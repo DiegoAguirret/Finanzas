@@ -30,6 +30,10 @@ Se abre con doble clic, pero la extensión de Chrome no puede abrir `file://`, a
 
 Verificación en el navegador: cargar datos de prueba en `localStorage`, recorrer las vistas, revisar la consola y comprobar anchos de 375 a 1920 px. Al terminar, borrar el `localStorage` de esos orígenes, parar los servidores y borrar `pruebas/supabase_falso_estado.json`. No tocar los datos del origen `file://` del usuario.
 
+## Publicación
+
+Repositorio git **privado** en GitHub, publicado con **Cloudflare Pages** (se despliega solo con cada `git push` a `main`). Solo se publica la web: el comando de compilación de Cloudflare es `mkdir -p public && cp finanzas.html public/index.html` con directorio de salida `public` (así no se exponen `supabase/`, `pruebas/` ni este archivo, y la web queda en la raíz `/`). La dirección publicada debe estar en Supabase → Authentication → URL Configuration (Site URL y Redirect URLs con `/**`) para que funcione el acceso con Google. Hacer commit y push solo cuando el usuario lo pida.
+
 ## Arquitectura
 
 **Estado local** (`localStorage`, siempre con `leerJSON`/`escribirJSON` o try/catch). Es la copia que permite abrir al instante y trabajar sin conexión:
