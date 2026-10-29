@@ -1,0 +1,8 @@
+# Datos y cuentas de prueba del servidor local (pruebas/supabase_falso.py)
+pruebas/*_estado.json
+# Configuración local de herramientas y del sistema
+.claude/settings.local.json
+Thumbs.db
+.DS_Store
+# Carpeta que genera Cloudflare Pages al publicar
+public/
