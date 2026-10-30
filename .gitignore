@@ -10,3 +10,5 @@ Thumbs.db
 public/
 # Generado por construir.py en cada publicación
 trabajador/cabeceras.js
+# Caché de Python
+__pycache__/

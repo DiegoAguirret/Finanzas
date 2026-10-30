@@ -1,7 +1,7 @@
 """Servidor local que imita, todo junto, la web publicada + el intermediario /api + Supabase (solo pruebas).
 
 Uso: python -I pruebas/supabase_falso.py public/index.html 8766  →  http://127.0.0.1:8766/
-     (o finanzas.html; si junto al HTML hay un _headers, sus cabeceras se aplican, como en Cloudflare)
+     (o finanzas.html; sirve también css/ y js/ junto al HTML; si hay un _headers, sus cabeceras se aplican, como en Cloudflare)
 Las cuentas y datos de prueba se guardan en pruebas/supabase_falso_estado.json (borrarlo al terminar).
 
 - /api/auth/v1/signup (con /__confirmar?activo=1 exige confirmar por correo), /token (password,
@@ -131,6 +131,12 @@ class Manejador(BaseHTTPRequestHandler):
         ruta = url.path
         if ruta in ('/', '/index.html', '/finanzas.html'):
             return self.responder(200, ARCHIVO_HTML.read_bytes(), 'text/html; charset=utf-8', cabeceras_publicadas())
+        m = re.fullmatch(r'/(css|js)/[a-z_]+\.(css|js)', ruta)
+        if m:
+            archivo = ARCHIVO_HTML.parent / ruta.lstrip('/')
+            if archivo.exists():
+                tipo = 'text/css' if m.group(2) == 'css' else 'text/javascript'
+                return self.responder(200, archivo.read_bytes(), tipo + '; charset=utf-8', cabeceras_publicadas())
         if re.fullmatch(r'/trabajador/[a-z_]+\.js', ruta):
             archivo = pathlib.Path(__file__).resolve().parent.parent / ruta.lstrip('/')
             if archivo.exists():

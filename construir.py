@@ -1,32 +1,24 @@
 """Prepara lo que publica Cloudflare (comando de compilación: python3 construir.py).
 
-- public/index.html: la web.
+- public/: la web (finanzas.html como index.html, más css/ y js/).
 - trabajador/cabeceras.js: cabeceras de seguridad que el Worker (trabajador/index.js) añade a la web.
 - public/_headers: las mismas cabeceras en el formato de archivo _headers (lo usa el servidor de
   pruebas pruebas/supabase_falso.py para imitar lo publicado).
 
-La Content-Security-Policy solo permite los scripts de la propia página (por su hash SHA-256) y
-conexiones a su mismo dominio (/api), así que un script inyectado o una conexión a otro servidor
-no se ejecutarían.
+La Content-Security-Policy solo permite scripts y estilos de archivos del propio dominio (nada en
+línea) y conexiones a ese mismo dominio (/api), así que un script inyectado o una conexión a otro
+servidor no se ejecutarían.
 """
-import base64
-import hashlib
 import json
 import pathlib
-import re
+import shutil
 
 RAIZ = pathlib.Path(__file__).parent
-# El navegador convierte CRLF y CR en LF antes de calcular el hash de un script: se hace lo mismo
-# aquí para que el hash coincida tanto con saltos de línea de Windows como de Linux.
-html = (RAIZ / 'finanzas.html').read_bytes().replace(b'\r\n', b'\n').replace(b'\r', b'\n')
-
-scripts = re.findall(rb'<script>(.*?)</script>', html, re.S)
-hashes = ' '.join("'sha256-%s'" % base64.b64encode(hashlib.sha256(s).digest()).decode() for s in scripts)
 
 politica = '; '.join([
     "default-src 'none'",
-    f"script-src {hashes}",
-    "style-src 'self' 'unsafe-inline'",  # estilos en línea de la página; no ejecutan código
+    "script-src 'self'",                 # solo js/*.js; ningún script ni manejador on… en línea
+    "style-src 'self'",                  # solo css/*.css; ningún atributo style en el HTML
     "img-src 'self' data:",
     "connect-src 'self'",                # solo /api del mismo dominio
     "form-action 'self'",
@@ -44,12 +36,16 @@ cabeceras = {
 }
 
 salida = RAIZ / 'public'
-salida.mkdir(exist_ok=True)
-(salida / 'index.html').write_bytes(html)
+if salida.exists():
+    shutil.rmtree(salida)  # sin restos de publicaciones anteriores
+salida.mkdir()
+shutil.copyfile(RAIZ / 'finanzas.html', salida / 'index.html')
+for carpeta in ('css', 'js'):
+    shutil.copytree(RAIZ / carpeta, salida / carpeta)
 (salida / '_headers').write_text('/*\n' + ''.join(f'  {k}: {v}\n' for k, v in cabeceras.items()),
                                  encoding='utf-8', newline='\n')
 (RAIZ / 'trabajador' / 'cabeceras.js').write_text(
     '// Generado por construir.py: no editar a mano.\n'
     f'export const CABECERAS_SEGURIDAD = {json.dumps(cabeceras, indent=2, ensure_ascii=False)};\n',
     encoding='utf-8', newline='\n')
-print(f'Listo: public/ y trabajador/cabeceras.js ({len(scripts)} scripts con hash en la Content-Security-Policy)')
+print('Listo: public/ y trabajador/cabeceras.js')

@@ -1,7 +1,7 @@
 """Servidor local para usar la web en tu PC contra Supabase real, igual que en Cloudflare.
 
 Sirve finanzas.html en http://localhost:8765/ y reenvía /api/* a Supabase añadiendo la clave, con las
-mismas rutas permitidas que functions/api/[[ruta]].js. La URL y la clave se leen de .dev.vars (en la
+mismas rutas permitidas que trabajador/intermediario.js. La URL y la clave se leen de .dev.vars (en la
 raíz del proyecto, ignorado por git) o de las variables de entorno SUPABASE_URL y SUPABASE_CLAVE:
 
     SUPABASE_URL=https://xxxx.supabase.co
@@ -69,6 +69,10 @@ class Manejador(BaseHTTPRequestHandler):
         ruta, _, consulta = self.path.partition('?')
         if ruta in ('/', '/index.html', '/finanzas.html'):
             return self.responder(200, (RAIZ / 'finanzas.html').read_bytes(), [('Content-Type', 'text/html; charset=utf-8')])
+        m = re.fullmatch(r'/(css|js)/[a-z_]+\.(css|js)', ruta)
+        if m and (RAIZ / ruta.lstrip('/')).exists():
+            tipo = 'text/css' if m.group(2) == 'css' else 'text/javascript'
+            return self.responder(200, (RAIZ / ruta.lstrip('/')).read_bytes(), [('Content-Type', tipo + '; charset=utf-8')])
         if not ruta.startswith('/api/'):
             return self.responder(404, b'No encontrado')
         destino = ruta[len('/api/'):]
