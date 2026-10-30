@@ -1,0 +1,15 @@
+{
+  // Botón verde de «Ejecutar y depurar» (F5). Necesita la extensión Python de VS Code.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Abrir web de prueba",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/pruebas/supabase_falso.py",
+      "args": ["finanzas.html", "8766"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}

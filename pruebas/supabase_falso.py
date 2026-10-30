@@ -30,7 +30,7 @@ LIMITE_FILAS = 1000  # como el max_rows de Supabase
 
 usuarios = {}   # correo → {id, clave, confirmado}
 tokens = {}     # token → id de usuario
-tablas = {t: {} for t in ['tarjetas', 'gastos', 'ingresos', 'pagos', 'tipos_cambio', 'preferencias']}
+tablas = {t: {} for t in ['tarjetas', 'gastos', 'ingresos', 'pagos', 'deudas', 'abonos', 'metas', 'aportes', 'tipos_cambio', 'preferencias']}
 BCRP = [
     {"fecha": "2026-10-23", "compra": 3.431, "venta": 3.437},
     {"fecha": "2026-10-26", "compra": 3.446, "venta": 3.453},
@@ -229,6 +229,9 @@ class Manejador(BaseHTTPRequestHandler):
             if metodo == 'PUT':
                 d = self.cuerpo()
                 u = usuarios[correo_de(uid)]
+                if 'data' in d:
+                    u['meta'] = {**u.get('meta', {}), **d['data']}
+                    return self.responder(200, usuario_publico(uid))
                 if d.get('password') == u['clave']:
                     return self.responder(422, {"error_code": "same_password", "msg": "New password should be different"})
                 if len(d.get('password', '')) < 8:
@@ -280,6 +283,10 @@ class Manejador(BaseHTTPRequestHandler):
                         for g in tablas['gastos'].values():
                             if g.get('tarjeta') == i:
                                 g['tarjeta'] = None
+                    for hija, campo, padre in (('abonos', 'deuda', 'deudas'), ('aportes', 'meta', 'metas')):
+                        if tabla == padre:
+                            for k in [k for k, v in tablas[hija].items() if v[campo] == i]:
+                                del tablas[hija][k]
                     del filas[(i,)]
             return self.responder(204)
         return self.responder(405, {"message": "método no permitido"})

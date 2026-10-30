@@ -86,6 +86,52 @@ create table if not exists public.preferencias (
   actualizado timestamptz not null default now()
 );
 
+-- Categorías propias: [{ nombre, icono, color }]. Null = las de siempre. gastos.categoria guarda el nombre.
+alter table public.preferencias add column if not exists categorias jsonb;
+
+-- Otras deudas (préstamos, personas): `monto` es lo que debías al registrarla
+create table if not exists public.deudas (
+  id uuid primary key default gen_random_uuid(),
+  usuario uuid not null default auth.uid() references auth.users on delete cascade,
+  nombre text not null check (char_length(nombre) between 1 and 40),
+  tipo text not null default 'otro' check (tipo in ('prestamo', 'persona', 'otro')),
+  moneda text not null default 'PEN' check (moneda in ('PEN', 'USD')),
+  monto numeric(12, 2) not null check (monto > 0),
+  fecha date not null,
+  creado timestamptz not null default now()
+);
+
+create table if not exists public.abonos (
+  id uuid primary key default gen_random_uuid(),
+  usuario uuid not null default auth.uid() references auth.users on delete cascade,
+  deuda uuid not null references public.deudas on delete cascade,
+  fecha date not null,
+  importe numeric(12, 2) not null check (importe > 0),
+  creado timestamptz not null default now()
+);
+
+-- Metas de ahorro. Un aporte con importe negativo es un retiro.
+create table if not exists public.metas (
+  id uuid primary key default gen_random_uuid(),
+  usuario uuid not null default auth.uid() references auth.users on delete cascade,
+  nombre text not null check (char_length(nombre) between 1 and 40),
+  icono text not null,
+  color text not null,
+  moneda text not null default 'PEN' check (moneda in ('PEN', 'USD')),
+  objetivo numeric(12, 2) not null check (objetivo > 0),
+  limite date,
+  creado timestamptz not null default now()
+);
+
+create table if not exists public.aportes (
+  id uuid primary key default gen_random_uuid(),
+  usuario uuid not null default auth.uid() references auth.users on delete cascade,
+  meta uuid not null references public.metas on delete cascade,
+  fecha date not null,
+  importe numeric(12, 2) not null check (importe <> 0),
+  creado timestamptz not null default now()
+);
+
 -- Tipo de cambio oficial del sistema bancario (BCRP), común a todos
 create table if not exists public.tipos_cambio_bcrp (
   fecha date primary key,
@@ -100,6 +146,12 @@ create index if not exists ingresos_usuario_fecha on public.ingresos (usuario, f
 create index if not exists pagos_usuario_fecha on public.pagos (usuario, fecha);
 create index if not exists pagos_tarjeta on public.pagos (tarjeta);
 create index if not exists gastos_tarjeta on public.gastos (tarjeta);
+create index if not exists deudas_usuario on public.deudas (usuario);
+create index if not exists abonos_usuario_fecha on public.abonos (usuario, fecha);
+create index if not exists abonos_deuda on public.abonos (deuda);
+create index if not exists metas_usuario on public.metas (usuario);
+create index if not exists aportes_usuario_fecha on public.aportes (usuario, fecha);
+create index if not exists aportes_meta on public.aportes (meta);
 
 -- ---------------------------------------------------------------------
 -- Seguridad (Row Level Security)
@@ -112,6 +164,10 @@ alter table public.pagos enable row level security;
 alter table public.tipos_cambio enable row level security;
 alter table public.preferencias enable row level security;
 alter table public.tipos_cambio_bcrp enable row level security;
+alter table public.deudas enable row level security;
+alter table public.abonos enable row level security;
+alter table public.metas enable row level security;
+alter table public.aportes enable row level security;
 
 -- La tarjeta indicada (si hay) debe ser del mismo usuario
 create or replace function public.tarjeta_propia(t uuid)
@@ -127,6 +183,32 @@ $$;
 -- Solo la usan las políticas (que se evalúan como el usuario con sesión)
 revoke all on function public.tarjeta_propia(uuid) from public, anon;
 grant execute on function public.tarjeta_propia(uuid) to authenticated;
+
+-- La deuda o la meta de un movimiento deben ser del mismo usuario
+create or replace function public.deuda_propia(d uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select exists (select 1 from public.deudas where id = d and usuario = (select auth.uid()));
+$$;
+
+create or replace function public.meta_propia(m uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select exists (select 1 from public.metas where id = m and usuario = (select auth.uid()));
+$$;
+
+revoke all on function public.deuda_propia(uuid) from public, anon;
+revoke all on function public.meta_propia(uuid) from public, anon;
+grant execute on function public.deuda_propia(uuid) to authenticated;
+grant execute on function public.meta_propia(uuid) to authenticated;
 
 drop policy if exists "propias" on public.tarjetas;
 create policy "propias" on public.tarjetas for all to authenticated
@@ -154,14 +236,34 @@ drop policy if exists "propias" on public.preferencias;
 create policy "propias" on public.preferencias for all to authenticated
   using (usuario = (select auth.uid())) with check (usuario = (select auth.uid()));
 
+drop policy if exists "propias" on public.deudas;
+create policy "propias" on public.deudas for all to authenticated
+  using (usuario = (select auth.uid())) with check (usuario = (select auth.uid()));
+
+drop policy if exists "propios" on public.abonos;
+create policy "propios" on public.abonos for all to authenticated
+  using (usuario = (select auth.uid()))
+  with check (usuario = (select auth.uid()) and public.deuda_propia(deuda));
+
+drop policy if exists "propias" on public.metas;
+create policy "propias" on public.metas for all to authenticated
+  using (usuario = (select auth.uid())) with check (usuario = (select auth.uid()));
+
+drop policy if exists "propios" on public.aportes;
+create policy "propios" on public.aportes for all to authenticated
+  using (usuario = (select auth.uid()))
+  with check (usuario = (select auth.uid()) and public.meta_propia(meta));
+
 drop policy if exists "lectura publica" on public.tipos_cambio_bcrp;
 create policy "lectura publica" on public.tipos_cambio_bcrp for select to anon, authenticated
   using (true);
 
 revoke all on public.tarjetas, public.gastos, public.ingresos, public.pagos,
+  public.deudas, public.abonos, public.metas, public.aportes,
   public.tipos_cambio, public.preferencias, public.tipos_cambio_bcrp from anon;
 grant select, insert, update, delete on public.tarjetas, public.gastos, public.ingresos,
-  public.pagos, public.tipos_cambio, public.preferencias to authenticated;
+  public.pagos, public.deudas, public.abonos, public.metas, public.aportes,
+  public.tipos_cambio, public.preferencias to authenticated;
 grant select on public.tipos_cambio_bcrp to anon, authenticated;
 
 -- ---------------------------------------------------------------------

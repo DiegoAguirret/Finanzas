@@ -5,7 +5,7 @@
 
 const RUTAS = [
   /^auth\/v1\/(signup|token|logout|user|settings|authorize|recover)$/,
-  /^rest\/v1\/(tarjetas|gastos|ingresos|pagos|tipos_cambio|preferencias|tipos_cambio_bcrp)$/,
+  /^rest\/v1\/(tarjetas|gastos|ingresos|pagos|deudas|abonos|metas|aportes|tipos_cambio|preferencias|tipos_cambio_bcrp)$/,
 ];
 const METODOS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 const CABECERAS_ENTRADA = ['authorization', 'content-type', 'prefer', 'range', 'accept'];

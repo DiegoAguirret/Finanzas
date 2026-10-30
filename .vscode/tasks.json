@@ -1,0 +1,21 @@
+{
+  // Ctrl + Shift + B inicia la web de prueba. Para apagarla: Ctrl + C en su terminal.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Abrir web de prueba",
+      "type": "shell",
+      "command": "Write-Host 'Abre http://127.0.0.1:8766/ (para apagar: Ctrl + C)'; python -I pruebas/supabase_falso.py finanzas.html 8766",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "Abrir web con mis datos reales",
+      "type": "shell",
+      "command": "Write-Host 'Abre http://localhost:8765/ (para apagar: Ctrl + C)'; python -I pruebas/proxy_local.py",
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}

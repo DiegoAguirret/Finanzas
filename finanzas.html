@@ -10,41 +10,56 @@
 </head>
 <body>
 
-<header>
-  <div class="container">
-    <div class="avatar hidden" id="avatar" aria-hidden="true"></div>
-    <div class="cabecera-texto">
-      <h1 id="cabecera-nombre">Finanzas personales</h1>
-      <p><span id="cabecera-app" class="hidden">Finanzas personales · </span><span id="hoy"></span></p>
+<div class="app">
+  <aside class="sidebar" id="barra" aria-label="Menú">
+    <div class="barra-marca">
+      <div class="barra-titulo">
+        <h1>Finanzas personales</h1>
+        <button type="button" class="barra-mini" id="btn-ocultar">Ocultar</button>
+      </div>
+      <p id="hoy"></p>
     </div>
-    <div class="cuenta" id="cuenta">
-      <button type="button" class="sync hidden" id="sync-estado"></button>
-      <span class="cuenta-correo" id="cuenta-correo"></span>
-      <button type="button" class="btn-cabecera" id="btn-cuenta"></button>
-    </div>
-    <button type="button" class="btn-cabecera" id="btn-tema"></button>
-  </div>
-</header>
-
-<div class="container layout">
-  <nav class="sidebar card" aria-label="Secciones">
-    <a class="nav-item" href="#gastos" data-vista="gastos"><span class="nav-texto">Gastos</span></a>
-    <a class="nav-item" href="#ingresos" data-vista="ingresos"><span class="nav-texto">Ingresos</span></a>
-    <a class="nav-item" href="#dashboard" data-vista="dashboard"><span class="nav-texto">Dashboard</span></a>
-    <a class="nav-item" href="#tarjeta" data-vista="tarjeta"><span class="nav-texto">Tarjetas</span></a>
-    <a class="nav-item" href="#simulador" data-vista="simulador"><span class="nav-texto">Simulaciones</span></a>
-    <a class="nav-item" href="#datos" data-vista="datos"><span class="nav-texto">Ajustes</span></a>
+    <nav class="barra-nav" aria-label="Secciones">
+      <a class="nav-item" href="#gastos" data-vista="gastos">Gastos</a>
+      <a class="nav-item" href="#ingresos" data-vista="ingresos">Ingresos</a>
+      <a class="nav-item" href="#dashboard" data-vista="dashboard">Dashboard</a>
+      <a class="nav-item" href="#tarjeta" data-vista="tarjeta">Tarjetas</a>
+      <a class="nav-item" href="#deudas" data-vista="deudas">Deudas</a>
+      <a class="nav-item" href="#ahorro" data-vista="ahorro">Ahorro</a>
+      <a class="nav-item" href="#simulador" data-vista="simulador">Simulaciones</a>
+      <a class="nav-item" href="#datos" data-vista="datos">Ajustes</a>
+    </nav>
     <div class="sidebar-pie">
-      Gastado este mes
-      <strong id="side-mes">S/ 0.00</strong>
-      <span class="separado hidden" id="side-balance-caja">
+      <div>
+        Gastado este mes
+        <strong id="side-mes">S/ 0.00</strong>
+      </div>
+      <div class="hidden" id="side-balance-caja">
         Ahorro del mes
         <strong id="side-balance">S/ 0.00</strong>
-      </span>
+      </div>
     </div>
-  </nav>
+    <div class="barra-cuenta">
+      <div class="barra-usuario">
+        <div class="avatar hidden" id="avatar" aria-hidden="true"></div>
+        <div class="barra-usuario-texto">
+          <strong id="cuenta-nombre"></strong>
+          <span id="cuenta-correo"></span>
+        </div>
+      </div>
+      <button type="button" class="barra-accion" id="btn-tema"></button>
+      <button type="button" class="barra-accion" id="btn-cuenta"></button>
+    </div>
+  </aside>
+  <div class="menu-fondo" id="menu-fondo"></div>
 
-  <main>
+  <div class="contenido" id="contenido">
+  <div class="barra-superior">
+    <button type="button" class="btn-menu" id="btn-menu" aria-controls="barra" aria-expanded="false">Menú</button>
+    <span>Finanzas personales</span>
+  </div>
+
+  <main class="container">
     <div class="mensaje error hidden" id="aviso-tc" role="status"></div>
     <div class="mensaje hidden" id="aviso-nube" role="status"></div>
     <!-- ===== Gastos ===== -->
@@ -79,9 +94,12 @@
                 <select id="moneda" aria-label="Moneda del gasto"><option value="PEN">S/</option><option value="USD">US$</option></select>
               </div>
             </div>
-            <div>
-              <label for="categoria">Categoría</label>
-              <select id="categoria"></select>
+            <div class="campo-ancho">
+              <div class="fila-etiqueta">
+                <span class="etiqueta" id="categoria-titulo">Categoría</span>
+                <a class="enlace-mini" href="#datos" id="ir-categorias">Crear categoría</a>
+              </div>
+              <div class="selector-cat" id="categoria" role="radiogroup" aria-labelledby="categoria-titulo"></div>
             </div>
             <div>
               <label for="medio">Medio de pago</label>
@@ -607,17 +625,224 @@
       </section>
     </div>
 
+    <!-- ===== Deudas ===== -->
+    <div class="vista hidden" id="vista-deudas">
+      <section class="card vista-cabecera">
+        <div>
+          <h2>Deudas</h2>
+          <p>Tus tarjetas y lo que debes aparte</p>
+        </div>
+      </section>
+      <div class="resumen">
+        <div class="card">
+          <div class="label">Debes en total</div>
+          <div class="valor" id="deu-total">S/ 0.00</div>
+          <div class="sub" id="deu-total-sub"></div>
+        </div>
+        <div class="card">
+          <div class="label">En tarjetas</div>
+          <div class="valor" id="deu-tarjetas">S/ 0.00</div>
+        </div>
+        <div class="card">
+          <div class="label">Otras deudas</div>
+          <div class="valor" id="deu-otras">S/ 0.00</div>
+        </div>
+      </div>
+      <div class="mensaje hidden" id="deu-msg" role="status"></div>
+      <div class="columnas lateral-izq">
+        <section class="card estrecha">
+          <h2 id="deu-form-titulo">Nueva deuda</h2>
+          <form id="deu-form" autocomplete="off">
+            <div class="campo-desc">
+              <label for="deu-nombre">Nombre</label>
+              <input id="deu-nombre" required maxlength="40" placeholder="Ej. Préstamo del carro">
+            </div>
+            <div>
+              <label for="deu-tipo">Tipo</label>
+              <select id="deu-tipo">
+                <option value="prestamo">Préstamo</option>
+                <option value="persona">A una persona</option>
+                <option value="otro">Otra</option>
+              </select>
+            </div>
+            <div>
+              <label for="deu-monto">Cuánto debes</label>
+              <div class="importe-moneda">
+                <input id="deu-monto" type="number" step="0.01" min="0.01" required placeholder="0.00">
+                <select id="deu-moneda" aria-label="Moneda de la deuda"><option value="PEN">S/</option><option value="USD">US$</option></select>
+              </div>
+            </div>
+            <div>
+              <label for="deu-fecha">Desde</label>
+              <input id="deu-fecha" type="date" required>
+            </div>
+            <div class="acciones-form">
+              <button type="submit" class="btn-primary" id="deu-guardar">Añadir deuda</button>
+              <button type="button" class="btn-secondary hidden" id="deu-cancelar">Cancelar</button>
+            </div>
+          </form>
+        </section>
+        <section class="card">
+          <h2>Mis deudas</h2>
+          <div class="lista-objetivos" id="deu-lista"></div>
+        </section>
+      </div>
+      <section class="card hidden" id="deu-detalle">
+        <h2 id="deu-det-titulo"></h2>
+        <form id="abo-form" class="form-movimiento" autocomplete="off">
+          <div>
+            <label for="abo-fecha">Fecha</label>
+            <input id="abo-fecha" type="date" required>
+          </div>
+          <div>
+            <label for="abo-importe" id="abo-etiqueta">Abono</label>
+            <input id="abo-importe" type="number" step="0.01" min="0.01" required placeholder="0.00">
+          </div>
+          <div class="acciones-form">
+            <button type="submit" class="btn-primary">Registrar abono</button>
+          </div>
+        </form>
+        <table>
+          <thead><tr><th>Fecha</th><th class="num">Abono</th><th></th></tr></thead>
+          <tbody id="abo-lista"></tbody>
+        </table>
+        <p class="nota">Un abono sale de tu dinero, pero no es gasto.</p>
+      </section>
+    </div>
+
+    <!-- ===== Ahorro ===== -->
+    <div class="vista hidden" id="vista-ahorro">
+      <section class="card vista-cabecera">
+        <div>
+          <h2>Ahorro</h2>
+          <p>Lo que te queda y tus metas</p>
+        </div>
+      </section>
+      <div class="resumen">
+        <div class="card">
+          <div class="label">Este mes</div>
+          <div class="valor" id="aho-mes">S/ 0.00</div>
+          <div class="sub">Ingresos menos gastos</div>
+        </div>
+        <div class="card">
+          <div class="label">En tus metas</div>
+          <div class="valor" id="aho-metas">S/ 0.00</div>
+          <div class="sub" id="aho-metas-sub"></div>
+        </div>
+        <div class="card">
+          <div class="label">Sin asignar</div>
+          <div class="valor" id="aho-libre">S/ 0.00</div>
+          <div class="sub" id="aho-libre-sub"></div>
+        </div>
+      </div>
+      <div class="mensaje hidden" id="aho-msg" role="status"></div>
+      <div class="columnas lateral-izq">
+        <section class="card estrecha">
+          <h2 id="met-form-titulo">Nueva meta</h2>
+          <form id="met-form" autocomplete="off">
+            <div class="campo-desc">
+              <label for="met-nombre">Nombre</label>
+              <div class="nombre-previa">
+                <span id="met-previa"></span>
+                <input id="met-nombre" required maxlength="40" placeholder="Ej. Viaje a Cusco">
+              </div>
+            </div>
+            <div>
+              <label for="met-objetivo">Objetivo</label>
+              <div class="importe-moneda">
+                <input id="met-objetivo" type="number" step="0.01" min="0.01" required placeholder="0.00">
+                <select id="met-moneda" aria-label="Moneda de la meta"><option value="PEN">S/</option><option value="USD">US$</option></select>
+              </div>
+            </div>
+            <div>
+              <label for="met-limite">Para cuándo (opcional)</label>
+              <input id="met-limite" type="date">
+            </div>
+            <div class="campo-ancho">
+              <span class="etiqueta">Ícono</span>
+              <div class="selector-iconos" id="met-iconos"></div>
+            </div>
+            <div class="campo-ancho">
+              <span class="etiqueta">Color</span>
+              <div class="selector-colores" id="met-colores"></div>
+            </div>
+            <div class="acciones-form">
+              <button type="submit" class="btn-primary" id="met-guardar">Añadir meta</button>
+              <button type="button" class="btn-secondary hidden" id="met-cancelar">Cancelar</button>
+            </div>
+          </form>
+        </section>
+        <section class="card">
+          <h2>Mis metas</h2>
+          <div class="lista-objetivos" id="met-lista"></div>
+        </section>
+      </div>
+      <section class="card hidden" id="met-detalle">
+        <h2 id="met-det-titulo"></h2>
+        <form id="apo-form" class="form-movimiento" autocomplete="off">
+          <div>
+            <label for="apo-tipo">Movimiento</label>
+            <select id="apo-tipo"><option value="aporte">Aporte</option><option value="retiro">Retiro</option></select>
+          </div>
+          <div>
+            <label for="apo-fecha">Fecha</label>
+            <input id="apo-fecha" type="date" required>
+          </div>
+          <div>
+            <label for="apo-importe" id="apo-etiqueta">Importe</label>
+            <input id="apo-importe" type="number" step="0.01" min="0.01" required placeholder="0.00">
+          </div>
+          <div class="acciones-form">
+            <button type="submit" class="btn-primary">Registrar</button>
+          </div>
+        </form>
+        <table>
+          <thead><tr><th>Fecha</th><th>Movimiento</th><th class="num">Importe</th><th></th></tr></thead>
+          <tbody id="apo-lista"></tbody>
+        </table>
+        <p class="nota">Las metas solo separan tu dinero: no cambian tu balance.</p>
+      </section>
+    </div>
+
     <!-- ===== Datos ===== -->
     <div class="vista hidden" id="vista-datos">
       <section class="card vista-cabecera">
         <div>
           <h2>Ajustes</h2>
-          <p>Apariencia, copias y datos</p>
+          <p>Personaliza tu web</p>
         </div>
       </section>
       <div class="mensaje hidden" id="datos-msg" role="status"></div>
-      <div class="datos-grid">
-        <section class="card apariencia">
+      <div class="ajustes">
+        <nav class="ajustes-menu" aria-label="Secciones de ajustes">
+          <button type="button" data-ajuste="cuenta">Cuenta</button>
+          <button type="button" data-ajuste="apariencia">Apariencia</button>
+          <button type="button" data-ajuste="categorias">Categorías</button>
+          <button type="button" data-ajuste="datos">Mis datos</button>
+        </nav>
+        <div class="ajustes-paneles">
+        <section class="card ajuste-panel" id="aj-cuenta">
+          <h2>Cuenta</h2>
+          <form id="cuenta-form" class="hidden" autocomplete="off">
+            <div class="campo-ancho">
+              <label for="aj-nombre">Nombre</label>
+              <input id="aj-nombre" required maxlength="60">
+            </div>
+            <div class="campo-ancho">
+              <span class="etiqueta">Correo</span>
+              <p class="dato-fijo" id="aj-correo"></p>
+            </div>
+            <div class="acciones-form">
+              <button type="submit" class="btn-primary">Guardar nombre</button>
+            </div>
+            <p class="nota campo-ancho">Con Google, tu nombre se actualiza al entrar.</p>
+          </form>
+          <div id="cuenta-sin">
+            <p class="dato-fijo">Tus datos solo están en este navegador.</p>
+            <button type="button" class="btn-primary" id="aj-entrar">Iniciar sesión</button>
+          </div>
+        </section>
+        <section class="card ajuste-panel" id="aj-apariencia">
           <h2>Apariencia</h2>
           <fieldset class="paletas" id="paletas">
             <legend class="sub">Color</legend>
@@ -631,7 +856,42 @@
             <label><input type="radio" name="tema" value="light"><span>Claro</span></label>
             <label><input type="radio" name="tema" value="dark"><span>Oscuro</span></label>
           </div>
+          <div class="campo-inicio">
+            <label for="aj-inicio">Al abrir, ir a</label>
+            <select id="aj-inicio"></select>
+          </div>
         </section>
+        <div class="ajuste-panel columnas-categorias" id="aj-categorias">
+          <section class="card">
+            <h2 id="cat-form-titulo">Nueva categoría</h2>
+            <form id="cat-form" autocomplete="off">
+              <div class="campo-ancho">
+                <label for="cat-nombre">Nombre</label>
+                <div class="nombre-previa">
+                  <span id="cat-previa"></span>
+                  <input id="cat-nombre" required maxlength="30" placeholder="Ej. Mascotas">
+                </div>
+              </div>
+              <div class="campo-ancho">
+                <span class="etiqueta">Ícono</span>
+                <div class="selector-iconos" id="cat-iconos"></div>
+              </div>
+              <div class="campo-ancho">
+                <span class="etiqueta">Color</span>
+                <div class="selector-colores" id="cat-colores"></div>
+              </div>
+              <div class="acciones-form">
+                <button type="submit" class="btn-primary" id="cat-guardar">Crear categoría</button>
+                <button type="button" class="btn-secondary hidden" id="cat-cancelar">Cancelar</button>
+              </div>
+            </form>
+          </section>
+          <section class="card">
+            <h2>Mis categorías</h2>
+            <div class="lista-categorias" id="cat-lista"></div>
+          </section>
+        </div>
+        <div class="ajuste-panel datos-grid" id="aj-datos">
         <section class="card">
           <h2>Exportar</h2>
           <p>JSON para restaurar aquí; CSV para Excel (solo gastos).</p>
@@ -648,12 +908,22 @@
         </section>
         <section class="card">
           <h2>Borrar todo</h2>
-          <p>Gastos, ingresos y pagos. Conserva las tarjetas. No se puede deshacer.</p>
+          <p>Gastos, ingresos, pagos, abonos y aportes. Conserva tarjetas, deudas, metas y categorías. No se puede deshacer.</p>
           <button type="button" class="btn-danger" id="borrar-todo">Borrar todos los movimientos</button>
         </section>
+        </div>
+        </div>
       </div>
     </div>
   </main>
+
+  <footer class="pie container">Finanzas personales · Tipo de cambio de respaldo: BCRP</footer>
+  </div>
+</div>
+
+<div class="aviso-guardado hidden" id="sync-estado" role="status">
+  <span id="sync-texto"></span>
+  <button type="button" class="hidden" id="sync-reintentar">Reintentar</button>
 </div>
 
 <div class="tooltip hidden" id="tooltip" role="tooltip"></div>

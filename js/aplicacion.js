@@ -7,10 +7,59 @@ const CLAVE_INGRESOS = 'finanzas.ingresos';
 const CLAVE_TARJETAS = 'finanzas.tarjetas';
 const CLAVE_PAGOS = 'finanzas.pagos';
 const CLAVE_TARJETA_ANTIGUA = 'finanzas.tarjeta'; // una sola tarjeta Interbank (versión anterior)
-const CATEGORIAS = ['Comida', 'Transporte', 'Vivienda', 'Ocio', 'Salud', 'Otros'];
+const CLAVE_CATEGORIAS = 'finanzas.categorias';
+const CLAVE_DEUDAS = 'finanzas.deudas';
+const CLAVE_ABONOS = 'finanzas.abonos';
+const CLAVE_METAS = 'finanzas.metas';
+const CLAVE_APORTES = 'finanzas.aportes';
+const CLAVE_INICIO = 'finanzas.inicio';
+// Trazos propios en una cuadrícula de 24 × 24 (ver .icono-cat en el CSS)
+const circulo = (x, y, r) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
+const ICONOS = {
+  comida: 'M6 3v6a3 3 0 0 0 6 0V3M9 3v18M17 21V3c-2 1-3 4-3 8h3',
+  cafe: 'M5 9h12v6a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5zM17 10h1.5a2.5 2.5 0 0 1 0 5H17M8 3v3M12 3v3',
+  compras: 'M6 8h12l1 13H5zM9 8V6a3 3 0 0 1 6 0v2',
+  mercado: 'M3 4h2l2.5 11h10l2-8H6' + circulo(9, 20, 1) + circulo(17, 20, 1),
+  bus: 'M6 4h12a2 2 0 0 1 2 2v11H4V6a2 2 0 0 1 2-2zM4 11h16M7 17v3M17 17v3M8 14h.01M16 14h.01',
+  auto: 'M4 16v-3l2-5a2 2 0 0 1 2-1h8a2 2 0 0 1 2 1l2 5v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM4.5 12h15M7 17v2M17 17v2',
+  casa: 'M4 11l8-7 8 7M6 9.5V20h12V9.5M10 20v-6h4v6',
+  ticket: 'M4 7h16v3.5a1.5 1.5 0 0 0 0 3V17H4v-3.5a1.5 1.5 0 0 0 0-3zM14 7v2M14 11v2M14 15v2',
+  salud: 'M12 20C6 15.5 4 12.5 4 9.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5c0 3-2 6-8 10.5z',
+  viaje: 'M3 12l18-8-6 17-3-7zM12 14l9-10',
+  libro: 'M5 5a2 2 0 0 1 2-2h12v15H7a2 2 0 0 0-2 2zM5 20a2 2 0 0 0 2 1h12v-3',
+  ropa: 'M8 4l4 2 4-2 5 4-3 3-1-1v10H7V10l-1 1-3-3z',
+  mascota: 'M12 12c-3 0-5 3-5 5.5C7 19 8 20 9.5 20c1 0 1.6-.5 2.5-.5s1.5.5 2.5.5c1.5 0 2.5-1 2.5-2.5 0-2.5-2-5.5-5-5.5z' +
+    circulo(5.5, 11, 1.4) + circulo(9, 7, 1.4) + circulo(15, 7, 1.4) + circulo(18.5, 11, 1.4),
+  regalo: 'M4 11h16v9H4zM3 7h18v4H3zM12 7v13M12 7C10 3 6 3 7 6c.4 1 3 1 5 1M12 7c2-4 6-4 5-1-.4 1-3 1-5 1',
+  luz: 'M13 3L5 14h6l-1 7 8-11h-6z',
+  telefono: 'M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2',
+  internet: 'M3 9a13 13 0 0 1 18 0M6.5 13a8 8 0 0 1 11 0M10 16.5a3 3 0 0 1 4 0M12 20h.01',
+  pesas: 'M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12',
+  video: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  trabajo: 'M4 8h16v11H4zM9 8V5h6v3M4 13h16',
+  dinero: circulo(12, 12, 9) + 'M15 9c-.5-1-1.5-1.5-3-1.5-2 0-3 1-3 2.25S10 12 12 12s3 .75 3 2.25-1 2.25-3 2.25c-1.5 0-2.5-.5-3-1.5M12 6v12',
+  meta: circulo(12, 12, 9) + circulo(12, 12, 4.5) + circulo(12, 12, 1),
+  escudo: 'M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z',
+  tarjeta: 'M3 6h18v12H3zM3 10h18M7 15h3',
+  banco: 'M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18',
+  persona: circulo(12, 8, 4) + 'M5 20c1-4 4-6 7-6s6 2 7 6',
+  otros: circulo(5, 12, 1.5) + circulo(12, 12, 1.5) + circulo(19, 12, 1.5),
+};
+const COLORES = ['ambar', 'naranja', 'rojo', 'rosa', 'violeta', 'indigo', 'azul', 'cian', 'verde', 'gris'];
+const CATEGORIAS_BASE = [
+  { nombre: 'Comida', icono: 'comida', color: 'ambar' },
+  { nombre: 'Transporte', icono: 'bus', color: 'azul' },
+  { nombre: 'Vivienda', icono: 'casa', color: 'violeta' },
+  { nombre: 'Ocio', icono: 'ticket', color: 'rosa' },
+  { nombre: 'Salud', icono: 'salud', color: 'verde' },
+  { nombre: 'Suscripciones', icono: 'video', color: 'indigo' },
+  { nombre: 'Otros', icono: 'otros', color: 'gris' },
+];
+const CATEGORIA_FIJA = 'Otros'; // recibe los gastos de las categorías eliminadas: no se borra ni se renombra
 // Medios de pago fijos; además, cada tarjeta es un medio cuya clave es el id de la tarjeta
 const MEDIOS_FIJOS = { efectivo: 'Efectivo', debito: 'Débito / transferencia', credito: 'Otra tarjeta de crédito' };
-const VISTAS = ['gastos', 'ingresos', 'dashboard', 'tarjeta', 'simulador', 'datos'];
+const VISTAS = ['gastos', 'ingresos', 'dashboard', 'tarjeta', 'deudas', 'ahorro', 'simulador', 'datos'];
+const NOMBRES_VISTAS = { gastos: 'Gastos', ingresos: 'Ingresos', dashboard: 'Dashboard', tarjeta: 'Tarjetas', deudas: 'Deudas', ahorro: 'Ahorro', simulador: 'Simulaciones', datos: 'Ajustes' };
 const soles = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' });
 const decimales = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const MONEDAS = ['PEN', 'USD'];
@@ -23,6 +72,11 @@ let gastos = [];
 let tarjetas = [];
 let ingresos = [];
 let pagos = [];
+let categorias = CATEGORIAS_BASE.map((x) => ({ ...x }));
+let deudas = [];
+let abonos = [];
+let metas = [];
+let aportes = [];
 let editandoId = null;
 let confirmandoId = null;
 let vistaActual = 'gastos';
@@ -269,11 +323,13 @@ const TABLAS = {
       };
     },
     deFila: (f) => gastoValido({ ...f, medio: f.medio === 'tarjeta' ? f.tarjeta || 'credito' : f.medio }),
+    poner: (l) => { gastos = l; },
   },
   ingresos: {
     lista: () => ingresos,
     aFila: (i) => ({ id: i.id, descripcion: i.descripcion, importe: i.importe, moneda: i.moneda, fecha: i.fecha }),
     deFila: (f) => ingresoValido(f),
+    poner: (l) => { ingresos = l; },
   },
   pagos: {
     lista: () => pagos,
@@ -282,9 +338,35 @@ const TABLAS = {
       pagado_moneda: x.pagadoMoneda, pagado: x.pagado, tipo_cambio: x.tipoCambio,
     }),
     deFila: (f) => pagoValido({ ...f, pagadoMoneda: f.pagado_moneda, tipoCambio: f.tipo_cambio }),
+    poner: (l) => { pagos = l; },
+  },
+  deudas: {
+    lista: () => deudas,
+    aFila: (d) => ({ id: d.id, nombre: d.nombre, tipo: d.tipo, moneda: d.moneda, monto: d.monto, fecha: d.fecha }),
+    deFila: (f) => deudaValida(f),
+    poner: (l) => { deudas = l; },
+  },
+  abonos: {
+    lista: () => abonos,
+    aFila: (a) => ({ id: a.id, deuda: a.deuda, fecha: a.fecha, importe: a.importe }),
+    deFila: (f) => abonoValido(f),
+    poner: (l) => { abonos = l; },
+  },
+  metas: {
+    lista: () => metas,
+    aFila: (m) => ({ id: m.id, nombre: m.nombre, icono: m.icono, color: m.color, moneda: m.moneda, objetivo: m.objetivo, limite: m.limite }),
+    deFila: (f) => metaValida(f),
+    poner: (l) => { metas = l; },
+  },
+  aportes: {
+    lista: () => aportes,
+    aFila: (a) => ({ id: a.id, meta: a.meta, fecha: a.fecha, importe: a.importe }),
+    deFila: (f) => aporteValido(f),
+    poner: (l) => { aportes = l; },
   },
 };
-const ORDEN_TABLAS = ['tarjetas', 'gastos', 'ingresos', 'pagos']; // las tarjetas antes que lo que las usa
+// Las tablas padre antes que lo que las usa
+const ORDEN_TABLAS = ['tarjetas', 'gastos', 'ingresos', 'pagos', 'deudas', 'abonos', 'metas', 'aportes'];
 
 const ERRORES_ACCESO = {
   invalid_credentials: 'Correo o contraseña incorrectos.',
@@ -320,6 +402,8 @@ let sincronizando = false, otraVez = false, errorSync = null, esperaSync = null,
 let accesoModo = 'entrar'; // entrar | registro | recuperar | nueva-clave
 let modoPintado = null;
 let confirmandoSalida = false;
+let esperaAvisoGuardado = null;
+let appIniciada = false;       // lo que se guarda al arrancar (migraciones) no es un cambio del usuario
 let escrituraFallida = false;  // localStorage no aceptó el último guardado: la memoria es lo más reciente
 let ultimaDescarga = 0;        // cuándo se trajo la nube por última vez (ms)
 const ESPERA_DESCARGA = 60000; // al volver a la pestaña se consulta la nube como mucho una vez por minuto
@@ -382,10 +466,26 @@ function guardarSesion(d) {
   escribirJSON(CLAVE_SESION, sesion);
 }
 
-// Nombre del usuario: el de su cuenta de Google o el que escribió al registrarse
+// Google da el nombre completo: se deja el primer nombre y el primer apellido. Las partículas van
+// con la palabra siguiente («de la Cruz» es un apellido). Con 3 palabras se asume nombre y dos
+// apellidos; con 4 o más, el primer apellido es el penúltimo.
+function nombreCorto(completo) {
+  const partes = [];
+  let particulas = '';
+  for (const palabra of completo.split(/\s+/).filter(Boolean)) {
+    if (/^(de|del|la|las|los|y)$/i.test(palabra)) particulas += palabra + ' ';
+    else { partes.push(particulas + palabra); particulas = ''; }
+  }
+  if (partes.length <= 2) return completo;
+  return partes[0] + ' ' + (partes.length === 3 ? partes[1] : partes.at(-2));
+}
+
+// Nombre del usuario: el de su cuenta de Google (acortado) o el que escribió al registrarse
 function nombreDe(usuario) {
   const meta = usuario?.user_metadata || {};
-  return String(meta.full_name || meta.name || '').trim().slice(0, 60);
+  const nombre = String(meta.full_name || meta.name || '').trim();
+  const conGoogle = usuario?.app_metadata?.provider === 'google' || usuario?.identities?.some((i) => i.provider === 'google');
+  return (conGoogle ? nombreCorto(nombre) : nombre).slice(0, 60);
 }
 
 // Actualiza el nombre guardado en la sesión (por ejemplo, sesiones de antes de mostrar el nombre)
@@ -552,9 +652,16 @@ function borrarCopiaLocal() {
   pagos = [];
   tiposCambio.bcp = [];
   tiposCambio.interbank = [];
+  categorias = CATEGORIAS_BASE.map((x) => ({ ...x }));
+  deudas = [];
+  abonos = [];
+  metas = [];
+  aportes = [];
   sincronizado = {};
   tarSeleccion = null;
-  for (const clave of [CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_SINCRONIZADO, CLAVE_DUENO]) {
+  deuSeleccion = null;
+  metSeleccion = null;
+  for (const clave of [CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_CATEGORIAS, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO, CLAVE_DUENO]) {
     try { localStorage.removeItem(clave); } catch {}
   }
   escribirJSON(CLAVE_TC, tiposCambio);
@@ -579,7 +686,8 @@ function filasTiposCambio() {
 
 function hayCambiosSinSubir() {
   const actuales = { ...Object.fromEntries(ORDEN_TABLAS.map((t) => [t, filasDe(t)])), tipos_cambio: filasTiposCambio() };
-  if ((sincronizado.preferencias || {}).sim !== JSON.stringify(sim)) return true;
+  const prefs = sincronizado.preferencias || {};
+  if (prefs.sim !== JSON.stringify(sim) || prefs.cats !== JSON.stringify(categorias)) return true;
   return Object.entries(actuales).some(([t, filas]) => {
     const previas = sincronizado[t] || {};
     return Object.keys(filas).some((id) => previas[id] !== filas[id]) ||
@@ -588,6 +696,7 @@ function hayCambiosSinSubir() {
 }
 
 function programarSync() {
+  if (!sesion) recordarCuenta();
   if (!sesion || !nubeLista) return;
   otraVez = true;
   pintarCuenta();
@@ -599,6 +708,8 @@ function programarSync() {
 // pestaña pudo haberlo cambiado hace un instante y, con datos viejos, se borrarían sus filas nuevas.
 async function subirCambios() {
   recargarDeLocal();
+  const hayCambios = hayCambiosSinSubir();
+  if (hayCambios) avisoGuardado('Guardando…');
   const actuales = Object.fromEntries(ORDEN_TABLAS.map((t) => [t, filasDe(t)]));
   for (const t of ORDEN_TABLAS) {
     const previas = sincronizado[t] || {};
@@ -617,12 +728,14 @@ async function subirCambios() {
   if (tcNuevos.length) {
     await api('/rest/v1/tipos_cambio?on_conflict=usuario,banco,fecha', { metodo: 'POST', cuerpo: tcNuevos, prefer: 'resolution=merge-duplicates,return=minimal' });
   }
-  const preferencias = JSON.stringify(sim);
-  if ((sincronizado.preferencias || {}).sim !== preferencias) {
-    await api('/rest/v1/preferencias?on_conflict=usuario', { metodo: 'POST', cuerpo: { simulacion: sim }, prefer: 'resolution=merge-duplicates,return=minimal' });
+  const preferencias = { sim: JSON.stringify(sim), cats: JSON.stringify(categorias) };
+  const previas = sincronizado.preferencias || {};
+  if (previas.sim !== preferencias.sim || previas.cats !== preferencias.cats) {
+    await api('/rest/v1/preferencias?on_conflict=usuario', { metodo: 'POST', cuerpo: { simulacion: sim, categorias }, prefer: 'resolution=merge-duplicates,return=minimal' });
   }
-  sincronizado = { ...actuales, tipos_cambio: tcs, preferencias: { sim: preferencias } };
+  sincronizado = { ...actuales, tipos_cambio: tcs, preferencias };
   escribirJSON(CLAVE_SINCRONIZADO, sincronizado);
+  if (hayCambios) avisoGuardado('Guardado', 2500);
 }
 
 async function sincronizar() {
@@ -660,28 +773,26 @@ async function traerTodo(ruta, orden) {
 }
 
 async function descargarDeLaNube() {
-  const [ts, gs, is, ps, tcs, prefs] = await Promise.all([
-    ...ORDEN_TABLAS.map((t) => traerTodo(`/rest/v1/${t}?select=*`, 'id')),
+  const [filas, tcs, prefs] = await Promise.all([
+    Promise.all(ORDEN_TABLAS.map((t) => traerTodo(`/rest/v1/${t}?select=*`, 'id'))),
     traerTodo('/rest/v1/tipos_cambio?select=banco,fecha,compra,venta', 'banco,fecha'),
-    api('/rest/v1/preferencias?select=simulacion'),
+    api('/rest/v1/preferencias?select=simulacion,categorias'),
   ]);
-  return { tarjetas: ts, gastos: gs, ingresos: is, pagos: ps, tipos_cambio: tcs, preferencias: prefs };
+  return { ...Object.fromEntries(ORDEN_TABLAS.map((t, i) => [t, filas[i]])), tipos_cambio: tcs, preferencias: prefs };
 }
 
 // Pone en la web los datos de la nube; con `unir`, conserva además los locales que la nube no tiene
 function aplicarNube(nube, unir) {
-  const locales = { tarjetas, gastos, ingresos, pagos, bcp: tiposCambio.bcp, interbank: tiposCambio.interbank };
+  const locales = { ...Object.fromEntries(ORDEN_TABLAS.map((t) => [t, TABLAS[t].lista()])), bcp: tiposCambio.bcp, interbank: tiposCambio.interbank };
   // Primero las tarjetas: los gastos y pagos las necesitan para validarse
-  tarjetas = nube.tarjetas.map(TABLAS.tarjetas.deFila).filter(Boolean);
+  const tarjetasNube = nube.tarjetas.map(TABLAS.tarjetas.deFila).filter(Boolean);
+  tarjetas = tarjetasNube;
   if (unir) tarjetas = tarjetas.concat(locales.tarjetas.filter((t) => !tarjetaDe(t.id)));
-  const deNube = {};
-  for (const t of ['gastos', 'ingresos', 'pagos']) {
+  const deNube = { tarjetas: tarjetasNube };
+  for (const t of ORDEN_TABLAS.slice(1)) { // en orden: abonos y aportes se validan contra sus padres
     deNube[t] = nube[t].map(TABLAS[t].deFila).filter(Boolean);
     const ids = new Set(deNube[t].map((x) => x.id));
-    const lista = unir ? deNube[t].concat(locales[t].filter((x) => !ids.has(x.id))) : deNube[t];
-    if (t === 'gastos') gastos = lista;
-    else if (t === 'ingresos') ingresos = lista;
-    else pagos = lista;
+    TABLAS[t].poner(unir ? deNube[t].concat(locales[t].filter((x) => !ids.has(x.id))) : deNube[t]);
   }
   const tcNube = {};
   for (const banco of ['bcp', 'interbank']) {
@@ -691,6 +802,14 @@ function aplicarNube(nube, unir) {
   }
   const simNube = nube.preferencias[0]?.simulacion;
   if (simNube && Object.keys(simNube).length) sim = { ...sim, ...simNube };
+  const catsNube = nube.preferencias[0]?.categorias;
+  let catsConfirmadas;
+  if (Array.isArray(catsNube) && catsNube.length) {
+    const locales = categorias;
+    categorias = normalizarCategorias(catsNube);
+    catsConfirmadas = JSON.stringify(categorias);
+    if (unir) categorias = normalizarCategorias(categorias.concat(locales));
+  }
 
   // Lo que la nube tiene es lo ya sincronizado; lo local que se unió se subirá en la próxima sincronización
   const filas = (t, lista) => Object.fromEntries(lista.map((x) => {
@@ -698,13 +817,10 @@ function aplicarNube(nube, unir) {
     return [f.id, JSON.stringify(f)];
   }));
   sincronizado = {
-    tarjetas: filas('tarjetas', nube.tarjetas.map(TABLAS.tarjetas.deFila).filter(Boolean)),
-    gastos: filas('gastos', deNube.gastos),
-    ingresos: filas('ingresos', deNube.ingresos),
-    pagos: filas('pagos', deNube.pagos),
+    ...Object.fromEntries(ORDEN_TABLAS.map((t) => [t, filas(t, deNube[t])])),
     tipos_cambio: Object.fromEntries(['bcp', 'interbank'].flatMap((banco) =>
       tcNube[banco].map((t) => [banco + '|' + t.fecha, JSON.stringify({ banco, ...t })]))),
-    preferencias: simNube ? { sim: JSON.stringify(sim) } : {},
+    preferencias: { ...(simNube ? { sim: JSON.stringify(sim) } : {}), ...(catsConfirmadas ? { cats: catsConfirmadas } : {}) },
   };
 }
 
@@ -722,7 +838,7 @@ async function iniciarNube() {
       await sincronizar();
       if (errorSync) throw errorSync;
     }
-    const unir = !dueno && [tarjetas, gastos, ingresos, pagos].some((l) => l.length);
+    const unir = !dueno && [tarjetas, gastos, ingresos, pagos, deudas, metas].some((l) => l.length);
     let nubeVacia = false;
     await conCandado(CANDADO_SYNC, async () => {
       const nube = await descargarDeLaNube();
@@ -767,6 +883,9 @@ function guardarCopiaLocal() {
   guardarPagos();
   escribirJSON(CLAVE_TC, tiposCambio);
   guardarSim();
+  guardarCategorias();
+  guardarDeudas();
+  guardarMetas();
 }
 
 // Trae lo que cambió en otro dispositivo (al volver a la pestaña, como mucho una vez por minuto)
@@ -814,6 +933,7 @@ function recargarDeLocal() {
   }
   cargarPagos();
   cargarSim();
+  cargarObjetivos();
   sincronizado = leerJSON(CLAVE_SINCRONIZADO, {});
 }
 
@@ -823,7 +943,10 @@ function refrescarTodo() {
   if (editandoId && !gastos.some((x) => x.id === editandoId)) salirEdicion();
   if (ingEditandoId && !ingresos.some((x) => x.id === ingEditandoId)) salirEdicionIngreso();
   if (tarEditandoId && !tarjetaDe(tarEditandoId)) salirEdicionTarjeta();
+  if (deuEditandoId && !deudaDe(deuEditandoId)) salirEdicionDeuda();
+  if (metEditandoId && !metaDe(metEditandoId)) salirEdicionMeta();
   poblarMedios();
+  poblarCategorias();
   render();
   renderVista();
 }
@@ -856,35 +979,73 @@ function iniciales(texto) {
   return ((palabras[0]?.[0] || '') + (palabras.length > 1 ? palabras.at(-1)[0] : '')).toUpperCase();
 }
 
+// Aviso breve de guardado; con `ocultar` (ms) se va solo
+function avisoGuardado(texto, ocultar = 0) {
+  const caja = $('sync-estado');
+  clearTimeout(esperaAvisoGuardado);
+  caja.classList.remove('hidden', 'error', 'recordatorio');
+  caja.removeAttribute('title');
+  $('sync-reintentar').classList.add('hidden');
+  $('sync-texto').textContent = texto;
+  if (ocultar) esperaAvisoGuardado = setTimeout(() => caja.classList.add('hidden'), ocultar);
+}
+
+// Sin cuenta, cada cambio recuerda que solo queda en este navegador (desde un archivo no se puede entrar)
+function recordarCuenta() {
+  if (!appIniciada || location.protocol === 'file:') return;
+  avisoGuardado('Inicia sesión para guardar tus cambios en tu cuenta.', 6000);
+  $('sync-estado').classList.add('recordatorio');
+  $('sync-reintentar').textContent = 'Iniciar sesión';
+  $('sync-reintentar').classList.remove('hidden');
+}
+
+function pintarSync() {
+  const caja = $('sync-estado');
+  const recordatorio = caja.classList.contains('recordatorio');
+  if (!sesion && recordatorio) return;
+  if (sesion && errorSync) {
+    avisoGuardado('Sin guardar');
+    caja.classList.add('error');
+    caja.title = errorSync.message;
+    $('sync-reintentar').textContent = 'Reintentar';
+    $('sync-reintentar').classList.remove('hidden');
+  } else if (!sesion || recordatorio || caja.classList.contains('error')) {
+    caja.classList.add('hidden');
+    caja.classList.remove('error', 'recordatorio');
+  }
+}
+
 function pintarCuenta() {
-  // En la cabecera, el nombre del usuario (o la parte de su correo antes de la @)
+  // En la barra lateral, el nombre del usuario (o la parte de su correo antes de la @)
   const nombre = sesion ? sesion.usuario.nombre || sesion.usuario.correo.split('@')[0] : '';
-  $('cabecera-nombre').textContent = nombre || 'Finanzas personales';
-  $('cabecera-app').classList.toggle('hidden', !nombre);
+  $('cuenta-nombre').textContent = nombre || 'Sin cuenta';
   $('avatar').textContent = nombre ? iniciales(nombre) : '';
   $('avatar').classList.toggle('hidden', !nombre);
+  $('cuenta-correo').textContent = sesion ? sesion.usuario.correo : '';
   if (!confirmandoSalida) $('btn-cuenta').textContent = sesion ? 'Cerrar sesión' : 'Iniciar sesión';
-  $('cuenta-correo').textContent = sesion ? sesion.usuario.correo : 'Sin cuenta';
-  const estado = $('sync-estado');
-  estado.classList.toggle('hidden', !sesion);
-  estado.classList.toggle('error', !!errorSync);
-  estado.textContent = errorSync ? 'Sin guardar · reintentar'
-    : sincronizando || otraVez || !nubeLista ? 'Guardando…' : 'Guardado';
-  estado.title = errorSync ? errorSync.message : 'Tus datos están guardados en tu cuenta';
+  $('btn-cuenta').classList.toggle('principal', !sesion);
+  pintarSync();
+  $('cuenta-form').classList.toggle('hidden', !sesion);
+  $('cuenta-sin').classList.toggle('hidden', !!sesion);
+  if (sesion) {
+    if (document.activeElement !== $('aj-nombre')) $('aj-nombre').value = sesion.usuario.nombre;
+    $('aj-correo').textContent = sesion.usuario.correo;
+  }
 }
 
 function mostrarAcceso(modo = 'entrar') {
   accesoModo = modo;
   pintarAcceso();
+  $('sync-estado').classList.add('hidden');
   $('acceso').classList.remove('hidden');
   // Mientras está abierta, el resto de la página no recibe foco ni clics
-  for (const el of document.querySelectorAll('header, .layout')) el.inert = true;
+  for (const el of document.querySelectorAll('.app')) el.inert = true;
   $('acceso-correo').focus();
 }
 
 function ocultarAcceso() {
   $('acceso').classList.add('hidden');
-  for (const el of document.querySelectorAll('header, .layout')) el.inert = false;
+  for (const el of document.querySelectorAll('.app')) el.inert = false;
 }
 
 // Pinta la pantalla de acceso según accesoModo; `ok` muestra el mensaje como aviso y no como error
@@ -958,7 +1119,7 @@ function leerFormulario() {
     descripcion: $('descripcion').value.trim(),
     importe: redondear(parseFloat($('importe').value)),
     moneda: $('moneda').value === 'USD' ? 'USD' : 'PEN',
-    categoria: $('categoria').value,
+    categoria: categoriaElegida(),
     medio: medioValido($('medio').value),
     fecha: $('fecha').value,
   };
@@ -987,7 +1148,7 @@ function editar(id) {
   $('descripcion').value = g.descripcion;
   $('importe').value = g.importe;
   $('moneda').value = g.moneda;
-  $('categoria').value = g.categoria;
+  fijarCategoria(g.categoria);
   $('medio').value = g.medio;
   $('fecha').value = g.fecha;
   $('form-titulo').textContent = 'Editar gasto';
@@ -1001,6 +1162,7 @@ function editar(id) {
 function salirEdicion() {
   editandoId = null;
   form.reset();
+  fijarCategoria();
   $('fecha').value = hoyISO();
   $('form-titulo').textContent = 'Nuevo gasto';
   $('btn-guardar').textContent = 'Añadir gasto';
@@ -1029,11 +1191,28 @@ function boton(texto, titulo, onClick, clase = '') {
   return b;
 }
 
-function etiquetaCategoria(c) {
-  const tag = document.createElement('span');
-  tag.className = 'tag tag-' + c;
-  tag.textContent = c;
-  return tag;
+// Círculo de color con el ícono; `clase` = chico | grande
+function iconoCategoria(icono, color, clase = '') {
+  const caja = document.createElement('span');
+  caja.className = `icono-cat c-${color} ${clase}`;
+  const s = svgEl('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' });
+  s.append(svgEl('path', { d: ICONOS[icono] || ICONOS.otros }));
+  caja.append(s);
+  return caja;
+}
+
+function categoriaDe(nombre) {
+  return categorias.find((x) => x.nombre === nombre) || { nombre, icono: 'otros', color: 'gris' };
+}
+
+function etiquetaCategoria(nombre) {
+  const c = categoriaDe(nombre);
+  const chip = document.createElement('span');
+  chip.className = 'cat-chip';
+  const texto = document.createElement('span');
+  texto.textContent = c.nombre;
+  chip.append(iconoCategoria(c.icono, c.color, 'chico'), texto);
+  return chip;
 }
 
 // Las tarjetas registradas se resaltan con etiqueta; el resto de medios va como texto
@@ -1400,6 +1579,7 @@ function cifrasPeriodo(desde, hasta) {
   const gas = entre(gastos, desde, hasta);
   const ing = entre(ingresos, desde, hasta);
   const pag = entre(pagos, desde, hasta);
+  const abo = entre(abonos, desde, hasta);
   const conT = gas.filter((g) => tarjetaDe(g.medio));
   const sinT = gas.filter((g) => !tarjetaDe(g.medio));
   const en = (lista, m) => lista.reduce((s, x) => s + (x.moneda === m ? x.importe : 0), 0);
@@ -1410,16 +1590,19 @@ function cifrasPeriodo(desde, hasta) {
     conTarjeta: redondear(sumar(conT)),
     sinTarjeta: redondear(sumar(sinT)),
     pagos: redondear(pag.reduce((s, x) => s + pagoEnSoles(x), 0)),
+    abonos: redondear(abo.reduce((s, x) => s + abonoEnSoles(x), 0)),
     dineroPor: montos(),
     deudaPor: montos(),
-    hayDolares: [...gas, ...ing].some((x) => x.moneda === 'USD') || pag.some((x) => x.moneda === 'USD' || x.pagadoMoneda === 'USD'),
+    hayDolares: [...gas, ...ing].some((x) => x.moneda === 'USD') || pag.some((x) => x.moneda === 'USD' || x.pagadoMoneda === 'USD') ||
+      abo.some((x) => deudaDe(x.deuda)?.moneda === 'USD'),
   };
   for (const m of MONEDAS) {
-    c.dineroPor[m] = redondear(en(ing, m) - en(sinT, m) - pagadoEn(m));
+    const abonadoEn = abo.reduce((s, x) => s + (deudaDe(x.deuda)?.moneda === m ? x.importe : 0), 0);
+    c.dineroPor[m] = redondear(en(ing, m) - en(sinT, m) - pagadoEn(m) - abonadoEn);
     c.deudaPor[m] = redondear(en(conT, m) - en(pag, m)); // compras con tarjeta − abonos
   }
   c.ahorro = redondear(c.ingresos - c.gastos);
-  c.dinero = redondear(c.ingresos - c.sinTarjeta - c.pagos);
+  c.dinero = redondear(c.ingresos - c.sinTarjeta - c.pagos - c.abonos);
   return c;
 }
 
@@ -1563,11 +1746,13 @@ function renderBalance() {
   filaCuadre(cuadre, 'Ingresos', '', conSigno(c.ingresos));
   filaCuadre(cuadre, 'Gastos pagados al momento', hayTarjetas ? 'Efectivo o débito' : '', conSigno(-c.sinTarjeta));
   if (hayTarjetas) filaCuadre(cuadre, 'Pagos de tarjetas', '', conSigno(-c.pagos));
+  if (c.abonos) filaCuadre(cuadre, 'Abonos a otras deudas', '', conSigno(-c.abonos));
   filaCuadre(cuadre, 'Cambio en tu dinero', '', montoConSigno(c.dinero, true), true);
   if (hayTarjetas) {
     filaCuadre(cuadre2, 'Cambio en tu dinero', '', conSigno(c.dinero));
     filaCuadre(cuadre2, 'Compras con tus tarjetas', 'Suben tu deuda', conSigno(-c.conTarjeta));
     filaCuadre(cuadre2, 'Pagos de tarjetas', 'Bajan tu deuda; no son gasto', conSigno(c.pagos));
+    if (c.abonos) filaCuadre(cuadre2, 'Abonos a otras deudas', 'No son gasto', conSigno(c.abonos));
   } else {
     filaCuadre(cuadre2, 'Ingresos', '', conSigno(c.ingresos));
     filaCuadre(cuadre2, 'Gastos', '', conSigno(-c.gastos));
@@ -1596,6 +1781,10 @@ function renderBalance() {
       tipo: x.moneda === 'USD' ? 'Pago de tarjeta · deuda en dólares' : 'Pago de tarjeta',
       importe: x.pagado, moneda: x.pagadoMoneda, efecto: -x.pagado,
     })),
+    ...entre(abonos, desde, hasta).map((x) => {
+      const d = deudaDe(x.deuda);
+      return { fecha: x.fecha, descripcion: 'Abono a ' + d.nombre, tipo: 'Abono a deuda', importe: x.importe, moneda: d.moneda, efecto: -x.importe };
+    }),
   ].sort((x, y) => (x.fecha < y.fecha ? 1 : x.fecha > y.fecha ? -1 : 0));
   const tbody = $('bal-movs');
   tbody.replaceChildren();
@@ -1836,7 +2025,7 @@ function basesDesdeRegistros() {
     conDatos.add(mes);
   }
   const n = Math.max(1, conDatos.size);
-  return Object.fromEntries(CATEGORIAS.map((c) => [c, Math.round(((suma[c] || 0) / n) * 100) / 100]));
+  return Object.fromEntries(nombresCategorias().map((c) => [c, Math.round(((suma[c] || 0) / n) * 100) / 100]));
 }
 
 function baseDe(c) {
@@ -1848,7 +2037,9 @@ function textoPct(v) {
 }
 
 function crearFilasSim() {
-  for (const c of CATEGORIAS) {
+  $('sim-filas').replaceChildren();
+  for (const c of Object.keys(simFilas)) delete simFilas[c];
+  for (const c of nombresCategorias()) {
     const fila = document.createElement('div');
     fila.className = 'sim-fila';
 
@@ -1898,7 +2089,7 @@ function renderSimulador() {
   $('sim-extra').value = sim.extra;
   $('sim-meta').value = sim.meta;
   $('sim-horizonte').value = sim.horizonte;
-  for (const c of CATEGORIAS) {
+  for (const c of nombresCategorias()) {
     const f = simFilas[c];
     if (document.activeElement !== f.base) {
       const b = baseDe(c);
@@ -1924,7 +2115,7 @@ function delta(el, diferencia, menosEsBueno, sufijo) {
 
 function calcularSim() {
   let actual = 0, simulado = numero(sim.extra);
-  for (const c of CATEGORIAS) {
+  for (const c of nombresCategorias()) {
     const b = baseDe(c) || 0;
     const v = b * (1 + (sim.ajustes[c] || 0) / 100);
     actual += b;
@@ -2533,7 +2724,8 @@ function gastoValido(g) {
     descripcion,
     importe,
     moneda: g.moneda === 'USD' ? 'USD' : 'PEN',
-    categoria: CATEGORIAS.includes(g.categoria) ? g.categoria : 'Otros',
+    // Se conserva el nombre aunque aún no esté en la lista: la categoría pudo crearse en otro dispositivo
+    categoria: (typeof g.categoria === 'string' && g.categoria.trim().slice(0, 30)) || CATEGORIA_FIJA,
     medio: medioValido(g.medio),
     fecha: g.fecha,
   };
@@ -2568,7 +2760,7 @@ function normalizarIds() {
 }
 
 $('exp-json').addEventListener('click', () => {
-  descargar(`finanzas-${hoyISO()}.json`, JSON.stringify({ gastos, ingresos, tarjetas, pagos, tiposCambio: { bcp: tiposCambio.bcp, interbank: tiposCambio.interbank } }, null, 2), 'application/json');
+  descargar(`finanzas-${hoyISO()}.json`, JSON.stringify({ gastos, ingresos, tarjetas, pagos, categorias, deudas, abonos, metas, aportes, tiposCambio: { bcp: tiposCambio.bcp, interbank: tiposCambio.interbank } }, null, 2), 'application/json');
   mensajeDatos(`Exportados ${gastos.length} gastos, ${ingresos.length} ingresos, ${tarjetas.length} tarjetas y ${pagos.length} pagos de tarjeta en JSON.`);
 });
 
@@ -2627,6 +2819,26 @@ $('imp-archivo').addEventListener('change', async (e) => {
       pagos.push(p);
       nuevosPagos++;
     }
+    if (Array.isArray(datos?.categorias)) {
+      categorias = normalizarCategorias(categorias.concat(datos.categorias));
+      guardarCategorias();
+    }
+    // En orden: las deudas y metas antes que sus movimientos
+    let nuevosObjetivos = 0;
+    for (const t of ['deudas', 'abonos', 'metas', 'aportes']) {
+      const ids = new Set(TABLAS[t].lista().map((x) => x.id));
+      for (const item of Array.isArray(datos?.[t]) ? datos[t] : []) {
+        const x = TABLAS[t].deFila(item);
+        if (!x || ids.has(x.id)) { omitidos++; continue; }
+        ids.add(x.id);
+        TABLAS[t].lista().push(x);
+        nuevosObjetivos++;
+      }
+    }
+    if (nuevosObjetivos) {
+      guardarDeudas();
+      guardarMetas();
+    }
     for (const banco of ['bcp', 'interbank']) {
       for (const item of Array.isArray(datos?.tiposCambio?.[banco]) ? datos.tiposCambio[banco] : []) {
         const t = tcValido(item);
@@ -2637,6 +2849,7 @@ $('imp-archivo').addEventListener('change', async (e) => {
     guardar();
     if (nuevosIngresos) guardarIngresos();
     if (nuevosPagos) guardarPagos();
+    poblarCategorias();
     render();
     const contar = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
     const partes = [
@@ -2644,6 +2857,7 @@ $('imp-archivo').addEventListener('change', async (e) => {
       nuevosIngresos && contar(nuevosIngresos, 'ingreso', 'ingresos'),
       nuevasTarjetas && contar(nuevasTarjetas, 'tarjeta', 'tarjetas'),
       nuevosPagos && contar(nuevosPagos, 'pago de tarjeta', 'pagos de tarjeta'),
+      nuevosObjetivos && contar(nuevosObjetivos, 'registro de deudas y metas', 'registros de deudas y metas'),
     ].filter(Boolean);
     mensajeDatos((partes.length
       ? 'Importados ' + (partes.length > 1 ? partes.slice(0, -1).join(', ') + ' y ' + partes.at(-1) : partes[0])
@@ -2669,11 +2883,15 @@ $('borrar-todo').addEventListener('click', () => {
   gastos = [];
   ingresos = [];
   pagos = [];
+  abonos = [];
+  aportes = [];
   salirEdicion();
   salirEdicionIngreso();
   guardar();
   guardarIngresos();
   guardarPagos();
+  guardarDeudas();
+  guardarMetas();
   render();
   mensajeDatos(`Se eliminaron ${n[0]} gastos, ${n[1]} ingresos y ${n[2]} pagos de tarjeta.`);
 });
@@ -2684,11 +2902,16 @@ function renderVista() {
   if (vistaActual === 'dashboard') renderDashboard();
   if (vistaActual === 'tarjeta') renderTarjeta();
   if (vistaActual === 'simulador') renderSimulador();
+  if (vistaActual === 'deudas') renderDeudas();
+  if (vistaActual === 'ahorro') renderAhorro();
+  if (vistaActual === 'datos') renderAjustes();
 }
 
 function mostrarVista() {
   const nombre = location.hash.slice(1);
-  vistaActual = VISTAS.includes(nombre) ? nombre : 'gastos';
+  let inicio = null;
+  try { inicio = localStorage.getItem(CLAVE_INICIO); } catch {}
+  vistaActual = VISTAS.includes(nombre) ? nombre : VISTAS.includes(inicio) ? inicio : 'gastos';
   for (const v of VISTAS) $('vista-' + v).classList.toggle('hidden', v !== vistaActual);
   document.querySelectorAll('.nav-item').forEach((a) => {
     if (a.dataset.vista === vistaActual) a.setAttribute('aria-current', 'page');
@@ -2697,9 +2920,707 @@ function mostrarVista() {
   if (vistaActual !== 'datos') $('datos-msg').classList.add('hidden');
   if (vistaActual !== 'tarjeta') mensajeTarjeta('');
   if (vistaActual !== 'ingresos') mensajeBalance('');
+  if (vistaActual !== 'deudas') avisar('deu-msg', '');
+  if (vistaActual !== 'ahorro') avisar('aho-msg', '');
   ocultarTip();
   renderVista();
+  cerrarMenuMovil();
 }
+
+// ---- Barra lateral: se oculta en pantallas anchas (se recuerda) y es un panel en móvil ----
+const pantallaMovil = matchMedia('(max-width: 860px)');
+
+function menuAbierto() {
+  return pantallaMovil.matches ? document.body.classList.contains('menu-abierto') : document.documentElement.dataset.menu !== 'oculto';
+}
+
+function alternarMenu(abrir) {
+  if (pantallaMovil.matches) {
+    document.body.classList.toggle('menu-abierto', abrir);
+    $('contenido').inert = abrir;
+  } else {
+    if (abrir) delete document.documentElement.dataset.menu;
+    else document.documentElement.dataset.menu = 'oculto';
+    try { localStorage.setItem('finanzas.menu', abrir ? 'visible' : 'oculto'); } catch {}
+    renderVista(); // los gráficos miden el ancho nuevo
+  }
+  $('btn-menu').setAttribute('aria-expanded', String(abrir));
+  (abrir ? $('btn-ocultar') : $('btn-menu')).focus();
+}
+
+function cerrarMenuMovil() {
+  if (pantallaMovil.matches && menuAbierto()) alternarMenu(false);
+}
+
+// ---- Categorías ----
+function categoriaValida(x) {
+  const nombre = typeof x?.nombre === 'string' ? x.nombre.trim().slice(0, 30) : '';
+  if (!nombre) return null;
+  return { nombre, icono: x.icono in ICONOS ? x.icono : 'otros', color: COLORES.includes(x.color) ? x.color : 'gris' };
+}
+
+// Sin repetidos (sin distinguir mayúsculas) y siempre con «Otros»
+function normalizarCategorias(lista) {
+  const vistos = new Set();
+  const salida = [];
+  for (const item of Array.isArray(lista) ? lista : []) {
+    const x = categoriaValida(item);
+    if (!x || vistos.has(x.nombre.toLowerCase())) continue;
+    vistos.add(x.nombre.toLowerCase());
+    salida.push(x);
+  }
+  if (!salida.length) return CATEGORIAS_BASE.map((x) => ({ ...x }));
+  if (!vistos.has(CATEGORIA_FIJA.toLowerCase())) salida.push(CATEGORIAS_BASE.at(-1));
+  return salida;
+}
+
+function nombresCategorias() {
+  return categorias.map((x) => x.nombre);
+}
+
+function guardarCategorias() {
+  escribirJSON(CLAVE_CATEGORIAS, categorias);
+  programarSync();
+}
+
+function categoriaElegida() {
+  return document.querySelector('input[name="categoria"]:checked')?.value || CATEGORIA_FIJA;
+}
+
+// Sin nombre (o si ya no existe), la primera
+function fijarCategoria(nombre) {
+  const radios = [...document.querySelectorAll('input[name="categoria"]')];
+  const r = radios.find((x) => x.value === nombre) || radios[0];
+  if (r) r.checked = true;
+}
+
+// Rehace lo que depende de la lista, solo si cambió (no se pierde lo que se esté escribiendo)
+let categoriasPintadas = null;
+function poblarCategorias() {
+  const firma = JSON.stringify(categorias);
+  if (firma === categoriasPintadas) return;
+  categoriasPintadas = firma;
+  const elegida = categoriaElegida();
+  $('categoria').replaceChildren(...categorias.map((c) => {
+    const label = document.createElement('label');
+    const r = document.createElement('input');
+    r.type = 'radio';
+    r.name = 'categoria';
+    r.value = c.nombre;
+    const caja = document.createElement('span');
+    caja.className = 'opcion-cat';
+    const texto = document.createElement('span');
+    texto.textContent = c.nombre;
+    caja.append(iconoCategoria(c.icono, c.color), texto);
+    label.append(r, caja);
+    return label;
+  }));
+  fijarCategoria(elegida);
+  const filtro = $('filtro-categoria');
+  const antes = filtro.value;
+  filtro.replaceChildren(filtro.options[0], ...nombresCategorias().map((c) => new Option(c, c)));
+  filtro.value = [...filtro.options].some((o) => o.value === antes) ? antes : '';
+  crearFilasSim();
+}
+
+// Selectores visuales de ícono y color (formularios de categoría y de meta)
+function crearSelectores(prefijo) {
+  const radio = (grupo, valor, titulo, visual) => {
+    const label = document.createElement('label');
+    const r = document.createElement('input');
+    r.type = 'radio';
+    r.name = `${prefijo}-${grupo}`;
+    r.value = valor;
+    r.setAttribute('aria-label', titulo);
+    label.append(r, visual);
+    return label;
+  };
+  $(`${prefijo}-iconos`).replaceChildren(...Object.keys(ICONOS).map((k) => radio('icono', k, 'Ícono ' + k, iconoCategoria(k, 'gris'))));
+  $(`${prefijo}-colores`).replaceChildren(...COLORES.map((k) => {
+    const m = document.createElement('span');
+    m.className = `muestra-color c-${k}`;
+    return radio('color', k, 'Color ' + k, m);
+  }));
+  for (const grupo of ['iconos', 'colores']) $(`${prefijo}-${grupo}`).addEventListener('change', () => pintarSelectores(prefijo));
+}
+
+function valorSelector(prefijo, grupo) {
+  return document.querySelector(`input[name="${prefijo}-${grupo}"]:checked`)?.value;
+}
+
+function fijarSelectores(prefijo, icono, color) {
+  for (const r of document.querySelectorAll(`input[name="${prefijo}-icono"]`)) r.checked = r.value === icono;
+  for (const r of document.querySelectorAll(`input[name="${prefijo}-color"]`)) r.checked = r.value === color;
+  pintarSelectores(prefijo);
+}
+
+// El ícono elegido y la vista previa llevan el color elegido
+function pintarSelectores(prefijo) {
+  const color = valorSelector(prefijo, 'color'), icono = valorSelector(prefijo, 'icono');
+  for (const caja of $(`${prefijo}-iconos`).querySelectorAll('.icono-cat')) caja.className = `icono-cat c-${color}`;
+  $(`${prefijo}-previa`).replaceChildren(iconoCategoria(icono, color));
+}
+
+let catEditando = null; // nombre de la categoría que se edita
+function salirEdicionCategoria() {
+  catEditando = null;
+  $('cat-form').reset();
+  $('cat-nombre').disabled = false;
+  fijarSelectores('cat', 'compras', 'azul');
+  $('cat-form-titulo').textContent = 'Nueva categoría';
+  $('cat-guardar').textContent = 'Crear categoría';
+  $('cat-cancelar').classList.add('hidden');
+}
+
+function editarCategoria(c) {
+  catEditando = c.nombre;
+  $('cat-nombre').value = c.nombre;
+  $('cat-nombre').disabled = c.nombre === CATEGORIA_FIJA;
+  fijarSelectores('cat', c.icono, c.color);
+  $('cat-form-titulo').textContent = 'Editar categoría';
+  $('cat-guardar').textContent = 'Guardar cambios';
+  $('cat-cancelar').classList.remove('hidden');
+  $('cat-form').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
+}
+
+function categoriasCambiadas() {
+  guardarCategorias();
+  poblarCategorias();
+  render();
+  renderVista();
+}
+
+function moverCategoriaEnSim(de, a) {
+  for (const mapa of [sim.ajustes, sim.bases]) {
+    if (a && de in mapa) mapa[a] = mapa[de];
+    delete mapa[de];
+  }
+  guardarSim();
+}
+
+function guardarCategoriaForm(e) {
+  e.preventDefault();
+  const nueva = categoriaValida({ nombre: $('cat-nombre').value, icono: valorSelector('cat', 'icono'), color: valorSelector('cat', 'color') });
+  if (!nueva) return;
+  if (categorias.some((x) => x.nombre !== catEditando && x.nombre.toLowerCase() === nueva.nombre.toLowerCase())) {
+    mensajeDatos('Ya tienes una categoría con ese nombre.', true);
+    return;
+  }
+  if (catEditando) {
+    Object.assign(categorias.find((x) => x.nombre === catEditando), nueva);
+    if (nueva.nombre !== catEditando) {
+      for (const g of gastos) if (g.categoria === catEditando) g.categoria = nueva.nombre;
+      moverCategoriaEnSim(catEditando, nueva.nombre);
+      guardar();
+    }
+    mensajeDatos('Categoría actualizada.');
+  } else {
+    categorias.push(nueva);
+    mensajeDatos(`Categoría ${nueva.nombre} creada.`);
+  }
+  salirEdicionCategoria();
+  categoriasCambiadas();
+}
+
+function eliminarCategoria(c) {
+  categorias = categorias.filter((x) => x !== c);
+  let n = 0;
+  for (const g of gastos) if (g.categoria === c.nombre) { g.categoria = CATEGORIA_FIJA; n++; }
+  moverCategoriaEnSim(c.nombre, null);
+  if (n) guardar();
+  if (catEditando === c.nombre) salirEdicionCategoria();
+  mensajeDatos(`Categoría ${c.nombre} eliminada.` + (n ? ` Sus gastos pasaron a ${CATEGORIA_FIJA}.` : ''));
+  categoriasCambiadas();
+}
+
+function renderCategorias() {
+  $('cat-lista').replaceChildren(...categorias.map((c) => {
+    const fila = document.createElement('div');
+    fila.className = 'fila-categoria';
+    const acciones = document.createElement('div');
+    acciones.append(boton('Editar', `Editar ${c.nombre}`, () => editarCategoria(c)));
+    if (c.nombre !== CATEGORIA_FIJA) acciones.append(botonEliminar(`Eliminar ${c.nombre}`, () => eliminarCategoria(c)));
+    const chip = etiquetaCategoria(c.nombre);
+    fila.append(chip, acciones);
+    return fila;
+  }));
+}
+
+// ---- Ajustes por secciones ----
+let ajusteActual = 'cuenta';
+function abrirAjuste(nombre) {
+  ajusteActual = nombre;
+  renderAjustes();
+}
+
+function renderAjustes() {
+  for (const b of document.querySelectorAll('.ajustes-menu button')) {
+    if (b.dataset.ajuste === ajusteActual) b.setAttribute('aria-current', 'true');
+    else b.removeAttribute('aria-current');
+  }
+  for (const nombre of ['cuenta', 'apariencia', 'categorias', 'datos']) $('aj-' + nombre).classList.toggle('activo', nombre === ajusteActual);
+  if (ajusteActual === 'categorias') renderCategorias();
+}
+
+async function guardarNombreCuenta(e) {
+  e.preventDefault();
+  const nombre = $('aj-nombre').value.trim();
+  if (!sesion || !nombre) return;
+  try {
+    const usuario = await api('/auth/v1/user', { metodo: 'PUT', cuerpo: { data: { full_name: nombre } } });
+    sesion.usuario.nombre = nombreDe(usuario) || nombre;
+    escribirJSON(CLAVE_SESION, sesion);
+    $('aj-nombre').blur();
+    pintarCuenta();
+    mensajeDatos('Nombre actualizado.');
+  } catch (err) {
+    mensajeDatos(ERRORES_ACCESO[err.codigo] || err.message, true);
+  }
+}
+
+// ---- Deudas y metas ----
+const TIPOS_DEUDA = { prestamo: 'Préstamo', persona: 'A una persona', otro: 'Otra' };
+const ICONOS_DEUDA = { prestamo: 'banco', persona: 'persona', otro: 'otros' };
+let deuEditandoId = null, deuSeleccion = null, metEditandoId = null, metSeleccion = null;
+
+const idValido = (x) => (esUUID(x?.id) ? x.id : nuevoId());
+const fechaValida = (f) => /^\d{4}-\d{2}-\d{2}$/.test(f);
+const deudaDe = (id) => deudas.find((x) => x.id === id);
+const metaDe = (id) => metas.find((x) => x.id === id);
+
+function deudaValida(d) {
+  const nombre = typeof d?.nombre === 'string' ? d.nombre.trim().slice(0, 40) : '';
+  const monto = redondear(Number(d?.monto));
+  if (!nombre || !(monto > 0) || !fechaValida(d.fecha)) return null;
+  return { id: idValido(d), nombre, tipo: d.tipo in TIPOS_DEUDA ? d.tipo : 'otro', moneda: d.moneda === 'USD' ? 'USD' : 'PEN', monto, fecha: d.fecha };
+}
+
+function abonoValido(a) {
+  const importe = redondear(Number(a?.importe));
+  if (!deudaDe(a?.deuda) || !(importe > 0) || !fechaValida(a.fecha)) return null;
+  return { id: idValido(a), deuda: a.deuda, fecha: a.fecha, importe };
+}
+
+function metaValida(m) {
+  const nombre = typeof m?.nombre === 'string' ? m.nombre.trim().slice(0, 40) : '';
+  const objetivo = redondear(Number(m?.objetivo));
+  if (!nombre || !(objetivo > 0)) return null;
+  return {
+    id: idValido(m), nombre, icono: m.icono in ICONOS ? m.icono : 'meta', color: COLORES.includes(m.color) ? m.color : 'azul',
+    moneda: m.moneda === 'USD' ? 'USD' : 'PEN', objetivo, limite: fechaValida(m.limite) ? m.limite : null,
+  };
+}
+
+function aporteValido(a) {
+  const importe = redondear(Number(a?.importe));
+  if (!metaDe(a?.meta) || !importe || !fechaValida(a.fecha)) return null;
+  return { id: idValido(a), meta: a.meta, fecha: a.fecha, importe };
+}
+
+// Va después de cargar el resto: las listas guardadas se validan en orden, padres primero
+function cargarObjetivos() {
+  const lista = (clave, valida) => {
+    const datos = leerJSON(clave, []);
+    return Array.isArray(datos) ? datos.map(valida).filter(Boolean) : [];
+  };
+  categorias = normalizarCategorias(leerJSON(CLAVE_CATEGORIAS, null));
+  deudas = lista(CLAVE_DEUDAS, deudaValida);
+  abonos = lista(CLAVE_ABONOS, abonoValido);
+  metas = lista(CLAVE_METAS, metaValida);
+  aportes = lista(CLAVE_APORTES, aporteValido);
+}
+
+function guardarDeudas() {
+  escribirJSON(CLAVE_DEUDAS, deudas);
+  escribirJSON(CLAVE_ABONOS, abonos);
+  programarSync();
+}
+
+function guardarMetas() {
+  escribirJSON(CLAVE_METAS, metas);
+  escribirJSON(CLAVE_APORTES, aportes);
+  programarSync();
+}
+
+function avisar(id, texto, error = false) {
+  const el = $(id);
+  el.textContent = texto;
+  el.classList.toggle('error', error);
+  el.classList.toggle('hidden', !texto);
+}
+
+// Eliminar en dos clics: se cancela solo a los 3 s
+function botonEliminar(titulo, alConfirmar) {
+  const b = boton('Eliminar', titulo, () => {
+    if (b.classList.contains('confirmar')) return alConfirmar();
+    b.classList.add('confirmar');
+    b.textContent = '¿Eliminar?';
+    setTimeout(() => {
+      b.classList.remove('confirmar');
+      b.textContent = 'Eliminar';
+    }, 3000);
+  });
+  return b;
+}
+
+// Dólares a soles: la deuda a la venta (lo que cuesta pagarla), lo ahorrado a la compra (lo que vale)
+function aSoles(importe, moneda, fecha, lado) {
+  if (moneda !== 'USD') return importe;
+  const tc = tasaPara(null, fecha, lado);
+  return tc ? importe * tc : 0;
+}
+
+function abonoEnSoles(a) {
+  return aSoles(a.importe, deudaDe(a.deuda)?.moneda, a.fecha, 'venta');
+}
+
+function barraProgreso(fraccion) {
+  const pista = document.createElement('div');
+  pista.className = 'progreso';
+  const barra = document.createElement('div');
+  barra.style.width = Math.min(100, Math.max(0, fraccion * 100)) + '%';
+  pista.append(barra);
+  return pista;
+}
+
+function filaObjetivo({ icono, nombre, sub, monto, fraccion, acciones, elegido }) {
+  const fila = document.createElement('div');
+  fila.className = 'objetivo' + (elegido ? ' elegido' : '');
+  const textos = document.createElement('div');
+  const n = document.createElement('div');
+  n.className = 'objetivo-nombre';
+  n.textContent = nombre;
+  const s = document.createElement('div');
+  s.className = 'objetivo-sub';
+  s.textContent = sub;
+  textos.append(n, s);
+  const m = document.createElement('div');
+  m.className = 'objetivo-monto';
+  m.textContent = monto;
+  fila.append(icono, textos, m);
+  if (fraccion !== null) fila.append(barraProgreso(fraccion));
+  const caja = document.createElement('div');
+  caja.className = 'objetivo-acciones';
+  caja.append(...acciones);
+  fila.append(caja);
+  return fila;
+}
+
+function vacio(texto) {
+  const v = document.createElement('div');
+  v.className = 'vacio';
+  v.textContent = texto;
+  return v;
+}
+
+const porFechaDesc = (a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0);
+
+// Deudas
+function abonosDe(d) {
+  return abonos.filter((a) => a.deuda === d.id);
+}
+
+function pendienteDeuda(d) {
+  return redondear(d.monto - abonosDe(d).reduce((s, a) => s + a.importe, 0));
+}
+
+function deudaDeTarjeta(t) {
+  const d = montos();
+  for (const g of gastos) if (g.medio === t.id) d[g.moneda] += g.importe;
+  for (const p of pagosDe(t)) d[p.moneda] -= p.importe;
+  return { PEN: redondear(d.PEN), USD: redondear(d.USD) };
+}
+
+function salirEdicionDeuda() {
+  deuEditandoId = null;
+  $('deu-form').reset();
+  $('deu-fecha').value = hoyISO();
+  $('deu-form-titulo').textContent = 'Nueva deuda';
+  $('deu-guardar').textContent = 'Añadir deuda';
+  $('deu-cancelar').classList.add('hidden');
+}
+
+function editarDeuda(d) {
+  deuEditandoId = d.id;
+  $('deu-nombre').value = d.nombre;
+  $('deu-tipo').value = d.tipo;
+  $('deu-monto').value = d.monto;
+  $('deu-moneda').value = d.moneda;
+  $('deu-fecha').value = d.fecha;
+  $('deu-form-titulo').textContent = 'Editar deuda';
+  $('deu-guardar').textContent = 'Guardar cambios';
+  $('deu-cancelar').classList.remove('hidden');
+  $('deu-form').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
+}
+
+function renderDeudas() {
+  const hoy = hoyISO();
+  let enTarjetas = 0, enOtras = 0, sinTasa = false;
+  const lista = $('deu-lista');
+  lista.replaceChildren();
+
+  for (const t of tarjetas) {
+    const d = deudaDeTarjeta(t);
+    if (d.PEN <= 0 && d.USD <= 0) continue;
+    const tc = tasaPara(t.banco, hoy, 'venta');
+    if (d.USD > 0 && !tc) sinTasa = true;
+    enTarjetas += Math.max(0, d.PEN) + Math.max(0, d.USD) * (tc || 0);
+    const ver = boton('Ver tarjeta', `Ver ${t.nombre}`, () => {
+      tarSeleccion = t.id;
+      location.hash = 'tarjeta';
+    });
+    lista.append(filaObjetivo({ icono: iconoCategoria('tarjeta', 'azul'), nombre: t.nombre, sub: 'Tarjeta', monto: textoDeuda(d), fraccion: null, acciones: [ver] }));
+  }
+
+  for (const d of deudas) {
+    const pendiente = pendienteDeuda(d);
+    if (d.moneda === 'USD' && pendiente > 0 && !tasaPara(null, hoy, 'venta')) sinTasa = true;
+    enOtras += aSoles(Math.max(0, pendiente), d.moneda, hoy, 'venta');
+    lista.append(filaObjetivo({
+      icono: iconoCategoria(ICONOS_DEUDA[d.tipo], pendiente > 0 ? 'naranja' : 'verde'),
+      nombre: d.nombre,
+      sub: `${TIPOS_DEUDA[d.tipo]} · de ${dinero(d.monto, d.moneda)}`,
+      monto: pendiente > 0 ? dinero(pendiente, d.moneda) : 'Pagada',
+      fraccion: 1 - pendiente / d.monto,
+      elegido: deuSeleccion === d.id,
+      acciones: [
+        boton('Abonar', `Abonar a ${d.nombre}`, () => {
+          deuSeleccion = d.id;
+          renderDeudas();
+          $('deu-detalle').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
+          $('abo-importe').focus();
+        }),
+        boton('Editar', `Editar ${d.nombre}`, () => editarDeuda(d)),
+        botonEliminar(`Eliminar ${d.nombre}`, () => {
+          deudas = deudas.filter((x) => x !== d);
+          abonos = abonos.filter((a) => a.deuda !== d.id);
+          if (deuEditandoId === d.id) salirEdicionDeuda();
+          guardarDeudas();
+          render();
+          renderDeudas();
+        }),
+      ],
+    }));
+  }
+  if (!lista.children.length) lista.append(vacio('No tienes deudas registradas.'));
+
+  $('deu-total').textContent = soles.format(enTarjetas + enOtras);
+  $('deu-total-sub').textContent = sinTasa ? 'Sin tipo de cambio: faltan los dólares' : 'Dólares a la venta de hoy';
+  $('deu-tarjetas').textContent = soles.format(enTarjetas);
+  $('deu-otras').textContent = soles.format(enOtras);
+
+  const elegida = deudaDe(deuSeleccion);
+  $('deu-detalle').classList.toggle('hidden', !elegida);
+  if (!elegida) return;
+  const pendiente = pendienteDeuda(elegida);
+  $('deu-det-titulo').textContent = `Abonos a ${elegida.nombre}`;
+  $('abo-etiqueta').textContent = `Abono (${elegida.moneda === 'USD' ? 'US$' : 'S/'}, quedan ${dinero(pendiente, elegida.moneda)})`;
+  if (!$('abo-fecha').value) $('abo-fecha').value = hoy;
+  const tbody = $('abo-lista');
+  tbody.replaceChildren();
+  for (const a of abonosDe(elegida).sort(porFechaDesc)) {
+    const tr = document.createElement('tr');
+    celda(tr, 'Fecha', formatearFecha(a.fecha), 'fecha');
+    celda(tr, 'Abono', dinero(a.importe, elegida.moneda), 'num');
+    celda(tr, '', botonEliminar('Eliminar abono', () => {
+      abonos = abonos.filter((x) => x !== a);
+      guardarDeudas();
+      render();
+      renderDeudas();
+    }), 'acciones');
+    tbody.append(tr);
+  }
+}
+
+// Metas
+function aportesDe(m) {
+  return aportes.filter((a) => a.meta === m.id);
+}
+
+function guardadoEnMeta(m) {
+  return redondear(aportesDe(m).reduce((s, a) => s + a.importe, 0));
+}
+
+function salirEdicionMeta() {
+  metEditandoId = null;
+  $('met-form').reset();
+  fijarSelectores('met', 'meta', 'azul');
+  $('met-form-titulo').textContent = 'Nueva meta';
+  $('met-guardar').textContent = 'Añadir meta';
+  $('met-cancelar').classList.add('hidden');
+}
+
+function editarMeta(m) {
+  metEditandoId = m.id;
+  $('met-nombre').value = m.nombre;
+  $('met-objetivo').value = m.objetivo;
+  $('met-moneda').value = m.moneda;
+  $('met-limite').value = m.limite || '';
+  fijarSelectores('met', m.icono, m.color);
+  $('met-form-titulo').textContent = 'Editar meta';
+  $('met-guardar').textContent = 'Guardar cambios';
+  $('met-cancelar').classList.remove('hidden');
+  $('met-form').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
+}
+
+function renderAhorro() {
+  const hoy = hoyISO();
+  const mes = cifrasPeriodo(hoy.slice(0, 8) + '01', hoy).ahorro;
+  const acumulado = cifrasPeriodo('0000-01-01', hoy).ahorro;
+  let enMetas = 0;
+  const lista = $('met-lista');
+  lista.replaceChildren();
+  for (const m of metas) {
+    const guardado = guardadoEnMeta(m);
+    enMetas += aSoles(guardado, m.moneda, hoy, 'compra');
+    const falta = redondear(m.objetivo - guardado);
+    let sub = falta > 0 ? `Faltan ${dinero(falta, m.moneda)}` : 'Meta cumplida';
+    if (falta > 0 && m.limite) {
+      const dias = diasHasta(m.limite);
+      sub += dias < 0 ? ` · venció el ${fechaCorta(m.limite)}`
+        : ` · ${dinero(falta / Math.max(1, Math.ceil(dias / 30.44)), m.moneda)} al mes hasta el ${fechaCorta(m.limite)}`;
+    }
+    lista.append(filaObjetivo({
+      icono: iconoCategoria(m.icono, m.color),
+      nombre: m.nombre,
+      sub,
+      monto: `${dinero(guardado, m.moneda)} de ${dinero(m.objetivo, m.moneda)}`,
+      fraccion: guardado / m.objetivo,
+      elegido: metSeleccion === m.id,
+      acciones: [
+        boton('Aportar', `Aportar a ${m.nombre}`, () => {
+          metSeleccion = m.id;
+          renderAhorro();
+          $('met-detalle').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
+          $('apo-importe').focus();
+        }),
+        boton('Editar', `Editar ${m.nombre}`, () => editarMeta(m)),
+        botonEliminar(`Eliminar ${m.nombre}`, () => {
+          metas = metas.filter((x) => x !== m);
+          aportes = aportes.filter((a) => a.meta !== m.id);
+          if (metEditandoId === m.id) salirEdicionMeta();
+          guardarMetas();
+          renderAhorro();
+        }),
+      ],
+    }));
+  }
+  if (!metas.length) lista.append(vacio('Crea tu primera meta de ahorro.'));
+
+  const libre = redondear(acumulado - enMetas);
+  $('aho-mes').textContent = soles.format(mes);
+  $('aho-metas').textContent = soles.format(enMetas);
+  $('aho-metas-sub').textContent = `${metas.length} ${metas.length === 1 ? 'meta' : 'metas'}`;
+  $('aho-libre').textContent = soles.format(libre);
+  $('aho-libre-sub').textContent = libre < 0 ? 'Separaste más de lo que has ahorrado' : `Ahorro total: ${soles.format(acumulado)}`;
+
+  const elegida = metaDe(metSeleccion);
+  $('met-detalle').classList.toggle('hidden', !elegida);
+  if (!elegida) return;
+  $('met-det-titulo').textContent = `Movimientos de ${elegida.nombre}`;
+  $('apo-etiqueta').textContent = `Importe (${elegida.moneda === 'USD' ? 'US$' : 'S/'})`;
+  if (!$('apo-fecha').value) $('apo-fecha').value = hoy;
+  const tbody = $('apo-lista');
+  tbody.replaceChildren();
+  for (const a of aportesDe(elegida).sort(porFechaDesc)) {
+    const tr = document.createElement('tr');
+    celda(tr, 'Fecha', formatearFecha(a.fecha), 'fecha');
+    celda(tr, 'Movimiento', a.importe > 0 ? 'Aporte' : 'Retiro');
+    celda(tr, 'Importe', dinero(Math.abs(a.importe), elegida.moneda), 'num');
+    celda(tr, '', botonEliminar('Eliminar movimiento', () => {
+      aportes = aportes.filter((x) => x !== a);
+      guardarMetas();
+      renderAhorro();
+    }), 'acciones');
+    tbody.append(tr);
+  }
+}
+
+$('deu-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const d = deudaValida({
+    id: deuEditandoId || nuevoId(), nombre: $('deu-nombre').value, tipo: $('deu-tipo').value,
+    moneda: $('deu-moneda').value, monto: $('deu-monto').value, fecha: $('deu-fecha').value,
+  });
+  if (!d) return avisar('deu-msg', 'Revisa los datos de la deuda.', true);
+  const actual = deudaDe(deuEditandoId);
+  if (actual) {
+    const abonado = redondear(actual.monto - pendienteDeuda(actual));
+    if (d.monto < abonado) return avisar('deu-msg', `Ya abonaste ${dinero(abonado, actual.moneda)}: el monto no puede ser menor.`, true);
+    Object.assign(actual, d);
+  } else {
+    deudas.push(d);
+  }
+  avisar('deu-msg', '');
+  salirEdicionDeuda();
+  guardarDeudas();
+  render();
+  renderDeudas();
+});
+$('deu-cancelar').addEventListener('click', salirEdicionDeuda);
+
+$('abo-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const d = deudaDe(deuSeleccion);
+  const a = abonoValido({ id: nuevoId(), deuda: deuSeleccion, fecha: $('abo-fecha').value, importe: $('abo-importe').value });
+  if (!d || !a) return avisar('deu-msg', 'Revisa la fecha y el importe.', true);
+  const pendiente = pendienteDeuda(d);
+  if (a.importe > pendiente) return avisar('deu-msg', `Solo quedan ${dinero(pendiente, d.moneda)} por pagar.`, true);
+  abonos.push(a);
+  avisar('deu-msg', '');
+  $('abo-importe').value = '';
+  guardarDeudas();
+  render();
+  renderDeudas();
+});
+
+$('met-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const m = metaValida({
+    id: metEditandoId || nuevoId(), nombre: $('met-nombre').value, icono: valorSelector('met', 'icono'), color: valorSelector('met', 'color'),
+    moneda: $('met-moneda').value, objetivo: $('met-objetivo').value, limite: $('met-limite').value,
+  });
+  if (!m) return avisar('aho-msg', 'Revisa los datos de la meta.', true);
+  const actual = metaDe(metEditandoId);
+  if (actual) Object.assign(actual, m);
+  else metas.push(m);
+  avisar('aho-msg', '');
+  salirEdicionMeta();
+  guardarMetas();
+  renderAhorro();
+});
+$('met-cancelar').addEventListener('click', salirEdicionMeta);
+
+$('apo-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const m = metaDe(metSeleccion);
+  const retiro = $('apo-tipo').value === 'retiro';
+  const importe = redondear(parseFloat($('apo-importe').value));
+  const a = aporteValido({ id: nuevoId(), meta: metSeleccion, fecha: $('apo-fecha').value, importe: retiro ? -importe : importe });
+  if (!m || !a || !(importe > 0)) return avisar('aho-msg', 'Revisa la fecha y el importe.', true);
+  const guardado = guardadoEnMeta(m);
+  if (retiro && importe > guardado) return avisar('aho-msg', `Solo tienes ${dinero(guardado, m.moneda)} en esta meta.`, true);
+  aportes.push(a);
+  avisar('aho-msg', '');
+  $('apo-importe').value = '';
+  guardarMetas();
+  renderAhorro();
+});
+
+// Ajustes
+for (const b of document.querySelectorAll('.ajustes-menu button')) b.addEventListener('click', () => abrirAjuste(b.dataset.ajuste));
+$('ir-categorias').addEventListener('click', () => { ajusteActual = 'categorias'; });
+$('cat-form').addEventListener('submit', guardarCategoriaForm);
+$('cat-cancelar').addEventListener('click', salirEdicionCategoria);
+$('cuenta-form').addEventListener('submit', guardarNombreCuenta);
+$('aj-entrar').addEventListener('click', () => mostrarAcceso());
+$('aj-inicio').replaceChildren(...VISTAS.map((v) => new Option(NOMBRES_VISTAS[v], v)));
+try { $('aj-inicio').value = VISTAS.includes(localStorage.getItem(CLAVE_INICIO)) ? localStorage.getItem(CLAVE_INICIO) : 'gastos'; } catch {}
+$('aj-inicio').addEventListener('change', () => {
+  try { localStorage.setItem(CLAVE_INICIO, $('aj-inicio').value); } catch {}
+});
+crearSelectores('cat');
+crearSelectores('met');
 
 // ---- Eventos ----
 form.addEventListener('submit', (e) => {
@@ -2806,8 +3727,8 @@ $('tc-form').addEventListener('submit', (e) => {
 
 // Cuenta: iniciar / cerrar sesión, reintentar la sincronización
 $('btn-cuenta').addEventListener('click', () => (sesion ? cerrarSesion() : mostrarAcceso()));
-$('sync-estado').addEventListener('click', () => {
-  if (!sesion) return;
+$('sync-reintentar').addEventListener('click', () => {
+  if (!sesion) return mostrarAcceso();
   if (nubeLista) sincronizar();
   else iniciarNube();
 });
@@ -2878,6 +3799,17 @@ addEventListener('online', () => {
   else iniciarNube();
 });
 
+$('btn-menu').addEventListener('click', () => alternarMenu(true));
+$('btn-ocultar').addEventListener('click', () => alternarMenu(false));
+$('menu-fondo').addEventListener('click', cerrarMenuMovil);
+document.querySelector('.barra-nav').addEventListener('click', cerrarMenuMovil);
+addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarMenuMovil(); });
+pantallaMovil.addEventListener('change', () => {
+  document.body.classList.remove('menu-abierto');
+  $('contenido').inert = false;
+  $('btn-menu').setAttribute('aria-expanded', 'false');
+});
+
 // Al volver a la pestaña o a la ventana se trae lo cambiado en otros dispositivos
 document.addEventListener('visibilitychange', actualizarDesdeNube);
 addEventListener('focus', actualizarDesdeNube);
@@ -2904,7 +3836,7 @@ addEventListener('storage', (e) => {
     for (const r of document.querySelectorAll('input[name="paleta"]')) r.checked = r.value === (e.newValue || 'azul');
     renderVista();
   }
-  if (![CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_TC, CLAVE_SIM, CLAVE_SINCRONIZADO].includes(e.key)) return;
+  if (![CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_TC, CLAVE_SIM, CLAVE_CATEGORIAS, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO].includes(e.key)) return;
   // Un guardado puede tocar varias claves seguidas: se repinta una sola vez
   clearTimeout(esperaPestana);
   esperaPestana = setTimeout(() => {
@@ -2996,10 +3928,6 @@ pintarBotonTema();
 for (const r of document.querySelectorAll('input[name="paleta"]')) {
   r.checked = r.value === (document.documentElement.dataset.paleta || 'azul');
 }
-for (const c of CATEGORIAS) {
-  $('categoria').add(new Option(c, c));
-  $('filtro-categoria').add(new Option(c, c));
-}
 const fechaHoy = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 $('hoy').textContent = fechaHoy.charAt(0).toUpperCase() + fechaHoy.slice(1);
 $('fecha').value = hoyISO();
@@ -3018,7 +3946,12 @@ cargarPagos(); // después de tarjetas y gastos: migra los ciclos marcados como 
 normalizarIds();
 poblarMedios();
 cargarSim();
-crearFilasSim();
+cargarObjetivos();
+poblarCategorias();
+salirEdicion();
+salirEdicionDeuda();
+salirEdicionMeta();
+salirEdicionCategoria();
 render();
 mostrarVista();
 
@@ -3051,3 +3984,4 @@ pintarCuenta();
   if (location.protocol === 'file:') avisoNube(ERRORES_ACCESO.archivo);
 })();
 cargarBCRP();
+appIniciada = true;
