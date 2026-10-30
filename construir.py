@@ -1,12 +1,17 @@
-"""Prepara la carpeta public/ que publica Cloudflare Pages (comando de compilación: python3 construir.py).
+"""Prepara lo que publica Cloudflare (comando de compilación: python3 construir.py).
 
 - public/index.html: la web.
-- public/_headers: cabeceras de seguridad. La Content-Security-Policy solo permite los scripts de la
-  propia página (por su hash SHA-256) y conexiones a su mismo dominio (/api), así que un script
-  inyectado o una conexión a otro servidor no se ejecutarían.
+- trabajador/cabeceras.js: cabeceras de seguridad que el Worker (trabajador/index.js) añade a la web.
+- public/_headers: las mismas cabeceras en el formato de archivo _headers (lo usa el servidor de
+  pruebas pruebas/supabase_falso.py para imitar lo publicado).
+
+La Content-Security-Policy solo permite los scripts de la propia página (por su hash SHA-256) y
+conexiones a su mismo dominio (/api), así que un script inyectado o una conexión a otro servidor
+no se ejecutarían.
 """
 import base64
 import hashlib
+import json
 import pathlib
 import re
 
@@ -29,17 +34,22 @@ politica = '; '.join([
     "frame-ancestors 'none'",            # nadie puede incrustar la web en otra página
 ])
 
-cabeceras = f"""/*
-  Content-Security-Policy: {politica}
-  X-Content-Type-Options: nosniff
-  Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
-  Strict-Transport-Security: max-age=31536000; includeSubDomains
-  Cross-Origin-Opener-Policy: same-origin
-"""
+cabeceras = {
+    'Content-Security-Policy': politica,
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'Cross-Origin-Opener-Policy': 'same-origin',
+}
 
 salida = RAIZ / 'public'
 salida.mkdir(exist_ok=True)
 (salida / 'index.html').write_bytes(html)
-(salida / '_headers').write_text(cabeceras, encoding='utf-8', newline='\n')
-print(f'public/ listo: {len(scripts)} scripts con hash en la Content-Security-Policy')
+(salida / '_headers').write_text('/*\n' + ''.join(f'  {k}: {v}\n' for k, v in cabeceras.items()),
+                                 encoding='utf-8', newline='\n')
+(RAIZ / 'trabajador' / 'cabeceras.js').write_text(
+    '// Generado por construir.py: no editar a mano.\n'
+    f'export const CABECERAS_SEGURIDAD = {json.dumps(cabeceras, indent=2, ensure_ascii=False)};\n',
+    encoding='utf-8', newline='\n')
+print(f'Listo: public/ y trabajador/cabeceras.js ({len(scripts)} scripts con hash en la Content-Security-Policy)')

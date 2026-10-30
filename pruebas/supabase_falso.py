@@ -11,6 +11,7 @@ Las cuentas y datos de prueba se guardan en pruebas/supabase_falso_estado.json (
 - /api/rest/v1/<tabla>: GET (select=*, order, limit, offset), POST (upsert), DELETE (id=in.(...)),
   filtrando por usuario como Row Level Security; /api/rest/v1/tipos_cambio_bcrp es pública
 - /__estado vuelca las tablas; /__caida?activa=1 simula que el servidor no responde (503)
+- /trabajador/<archivo>.js sirve el código del Worker para probarlo en el navegador con import()
 """
 import base64
 import hashlib
@@ -124,6 +125,10 @@ class Manejador(BaseHTTPRequestHandler):
         ruta = url.path
         if ruta in ('/', '/index.html', '/finanzas.html'):
             return self.responder(200, ARCHIVO_HTML.read_bytes(), 'text/html; charset=utf-8', cabeceras_publicadas())
+        if re.fullmatch(r'/trabajador/[a-z_]+\.js', ruta):
+            archivo = pathlib.Path(__file__).resolve().parent.parent / ruta.lstrip('/')
+            if archivo.exists():
+                return self.responder(200, archivo.read_bytes(), 'text/javascript; charset=utf-8')
         if ruta == '/__estado':
             return self.responder(200, {"usuarios": list(usuarios), "tablas": {t: list(v.values()) for t, v in tablas.items()}})
         if ruta == '/__caida':

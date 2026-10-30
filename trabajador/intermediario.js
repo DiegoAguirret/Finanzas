@@ -1,7 +1,7 @@
-// Intermediario /api/* → Supabase (Cloudflare Pages Functions).
-// La web nunca conoce la URL ni la clave del proyecto: viven en variables de entorno de Cloudflare
-// (Settings → Variables and Secrets): SUPABASE_URL y SUPABASE_CLAVE (clave publishable).
-// Solo se reenvían las rutas y cabeceras que usa la web; el resto responde 404.
+// Intermediario /api/* → Supabase. La web nunca conoce la URL ni la clave del proyecto: viven en
+// variables de Cloudflare (Worker → Settings → Variables and Secrets): SUPABASE_URL y SUPABASE_CLAVE
+// (clave publishable). Solo se reenvían las rutas y cabeceras que usa la web; el resto responde 404.
+// Las mismas reglas están en pruebas/proxy_local.py: si se añade una ruta, añadirla en los dos.
 
 const RUTAS = [
   /^auth\/v1\/(signup|token|logout|user|settings|authorize|recover)$/,
@@ -18,11 +18,11 @@ function respuestaJSON(estado, datos) {
   });
 }
 
-export async function onRequest({ request, env, params }) {
+// `ruta` es lo que va después de /api/ (por ejemplo 'rest/v1/gastos')
+export async function intermediario(request, env, ruta) {
   if (!env.SUPABASE_URL || !env.SUPABASE_CLAVE) {
     return respuestaJSON(500, { message: 'Falta configurar SUPABASE_URL y SUPABASE_CLAVE en Cloudflare.' });
   }
-  const ruta = [].concat(params.ruta || []).join('/');
   if (!METODOS.includes(request.method)) return respuestaJSON(405, { message: 'Método no permitido' });
   if (!RUTAS.some((r) => r.test(ruta))) return respuestaJSON(404, { message: 'Ruta no permitida' });
 
@@ -39,7 +39,7 @@ export async function onRequest({ request, env, params }) {
   const ip = request.headers.get('CF-Connecting-IP');
   if (ip) cabeceras.set('X-Forwarded-For', ip);
 
-  const destino = env.SUPABASE_URL.replace(/\/+$/, '') + '/' + ruta + new URL(request.url).search;
+  const destino = env.SUPABASE_URL.trim().replace(/\/+$/, '') + '/' + ruta + new URL(request.url).search;
   let respuesta;
   try {
     respuesta = await fetch(destino, {

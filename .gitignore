@@ -8,3 +8,5 @@ Thumbs.db
 .DS_Store
 # Carpeta que genera Cloudflare Pages al publicar
 public/
+# Generado por construir.py en cada publicación
+trabajador/cabeceras.js
