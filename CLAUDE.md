@@ -62,7 +62,8 @@ Repositorio git **privado** en GitHub (`DiegoAguirret/Finanzas`), publicado como
   - copia de otra cuenta → se borra; misma cuenta con cambios sin subir → se suben primero;
   - copia sin dueño (datos de antes o del modo sin cuenta) → se **unen** con la nube y se suben;
   - luego descarga todo (`descargarDeLaNube()` / `aplicarNube()`).
-  Cerrar sesión borra la copia local (`borrarCopiaLocal()`). Sin conexión, el estado muestra «⚠️ Sin guardar · reintentar» y se reintenta solo (`online` y cada 30 s).
+  **Varias pestañas**: el evento `storage` avisa a las demás, que releen con `recargarDeLocal()` (nunca escribe) y repintan; entrar o salir recarga las otras. `conCandado()` (Web Locks) deja a una sola pestaña subir o aplicar descargas (`CANDADO_SYNC`) y renovar el token (`CANDADO_SESION`); `subirCambios()` parte siempre de lo guardado en `localStorage`. Conflictos: gana el último guardado de cada fila. Al volver a la pestaña, `actualizarDesdeNube()` trae lo de otros dispositivos (máximo una vez por minuto; si hay cambios sin subir, los sube primero y no los pisa).
+  Cerrar sesión borra la copia local (`borrarCopiaLocal()`). Sin conexión, el estado muestra «Sin guardar · reintentar» y se reintenta solo (`online` y cada 30 s).
 
 **Moneda y tipo de cambio**: todos los totales son en soles; `sumar()` usa `enSoles(x)`. Gastos en dólares → **venta** del banco de la tarjeta con que se pagó (`tasaPara(banco, fecha, lado)`; si el banco no tiene tasa, BCRP); ingresos en dólares → **compra**. `tasa()` toma el último tipo de cambio hasta esa fecha. Sin ningún tipo de cambio, los dólares no suman y `#aviso-tc` lo avisa. `cargarBCRP()` solo lee `tipos_cambio_bcrp` (público, también sin sesión); la actualiza `pg_cron`.
 

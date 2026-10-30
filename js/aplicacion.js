@@ -320,13 +320,28 @@ let sincronizando = false, otraVez = false, errorSync = null, esperaSync = null,
 let accesoModo = 'entrar'; // entrar | registro | recuperar | nueva-clave
 let modoPintado = null;
 let confirmandoSalida = false;
+let escrituraFallida = false;  // localStorage no aceptó el último guardado: la memoria es lo más reciente
+let ultimaDescarga = 0;        // cuándo se trajo la nube por última vez (ms)
+const ESPERA_DESCARGA = 60000; // al volver a la pestaña se consulta la nube como mucho una vez por minuto
+const CANDADO_SYNC = 'finanzas.sync', CANDADO_SESION = 'finanzas.renovar';
+
+// Una sola pestaña a la vez en lo que hay dentro (solo hay Web Locks en https y localhost)
+function conCandado(nombre, fn) {
+  return navigator.locks ? navigator.locks.request(nombre, fn) : fn();
+}
 
 function leerJSON(clave, defecto) {
   try { return JSON.parse(localStorage.getItem(clave)) ?? defecto; } catch { return defecto; }
 }
 
 function escribirJSON(clave, valor) {
-  try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) { console.warn('No se pudo guardar en localStorage', e); }
+  try {
+    localStorage.setItem(clave, JSON.stringify(valor));
+    escrituraFallida = false;
+  } catch (e) {
+    escrituraFallida = true;
+    console.warn('No se pudo guardar en localStorage', e);
+  }
 }
 
 async function api(ruta, { metodo = 'GET', cuerpo, prefer, autenticado = true } = {}) {
@@ -387,8 +402,15 @@ async function actualizarPerfil() {
 // Renueva el token si vence en menos de un minuto (una sola renovación a la vez)
 async function renovarSesion() {
   if (!sesion || sesion.expira - Date.now() > 60000) return;
-  renovando ||= (async () => {
+  renovando ||= conCandado(CANDADO_SESION, async () => {
     try {
+      // Mientras se esperaba el candado, otra pestaña pudo haberla renovado
+      const guardada = leerJSON(CLAVE_SESION, null);
+      if (guardada?.usuario?.id === sesion?.usuario.id && guardada.expira - Date.now() > 60000) {
+        sesion = guardada;
+        return;
+      }
+      if (!sesion) return;
       const d = await api('/auth/v1/token?grant_type=refresh_token', {
         metodo: 'POST', cuerpo: { refresh_token: sesion.renovar }, autenticado: false,
       });
@@ -398,7 +420,7 @@ async function renovarSesion() {
     } finally {
       renovando = null;
     }
-  })();
+  });
   await renovando;
 }
 
@@ -573,6 +595,36 @@ function programarSync() {
   esperaSync = setTimeout(sincronizar, 400);
 }
 
+// Sube lo que difiere de lo confirmado por la nube. Parte de lo guardado en este navegador: otra
+// pestaña pudo haberlo cambiado hace un instante y, con datos viejos, se borrarían sus filas nuevas.
+async function subirCambios() {
+  recargarDeLocal();
+  const actuales = Object.fromEntries(ORDEN_TABLAS.map((t) => [t, filasDe(t)]));
+  for (const t of ORDEN_TABLAS) {
+    const previas = sincronizado[t] || {};
+    const subir = Object.entries(actuales[t]).filter(([id, j]) => previas[id] !== j).map(([, j]) => JSON.parse(j));
+    if (subir.length) {
+      await api(`/rest/v1/${t}?on_conflict=id`, { metodo: 'POST', cuerpo: subir, prefer: 'resolution=merge-duplicates,return=minimal' });
+    }
+  }
+  // Se borra en orden inverso: primero lo que usa las tarjetas
+  for (const t of [...ORDEN_TABLAS].reverse()) {
+    const borrar = Object.keys(sincronizado[t] || {}).filter((id) => !(id in actuales[t]));
+    if (borrar.length) await api(`/rest/v1/${t}?id=in.(${borrar.join(',')})`, { metodo: 'DELETE', prefer: 'return=minimal' });
+  }
+  const tcs = filasTiposCambio();
+  const tcNuevos = Object.entries(tcs).filter(([k, j]) => (sincronizado.tipos_cambio || {})[k] !== j).map(([, j]) => JSON.parse(j));
+  if (tcNuevos.length) {
+    await api('/rest/v1/tipos_cambio?on_conflict=usuario,banco,fecha', { metodo: 'POST', cuerpo: tcNuevos, prefer: 'resolution=merge-duplicates,return=minimal' });
+  }
+  const preferencias = JSON.stringify(sim);
+  if ((sincronizado.preferencias || {}).sim !== preferencias) {
+    await api('/rest/v1/preferencias?on_conflict=usuario', { metodo: 'POST', cuerpo: { simulacion: sim }, prefer: 'resolution=merge-duplicates,return=minimal' });
+  }
+  sincronizado = { ...actuales, tipos_cambio: tcs, preferencias: { sim: preferencias } };
+  escribirJSON(CLAVE_SINCRONIZADO, sincronizado);
+}
+
 async function sincronizar() {
   if (!sesion || !nubeLista) return;
   if (sincronizando) { otraVez = true; return; }
@@ -581,30 +633,7 @@ async function sincronizar() {
   errorSync = null;
   pintarCuenta();
   try {
-    const actuales = Object.fromEntries(ORDEN_TABLAS.map((t) => [t, filasDe(t)]));
-    for (const t of ORDEN_TABLAS) {
-      const previas = sincronizado[t] || {};
-      const subir = Object.entries(actuales[t]).filter(([id, j]) => previas[id] !== j).map(([, j]) => JSON.parse(j));
-      if (subir.length) {
-        await api(`/rest/v1/${t}?on_conflict=id`, { metodo: 'POST', cuerpo: subir, prefer: 'resolution=merge-duplicates,return=minimal' });
-      }
-    }
-    // Se borra en orden inverso: primero lo que usa las tarjetas
-    for (const t of [...ORDEN_TABLAS].reverse()) {
-      const borrar = Object.keys(sincronizado[t] || {}).filter((id) => !(id in actuales[t]));
-      if (borrar.length) await api(`/rest/v1/${t}?id=in.(${borrar.join(',')})`, { metodo: 'DELETE', prefer: 'return=minimal' });
-    }
-    const tcs = filasTiposCambio();
-    const tcNuevos = Object.entries(tcs).filter(([k, j]) => (sincronizado.tipos_cambio || {})[k] !== j).map(([, j]) => JSON.parse(j));
-    if (tcNuevos.length) {
-      await api('/rest/v1/tipos_cambio?on_conflict=usuario,banco,fecha', { metodo: 'POST', cuerpo: tcNuevos, prefer: 'resolution=merge-duplicates,return=minimal' });
-    }
-    const preferencias = JSON.stringify(sim);
-    if ((sincronizado.preferencias || {}).sim !== preferencias) {
-      await api('/rest/v1/preferencias?on_conflict=usuario', { metodo: 'POST', cuerpo: { simulacion: sim }, prefer: 'resolution=merge-duplicates,return=minimal' });
-    }
-    sincronizado = { ...actuales, tipos_cambio: tcs, preferencias: { sim: preferencias } };
-    escribirJSON(CLAVE_SINCRONIZADO, sincronizado);
+    await conCandado(CANDADO_SYNC, subirCambios);
   } catch (e) {
     errorSync = e;
     if (e.codigo === 'sin_sesion' || e.estado === 401) {
@@ -694,14 +723,23 @@ async function iniciarNube() {
       if (errorSync) throw errorSync;
     }
     const unir = !dueno && [tarjetas, gastos, ingresos, pagos].some((l) => l.length);
-    const nube = await descargarDeLaNube();
-    const nubeVacia = ORDEN_TABLAS.every((t) => !nube[t].length);
-    aplicarNube(nube, unir);
+    let nubeVacia = false;
+    await conCandado(CANDADO_SYNC, async () => {
+      const nube = await descargarDeLaNube();
+      nubeVacia = ORDEN_TABLAS.every((t) => !nube[t].length);
+      if (dueno === id) {
+        // Otra pestaña guardó mientras se descargaba: lo suyo se sube primero y no se pisa
+        recargarDeLocal();
+        if (hayCambiosSinSubir()) { nubeLista = true; return; }
+      }
+      aplicarNube(nube, unir);
+      escribirJSON(CLAVE_DUENO, id);
+      escribirJSON(CLAVE_SINCRONIZADO, sincronizado);
+      nubeLista = true;
+      guardarCopiaLocal();
+    });
+    ultimaDescarga = Date.now();
     actualizarPerfil();
-    escribirJSON(CLAVE_DUENO, id);
-    escribirJSON(CLAVE_SINCRONIZADO, sincronizado);
-    nubeLista = true;
-    guardarCopiaLocal();
     refrescarTodo();
     if (unir) {
       await sincronizar();
@@ -731,8 +769,60 @@ function guardarCopiaLocal() {
   guardarSim();
 }
 
+// Trae lo que cambió en otro dispositivo (al volver a la pestaña, como mucho una vez por minuto)
+async function actualizarDesdeNube() {
+  if (!sesion || !nubeLista || document.hidden || Date.now() - ultimaDescarga < ESPERA_DESCARGA) return;
+  ultimaDescarga = Date.now();
+  if (hayCambiosSinSubir()) {
+    await sincronizar();
+    if (errorSync) return;
+  }
+  // Solo para comparar: la nube no devuelve las filas en el mismo orden
+  const huella = (o) => JSON.stringify(Object.keys(o).sort().map((t) => [t, Object.entries(o[t]).sort()]));
+  try {
+    const cambio = await conCandado(CANDADO_SYNC, async () => {
+      const nube = await descargarDeLaNube();
+      recargarDeLocal();
+      if (!sesion || hayCambiosSinSubir()) return false; // se guardó algo mientras tanto: no se pisa
+      const antes = huella(sincronizado);
+      aplicarNube(nube, false);
+      if (huella(sincronizado) === antes) return false;
+      escribirJSON(CLAVE_SINCRONIZADO, sincronizado);
+      guardarCopiaLocal();
+      return true;
+    });
+    if (cambio) refrescarTodo();
+  } catch (e) {
+    if (e.codigo === 'sin_sesion' || e.estado === 401) {
+      cerrarSesionLocal();
+      mostrarAcceso();
+    }
+  }
+}
+
+// Vuelve a leer lo guardado en este navegador (lo pudo cambiar otra pestaña). No escribe nada.
+function recargarDeLocal() {
+  if (escrituraFallida) return;
+  cargarTiposCambio();
+  cargar();
+  cargarIngresos();
+  const guardadas = leerJSON(CLAVE_TARJETAS, []);
+  tarjetas = Array.isArray(guardadas) ? guardadas.map(tarjetaValida).filter(Boolean) : [];
+  for (const g of gastos) {
+    g.medio = medioValido(g.medio);
+    g.moneda = g.moneda === 'USD' ? 'USD' : 'PEN';
+  }
+  cargarPagos();
+  cargarSim();
+  sincronizado = leerJSON(CLAVE_SINCRONIZADO, {});
+}
+
 function refrescarTodo() {
   for (const g of gastos) g.medio = medioValido(g.medio);
+  // Lo que se estaba editando pudo eliminarse en otra pestaña
+  if (editandoId && !gastos.some((x) => x.id === editandoId)) salirEdicion();
+  if (ingEditandoId && !ingresos.some((x) => x.id === ingEditandoId)) salirEdicionIngreso();
+  if (tarEditandoId && !tarjetaDe(tarEditandoId)) salirEdicionTarjeta();
   poblarMedios();
   render();
   renderVista();
@@ -2786,6 +2876,44 @@ addEventListener('online', () => {
   if (!sesion) return;
   if (nubeLista) sincronizar();
   else iniciarNube();
+});
+
+// Al volver a la pestaña o a la ventana se trae lo cambiado en otros dispositivos
+document.addEventListener('visibilitychange', actualizarDesdeNube);
+addEventListener('focus', actualizarDesdeNube);
+
+// Otra pestaña cambió algo en localStorage (este evento no llega a la que hizo el cambio)
+let esperaPestana;
+addEventListener('storage', (e) => {
+  if (e.key === null) return location.reload(); // se borró todo
+  if (e.key === CLAVE_SESION) {
+    // Entrar o salir en una pestaña vale para todas; si solo se renovó el token, se sigue igual
+    const nueva = leerJSON(CLAVE_SESION, null);
+    if (nueva?.usuario?.id !== sesion?.usuario.id) return location.reload();
+    sesion = nueva;
+    return;
+  }
+  if (e.key === 'finanzas.tema' && (e.newValue === 'light' || e.newValue === 'dark')) {
+    document.documentElement.dataset.theme = e.newValue;
+    pintarBotonTema();
+    renderVista();
+  }
+  if (e.key === 'finanzas.paleta') {
+    if (!e.newValue || e.newValue === 'azul') delete document.documentElement.dataset.paleta;
+    else document.documentElement.dataset.paleta = e.newValue;
+    for (const r of document.querySelectorAll('input[name="paleta"]')) r.checked = r.value === (e.newValue || 'azul');
+    renderVista();
+  }
+  if (![CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_TC, CLAVE_SIM, CLAVE_SINCRONIZADO].includes(e.key)) return;
+  // Un guardado puede tocar varias claves seguidas: se repinta una sola vez
+  clearTimeout(esperaPestana);
+  esperaPestana = setTimeout(() => {
+    recargarDeLocal();
+    refrescarTodo();
+    // Si la otra pestaña se cerró antes de subirlo, lo sube esta (el candado evita hacerlo dos veces)
+    if (sesion && nubeLista && hayCambiosSinSubir()) programarSync();
+    pintarCuenta();
+  }, 50);
 });
 
 $('tar-form').addEventListener('submit', (e) => {
