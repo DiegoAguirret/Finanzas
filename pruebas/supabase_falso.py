@@ -70,7 +70,13 @@ def sesion_para(id_usuario):
     tokens[token] = id_usuario
     tokens['r:' + renovar] = id_usuario
     return {"access_token": token, "refresh_token": renovar, "expires_in": 3600, "token_type": "bearer",
-            "user": {"id": id_usuario, "email": correo_de(id_usuario)}}
+            "user": usuario_publico(id_usuario)}
+
+
+def usuario_publico(id_usuario):
+    correo = correo_de(id_usuario)
+    return {"id": id_usuario, "email": correo, "user_metadata": usuarios[correo].get('meta', {}),
+            "identities": [{"provider": usuarios[correo].get('proveedor', 'email')}]}
 
 
 def reto_de(verificador):
@@ -158,7 +164,8 @@ class Manejador(BaseHTTPRequestHandler):
             if q.get('provider') != ['google'] or not q.get('code_challenge'):
                 return self.responder(400, {"error_code": "validation_failed", "msg": "Unsupported provider"})
             correo = 'google@ejemplo.test'
-            usuarios.setdefault(correo, {"id": str(uuid.uuid4()), "clave": None, "confirmado": True})
+            usuarios.setdefault(correo, {"id": str(uuid.uuid4()), "clave": None, "confirmado": True,
+                                         "proveedor": "google", "meta": {"full_name": "Usuaria de Google"}})
             codigo = uuid.uuid4().hex
             codigos[codigo] = (q['code_challenge'][0], usuarios[correo]['id'])
             return self.redirigir(q['redirect_to'][0] + '?code=' + codigo)
@@ -168,14 +175,20 @@ class Manejador(BaseHTTPRequestHandler):
             d = self.cuerpo()
             if len(d['password']) < 8:
                 return self.responder(422, {"code": 422, "error_code": "weak_password", "msg": "Password too short"})
+            if d['email'] in usuarios and confirmar_correo and not usuarios[d['email']].get('confirmado', True):
+                # Como Supabase: si la cuenta aún no está confirmada, reenvía el correo de confirmación
+                u = usuarios[d['email']]
+                self.enviar_correo('registro', u['id'], d.get('code_challenge'), q['redirect_to'][0])
+                return self.responder(200, usuario_publico(u['id']))
             if d['email'] in usuarios:
-                if confirmar_correo:  # como Supabase: no revela si la cuenta existe
-                    return self.responder(200, {"id": str(uuid.uuid4()), "email": d['email']})
+                if confirmar_correo:  # como Supabase: usuario falso sin identidades, sin enviar correo
+                    return self.responder(200, {"id": str(uuid.uuid4()), "email": d['email'], "identities": []})
                 return self.responder(422, {"code": 422, "error_code": "user_already_exists", "msg": "User already registered"})
-            usuarios[d['email']] = {"id": str(uuid.uuid4()), "clave": d['password'], "confirmado": not confirmar_correo}
+            usuarios[d['email']] = {"id": str(uuid.uuid4()), "clave": d['password'], "confirmado": not confirmar_correo,
+                                    "meta": d.get('data') or {}}
             if confirmar_correo:
                 self.enviar_correo('registro', usuarios[d['email']]['id'], d.get('code_challenge'), q['redirect_to'][0])
-                return self.responder(200, {"id": usuarios[d['email']]['id'], "email": d['email']})
+                return self.responder(200, usuario_publico(usuarios[d['email']]['id']))
             return self.responder(200, sesion_para(usuarios[d['email']]['id']))
         if ruta == '/auth/v1/recover' and metodo == 'POST':
             d = self.cuerpo()
@@ -215,7 +228,7 @@ class Manejador(BaseHTTPRequestHandler):
                 if len(d.get('password', '')) < 8:
                     return self.responder(422, {"error_code": "weak_password", "msg": "Password too short"})
                 u['clave'] = d['password']
-            return self.responder(200, {"id": uid, "email": correo_de(uid)})
+            return self.responder(200, usuario_publico(uid))
         if ruta == '/rest/v1/tipos_cambio_bcrp':
             return self.responder(200, sorted(BCRP, key=lambda x: x['fecha'], reverse=True))
 

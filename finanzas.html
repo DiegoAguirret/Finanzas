@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Finanzas Personales · Diego Aguirre</title>
+<title>Finanzas personales</title>
 <script>
   // Aplica el tema antes de pintar para evitar parpadeo
   (function () {
@@ -82,7 +82,7 @@
     display: grid; place-items: center;
     font-weight: 700; font-size: 1.25rem; flex-shrink: 0;
   }
-  header h1 { margin: 0; font-size: 1.75rem; letter-spacing: -.02em; }
+  header h1 { margin: 0; font-size: 1.75rem; letter-spacing: -.02em; overflow-wrap: anywhere; }
   header p { margin: 2px 0 0; opacity: .85; }
   .btn-tema {
     flex-shrink: 0;
@@ -118,6 +118,15 @@
   form.acceso-caja { display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: min(400px, 100%); }
   form.acceso-caja h2 { margin: 0; }
   .enlace { background: none; color: var(--accent); padding: 4px; font-weight: 500; }
+  .clave-con-ojo { position: relative; }
+  .clave-con-ojo input { padding-right: 46px; }
+  .ver-clave {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    background: none; padding: 6px 9px; font-size: 1.25rem; line-height: 1; border-radius: 8px;
+  }
+  .ver-clave:active { transform: translateY(-50%) scale(.95); }
+  .ver-clave:hover { background: var(--accent-soft); }
+  .ver-clave:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .btn-google {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     background: var(--google-fondo); color: var(--google-texto); border: 1px solid var(--google-borde);
@@ -451,10 +460,10 @@
 
 <header>
   <div class="container">
-    <div class="avatar">DA</div>
+    <div class="avatar" id="avatar" aria-hidden="true">👤</div>
     <div class="cabecera-texto">
-      <h1>Diego Aguirre</h1>
-      <p>Finanzas Personales · <span id="hoy"></span></p>
+      <h1 id="cabecera-nombre">Finanzas personales</h1>
+      <p><span id="cabecera-app" class="hidden">Finanzas personales · </span><span id="hoy"></span></p>
     </div>
     <div class="cuenta" id="cuenta">
       <button type="button" class="sync hidden" id="sync-estado"></button>
@@ -1090,13 +1099,24 @@
   <form class="card acceso-caja" id="acceso-form">
     <h2 id="acceso-titulo">Inicia sesión</h2>
     <p class="sub" id="acceso-texto">Tus datos se guardan en tu cuenta y los ves desde cualquier dispositivo.</p>
+    <div id="acceso-nombre-campo" class="hidden">
+      <label for="acceso-nombre">Nombre</label>
+      <input id="acceso-nombre" autocomplete="name" maxlength="60">
+    </div>
     <div id="acceso-correo-campo">
       <label for="acceso-correo">Correo</label>
       <input id="acceso-correo" type="email" autocomplete="email" maxlength="254" required>
     </div>
     <div id="acceso-clave-campo">
       <label for="acceso-clave" id="acceso-clave-label">Contraseña</label>
-      <input id="acceso-clave" type="password" autocomplete="current-password" minlength="8" maxlength="72" required>
+      <div class="clave-con-ojo">
+        <input id="acceso-clave" type="password" autocomplete="current-password" minlength="8" maxlength="72" required>
+        <button type="button" class="ver-clave" id="ver-clave" aria-controls="acceso-clave acceso-clave2" aria-pressed="false" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁️</button>
+      </div>
+    </div>
+    <div id="acceso-clave2-campo" class="hidden">
+      <label for="acceso-clave2">Repite la contraseña</label>
+      <input id="acceso-clave2" type="password" autocomplete="new-password" minlength="8" maxlength="72">
     </div>
     <div class="mensaje error hidden" id="acceso-msg" role="alert"></div>
     <button type="submit" class="btn-primary" id="acceso-entrar">Entrar</button>
@@ -1403,10 +1423,15 @@
     confirmar: 'Te enviamos un correo para confirmar tu cuenta. Abre el enlace (desde este mismo navegador) y entrarás directamente.',
     enlace_enviado: 'Si existe una cuenta con ese correo, te enviamos un enlace para elegir una nueva contraseña. Ábrelo desde este mismo navegador.',
     clave_cambiada: 'Listo: tu contraseña quedó cambiada.',
+    claves_distintas: 'Las contraseñas no coinciden. Escríbelas de nuevo.',
     same_password: 'La nueva contraseña debe ser distinta de la anterior.',
     sin_verificador: 'Tu correo quedó confirmado, pero el enlace se abrió en otro navegador o pestaña privada. Inicia sesión aquí con tu correo y contraseña.',
-    user_already_exists: 'Ya existe una cuenta con ese correo. Inicia sesión.',
-    email_exists: 'Ya existe una cuenta con ese correo. Inicia sesión.',
+    bad_code_verifier: 'Ese enlace no corresponde a este navegador o ya no es el último que pediste. Si acabas de confirmar tu correo, inicia sesión con tu correo y contraseña; si querías cambiar tu contraseña, pide un enlace nuevo.',
+    flow_state_not_found: 'Ese enlace ya se usó o caducó. Inicia sesión o pide un enlace nuevo.',
+    flow_state_expired: 'Ese enlace caducó. Pide uno nuevo.',
+    otp_expired: 'Ese enlace caducó. Pide uno nuevo.',
+    user_already_exists: 'Ya existe una cuenta con ese correo. Inicia sesión con tu contraseña o con Google, según cómo la creaste. Si nunca le pusiste contraseña, usa «¿Olvidaste tu contraseña?» para ponerle una.',
+    email_exists: 'Ya existe una cuenta con ese correo. Inicia sesión con tu contraseña o con Google, según cómo la creaste. Si nunca le pusiste contraseña, usa «¿Olvidaste tu contraseña?» para ponerle una.',
     weak_password: 'La contraseña es muy débil: usa al menos 8 caracteres, con letras y números.',
     email_provider_disabled: 'El acceso con correo está desactivado en Supabase (Authentication → Sign In / Providers → Email).',
     signup_disabled: 'La creación de cuentas está desactivada en Supabase.',
@@ -1424,6 +1449,7 @@
   let nubeLista = false;        // no se sube nada hasta saber de quién es la copia local
   let sincronizando = false, otraVez = false, errorSync = null, esperaSync = null, renovando = null;
   let accesoModo = 'entrar'; // entrar | registro | recuperar | nueva-clave
+  let modoPintado = null;
   let confirmandoSalida = false;
 
   function leerJSON(clave, defecto) {
@@ -1464,9 +1490,26 @@
       token: d.access_token,
       renovar: d.refresh_token,
       expira: d.expires_at ? d.expires_at * 1000 : Date.now() + d.expires_in * 1000,
-      usuario: { id: d.user.id, correo: d.user.email },
+      usuario: { id: d.user.id, correo: d.user.email, nombre: nombreDe(d.user) },
     };
     escribirJSON(CLAVE_SESION, sesion);
+  }
+
+  // Nombre del usuario: el de su cuenta de Google o el que escribió al registrarse
+  function nombreDe(usuario) {
+    const meta = usuario?.user_metadata || {};
+    return String(meta.full_name || meta.name || '').trim().slice(0, 60);
+  }
+
+  // Actualiza el nombre guardado en la sesión (por ejemplo, sesiones de antes de mostrar el nombre)
+  async function actualizarPerfil() {
+    try {
+      const usuario = await api('/auth/v1/user');
+      if (!sesion) return;
+      sesion.usuario.nombre = nombreDe(usuario);
+      escribirJSON(CLAVE_SESION, sesion);
+      pintarCuenta();
+    } catch {} // sin nombre se muestra el correo
   }
 
   // Renueva el token si vence en menos de un minuto (una sola renovación a la vez)
@@ -1492,15 +1535,34 @@
     return location.origin + location.pathname;
   }
 
-  async function autenticar(modo, correo, clave) {
+  async function autenticar(modo, correo, clave, nombre = '') {
     if (location.protocol === 'file:') throw Object.assign(new Error(ERRORES_ACCESO.archivo), { codigo: 'archivo' });
     if (modo === 'registro') {
       // Con «Confirm email» activo no hay sesión hasta abrir el enlace del correo, que vuelve con ?code=…
+      // Si no se envía correo (cuenta existente o error), se restaura el verificador anterior para que
+      // un enlace de confirmación pendiente siga sirviendo.
+      const anterior = leerJSON(CLAVE_PKCE, null);
+      const restaurar = () => (anterior ? escribirJSON(CLAVE_PKCE, anterior) : localStorage.removeItem(CLAVE_PKCE));
       const reto = await nuevoPKCE('registro');
-      const d = await api(`/auth/v1/signup?redirect_to=${encodeURIComponent(urlDeVuelta())}`, {
-        metodo: 'POST', autenticado: false,
-        cuerpo: { email: correo, password: clave, code_challenge: reto, code_challenge_method: 's256' },
-      });
+      let d;
+      try {
+        d = await api(`/auth/v1/signup?redirect_to=${encodeURIComponent(urlDeVuelta())}`, {
+          metodo: 'POST', autenticado: false,
+          cuerpo: {
+            email: correo, password: clave, data: { full_name: nombre.trim().slice(0, 60) },
+            code_challenge: reto, code_challenge_method: 's256',
+          },
+        });
+      } catch (e) {
+        restaurar();
+        throw e;
+      }
+      // Si el correo ya tiene cuenta, Supabase no la crea ni envía correo: responde con un usuario sin
+      // ninguna forma de acceso (identities vacío). Se avisa en vez de esperar un correo que no llegará.
+      if (!d?.access_token && Array.isArray(d?.identities) && d.identities.length === 0) {
+        restaurar();
+        throw Object.assign(new Error(ERRORES_ACCESO.user_already_exists), { codigo: 'user_already_exists' });
+      }
       if (!d?.access_token) throw Object.assign(new Error(ERRORES_ACCESO.confirmar), { codigo: 'confirmar' });
       guardarSesion(d);
       return;
@@ -1567,14 +1629,17 @@
     if (!codigo && !error) return null;
     history.replaceState(null, '', location.pathname + (location.hash.startsWith('#error') ? '' : location.hash));
     const pkce = leerJSON(CLAVE_PKCE, null);
-    try { localStorage.removeItem(CLAVE_PKCE); } catch {}
     if (error) throw Object.assign(new Error(`${ERRORES_ACCESO.acceso_fallo} (${error})`), { codigo: 'acceso_fallo_detalle' });
     if (!pkce?.verificador || Date.now() - pkce.creado > VIDA_PKCE) {
+      try { localStorage.removeItem(CLAVE_PKCE); } catch {}
       throw Object.assign(new Error(ERRORES_ACCESO.sin_verificador), { codigo: 'sin_verificador' });
     }
+    // El verificador se borra solo si el canje sale bien: si se abrió un enlace viejo, todavía
+    // tiene que servir para el último enlace enviado
     guardarSesion(await api('/auth/v1/token?grant_type=pkce', {
       metodo: 'POST', cuerpo: { auth_code: codigo, code_verifier: pkce.verificador }, autenticado: false,
     }));
+    try { localStorage.removeItem(CLAVE_PKCE); } catch {}
     return pkce.tipo;
   }
 
@@ -1760,6 +1825,7 @@
       const nube = await descargarDeLaNube();
       const nubeVacia = ORDEN_TABLAS.every((t) => !nube[t].length);
       aplicarNube(nube, unir);
+      actualizarPerfil();
       escribirJSON(CLAVE_DUENO, id);
       escribirJSON(CLAVE_SINCRONIZADO, sincronizado);
       nubeLista = true;
@@ -1822,7 +1888,18 @@
     setTimeout(() => $('aviso-nube').classList.add('hidden'), 10000);
   }
 
+  // 'Ana María Pérez' → 'AP'
+  function iniciales(texto) {
+    const palabras = texto.trim().split(/\s+/).filter(Boolean);
+    return ((palabras[0]?.[0] || '') + (palabras.length > 1 ? palabras.at(-1)[0] : '')).toUpperCase();
+  }
+
   function pintarCuenta() {
+    // En la cabecera, el nombre del usuario (o la parte de su correo antes de la @)
+    const nombre = sesion ? sesion.usuario.nombre || sesion.usuario.correo.split('@')[0] : '';
+    $('cabecera-nombre').textContent = nombre || 'Finanzas personales';
+    $('cabecera-app').classList.toggle('hidden', !nombre);
+    $('avatar').textContent = nombre ? iniciales(nombre) || '👤' : '👤';
     if (!confirmandoSalida) $('btn-cuenta').textContent = sesion ? 'Cerrar sesión' : 'Iniciar sesión';
     $('cuenta-correo').textContent = sesion ? sesion.usuario.correo : 'Sin cuenta · solo en este navegador';
     const estado = $('sync-estado');
@@ -1853,11 +1930,19 @@
     $('acceso-texto').textContent = textos[1];
     $('acceso-entrar').textContent = textos[2];
     const conCorreo = m !== 'nueva-clave', conClave = m !== 'recuperar';
+    $('acceso-nombre-campo').classList.toggle('hidden', m !== 'registro');
+    $('acceso-nombre').required = m === 'registro';
     $('acceso-correo-campo').classList.toggle('hidden', !conCorreo);
     $('acceso-correo').required = conCorreo;
     $('acceso-clave-campo').classList.toggle('hidden', !conClave);
     $('acceso-clave').required = conClave;
     $('acceso-clave-label').textContent = m === 'nueva-clave' ? 'Nueva contraseña' : 'Contraseña';
+    const repetir = m === 'registro' || m === 'nueva-clave';
+    $('acceso-clave2-campo').classList.toggle('hidden', !repetir);
+    $('acceso-clave2').required = repetir;
+    // Al cambiar de pantalla la contraseña vuelve a ocultarse (no al mostrar un mensaje o un error)
+    if (m !== modoPintado) verClave(false);
+    modoPintado = m;
     $('acceso-clave').autocomplete = m === 'entrar' ? 'current-password' : 'new-password';
     // En «entrar» no se exige el mínimo: las cuentas antiguas pueden tener contraseñas más cortas
     $('acceso-clave').minLength = m === 'entrar' ? 1 : 8;
@@ -1870,6 +1955,16 @@
     $('acceso-msg').textContent = mensaje;
     $('acceso-msg').classList.toggle('error', !ok);
     $('acceso-msg').classList.toggle('hidden', !mensaje);
+  }
+
+  // Muestra u oculta lo escrito en los campos de contraseña de la pantalla de acceso
+  function verClave(mostrar) {
+    for (const id of ['acceso-clave', 'acceso-clave2']) $(id).type = mostrar ? 'text' : 'password';
+    const b = $('ver-clave');
+    b.textContent = mostrar ? '🙈' : '👁️';
+    b.title = mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña';
+    b.setAttribute('aria-label', b.title);
+    b.setAttribute('aria-pressed', String(mostrar));
   }
 
   // ---- Persistencia ----
@@ -3759,6 +3854,7 @@
     accesoModo = accesoModo === 'entrar' ? 'registro' : 'entrar';
     pintarAcceso();
   });
+  $('ver-clave').addEventListener('click', () => verClave($('acceso-clave').type === 'password'));
   $('acceso-olvido').addEventListener('click', () => {
     accesoModo = 'recuperar';
     pintarAcceso();
@@ -3776,6 +3872,11 @@
     pintarAcceso();
     try {
       const correo = $('acceso-correo').value.trim(), clave = $('acceso-clave').value;
+      if ((accesoModo === 'registro' || accesoModo === 'nueva-clave') && clave !== $('acceso-clave2').value) {
+        pintarAcceso(ERRORES_ACCESO.claves_distintas);
+        $('acceso-clave2').focus();
+        return;
+      }
       if (accesoModo === 'recuperar') {
         await recuperarClave(correo);
         pintarAcceso(ERRORES_ACCESO.enlace_enviado, true);
@@ -3785,10 +3886,11 @@
         await cambiarClave(clave);
         avisoNube(ERRORES_ACCESO.clave_cambiada);
       } else {
-        await autenticar(accesoModo, correo, clave);
+        await autenticar(accesoModo, correo, clave, $('acceso-nombre').value);
       }
       try { localStorage.removeItem(CLAVE_MODO); } catch {}
       $('acceso-clave').value = '';
+      $('acceso-clave2').value = '';
       accesoModo = 'entrar';
       $('acceso').classList.add('hidden');
       await iniciarNube();
