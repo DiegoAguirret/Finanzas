@@ -1,3 +1,5 @@
+# URL y clave de Supabase para el proxy local (pruebas/proxy_local.py): nunca al repositorio
+.dev.vars
 # Datos y cuentas de prueba del servidor local (pruebas/supabase_falso.py)
 pruebas/*_estado.json
 # Configuración local de herramientas y del sistema

@@ -94,6 +94,7 @@ create table if not exists public.tipos_cambio_bcrp (
   actualizado timestamptz not null default now()
 );
 
+create index if not exists tarjetas_usuario on public.tarjetas (usuario);
 create index if not exists gastos_usuario_fecha on public.gastos (usuario, fecha);
 create index if not exists ingresos_usuario_fecha on public.ingresos (usuario, fecha);
 create index if not exists pagos_usuario_fecha on public.pagos (usuario, fecha);
@@ -122,6 +123,10 @@ set search_path = ''
 as $$
   select t is null or exists (select 1 from public.tarjetas where id = t and usuario = (select auth.uid()));
 $$;
+
+-- Solo la usan las políticas (que se evalúan como el usuario con sesión)
+revoke all on function public.tarjeta_propia(uuid) from public, anon;
+grant execute on function public.tarjeta_propia(uuid) to authenticated;
 
 drop policy if exists "propias" on public.tarjetas;
 create policy "propias" on public.tarjetas for all to authenticated
@@ -164,7 +169,10 @@ grant select on public.tipos_cambio_bcrp to anon, authenticated;
 -- ---------------------------------------------------------------------
 
 -- Trae los últimos 15 días del BCRP y los guarda. Devuelve cuántos días guardó.
--- Como mucho consulta al BCRP una vez por hora, así que la web puede llamarla al abrir.
+-- Solo la ejecuta pg_cron (ni la web ni usuarios anónimos pueden llamarla), y como mucho
+-- consulta al BCRP una vez cada 30 minutos. Nunca falla: si el BCRP no responde con los datos
+-- esperados (caída, página de protección anti-bots, formato distinto), no guarda nada y devuelve 0,
+-- y la web sigue usando los últimos tipos de cambio guardados.
 create or replace function public.actualizar_tipo_cambio_bcrp()
 returns integer
 language plpgsql
@@ -174,24 +182,35 @@ as $$
 declare
   meses constant text[] := array['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Dic'];
   respuesta extensions.http_response;
+  datos jsonb;
   periodo jsonb;
   partes text[];
   dia date;
   guardados integer := 0;
 begin
-  if exists (select 1 from public.tipos_cambio_bcrp where actualizado > now() - interval '1 hour') then
+  if exists (select 1 from public.tipos_cambio_bcrp where actualizado > now() - interval '30 minutes') then
     return 0;
   end if;
 
-  perform extensions.http_set_curlopt('CURLOPT_TIMEOUT', '15');
-  respuesta := extensions.http_get(format(
-    'https://estadisticas.bcrp.gob.pe/estadisticas/series/api/PD04639PD-PD04640PD/json/%s/%s',
-    to_char(current_date - 15, 'YYYY-MM-DD'), to_char(current_date, 'YYYY-MM-DD')));
-  if respuesta.status <> 200 then
+  begin
+    perform extensions.http_set_curlopt('CURLOPT_TIMEOUT', '15');
+    respuesta := extensions.http_get(format(
+      'https://estadisticas.bcrp.gob.pe/estadisticas/series/api/PD04639PD-PD04640PD/json/%s/%s',
+      to_char(current_date - 15, 'YYYY-MM-DD'), to_char(current_date, 'YYYY-MM-DD')));
+    if respuesta.status <> 200 or left(ltrim(respuesta.content), 1) <> '{' then
+      raise log 'tipo de cambio BCRP: respuesta inesperada (estado %)', respuesta.status;
+      return 0;
+    end if;
+    datos := respuesta.content::jsonb;
+  exception when others then
+    raise log 'tipo de cambio BCRP: no se pudo leer (%)', sqlerrm;
+    return 0;
+  end;
+  if jsonb_typeof(datos -> 'periods') <> 'array' then
     return 0;
   end if;
 
-  for periodo in select * from jsonb_array_elements(respuesta.content::jsonb -> 'periods') loop
+  for periodo in select * from jsonb_array_elements(datos -> 'periods') loop
     -- Fechas como '01.Oct.26'; los días sin dato vienen como 'n.d.'
     partes := string_to_array(periodo ->> 'name', '.');
     continue when array_length(partes, 1) <> 3 or array_position(meses, partes[2]) is null;
@@ -208,11 +227,7 @@ begin
 end;
 $$;
 
-revoke all on function public.actualizar_tipo_cambio_bcrp() from public;
-grant execute on function public.actualizar_tipo_cambio_bcrp() to anon, authenticated;
+revoke all on function public.actualizar_tipo_cambio_bcrp() from public, anon, authenticated;
 
--- Actualización automática de lunes a viernes a las 9:00 y 17:00 (hora de Lima = UTC-5)
-select cron.schedule('tipo-cambio-bcrp', '0 14,22 * * 1-5', 'select public.actualizar_tipo_cambio_bcrp()');
-
--- Primera carga
-select public.actualizar_tipo_cambio_bcrp();
+-- Actualización automática cada hora de lunes a viernes, de 8:05 a 18:05 (hora de Lima = UTC-5)
+select cron.schedule('tipo-cambio-bcrp', '5 13-23 * * 1-5', 'select public.actualizar_tipo_cambio_bcrp()');

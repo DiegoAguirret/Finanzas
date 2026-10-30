@@ -1090,17 +1090,18 @@
   <form class="card acceso-caja" id="acceso-form">
     <h2 id="acceso-titulo">Inicia sesión</h2>
     <p class="sub" id="acceso-texto">Tus datos se guardan en tu cuenta y los ves desde cualquier dispositivo.</p>
-    <div>
+    <div id="acceso-correo-campo">
       <label for="acceso-correo">Correo</label>
-      <input id="acceso-correo" type="email" autocomplete="email" required>
+      <input id="acceso-correo" type="email" autocomplete="email" maxlength="254" required>
     </div>
-    <div>
-      <label for="acceso-clave">Contraseña</label>
-      <input id="acceso-clave" type="password" autocomplete="current-password" minlength="6" required>
+    <div id="acceso-clave-campo">
+      <label for="acceso-clave" id="acceso-clave-label">Contraseña</label>
+      <input id="acceso-clave" type="password" autocomplete="current-password" minlength="8" maxlength="72" required>
     </div>
     <div class="mensaje error hidden" id="acceso-msg" role="alert"></div>
     <button type="submit" class="btn-primary" id="acceso-entrar">Entrar</button>
-    <div class="separador-o">o</div>
+    <button type="button" class="enlace" id="acceso-olvido">¿Olvidaste tu contraseña?</button>
+    <div class="separador-o" id="acceso-separador">o</div>
     <button type="button" class="btn-google" id="acceso-google">
       <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -1333,10 +1334,9 @@
 
   // Pide a Supabase que actualice el BCRP (como mucho una vez por hora) y descarga la serie.
   // Es información pública: funciona también sin iniciar sesión.
-  async function actualizarBCRP() {
-    try {
-      await api('/rest/v1/rpc/actualizar_tipo_cambio_bcrp', { metodo: 'POST', cuerpo: {}, autenticado: false });
-    } catch {} // si falla, se usa lo ya descargado
+  // Descarga el tipo de cambio del BCRP (lo actualiza pg_cron en Supabase cada hora en días hábiles).
+  // Es información pública: funciona también sin iniciar sesión.
+  async function cargarBCRP() {
     try {
       const filas = await api('/rest/v1/tipos_cambio_bcrp?select=fecha,compra,venta&order=fecha.desc&limit=400', { autenticado: false });
       tiposCambio.bcrp = filas.map(tcValido).filter(Boolean).sort(porFecha);
@@ -1354,8 +1354,10 @@
   // Supabase es la fuente principal: al abrir se descargan los datos y cada guardarX() programa
   // sincronizar(), que compara con lo último confirmado por la nube (`sincronizado`) y sube solo lo
   // que cambió. Los datos los protege Row Level Security: cada usuario solo ve sus filas.
-  const SUPABASE_URL = 'https://incynxtdufsfjewjqffe.supabase.co';
-  const SUPABASE_CLAVE = 'sb_publishable_sR002sB6AwFxFgOeIIldXA_ceGYnsbv'; // clave pública (publishable)
+  // La web no conoce la URL ni la clave de Supabase: habla con /api de su mismo dominio, donde
+  // un intermediario (functions/api en Cloudflare) añade la clave guardada como variable secreta.
+  const API = '/api';
+  const TAM_PAGINA = 1000; // Supabase devuelve como mucho 1000 filas por consulta
   const CLAVE_SESION = 'finanzas.sesion';
   const CLAVE_MODO = 'finanzas.modo';                 // 'local' = usar sin cuenta
   const CLAVE_SINCRONIZADO = 'finanzas.sincronizado'; // filas tal como las tiene la nube
@@ -1398,26 +1400,31 @@
   const ERRORES_ACCESO = {
     invalid_credentials: 'Correo o contraseña incorrectos.',
     email_not_confirmed: 'Tu cuenta aún no está confirmada: abre el enlace que te llegó por correo.',
-    confirmar: 'Te enviamos un correo para confirmar la cuenta. Ábrelo y luego inicia sesión aquí.',
+    confirmar: 'Te enviamos un correo para confirmar tu cuenta. Abre el enlace (desde este mismo navegador) y entrarás directamente.',
+    enlace_enviado: 'Si existe una cuenta con ese correo, te enviamos un enlace para elegir una nueva contraseña. Ábrelo desde este mismo navegador.',
+    clave_cambiada: 'Listo: tu contraseña quedó cambiada.',
+    same_password: 'La nueva contraseña debe ser distinta de la anterior.',
+    sin_verificador: 'Tu correo quedó confirmado, pero el enlace se abrió en otro navegador o pestaña privada. Inicia sesión aquí con tu correo y contraseña.',
     user_already_exists: 'Ya existe una cuenta con ese correo. Inicia sesión.',
     email_exists: 'Ya existe una cuenta con ese correo. Inicia sesión.',
-    weak_password: 'La contraseña es muy débil: usa al menos 6 caracteres.',
+    weak_password: 'La contraseña es muy débil: usa al menos 8 caracteres, con letras y números.',
     email_provider_disabled: 'El acceso con correo está desactivado en Supabase (Authentication → Sign In / Providers → Email).',
     signup_disabled: 'La creación de cuentas está desactivada en Supabase.',
     over_request_rate_limit: 'Demasiados intentos. Espera unos minutos y vuelve a probar.',
     over_email_send_rate_limit: 'Demasiados correos enviados. Espera unos minutos y vuelve a probar.',
     validation_failed: 'Revisa el correo y la contraseña.',
     sin_conexion: 'Sin conexión con el servidor. Revisa tu internet.',
-    google_archivo: 'Para entrar con Google abre la web desde su dirección (por ejemplo http://localhost:8765/finanzas.html o la web publicada), no con doble clic en el archivo: Google no puede volver a un archivo de tu PC.',
+    archivo: 'Abierta con doble clic, la web no puede conectarse con tu cuenta. Úsala desde su dirección publicada o con el servidor local (pruebas/proxy_local.py).',
     google_desactivado: 'El acceso con Google aún no está activado en Supabase (Authentication → Sign In / Providers → Google).',
-    google_fallo: 'No se pudo completar el acceso con Google. Vuelve a intentarlo.',
+    acceso_fallo: 'No se pudo completar el acceso. Vuelve a intentarlo.',
   };
 
   let sesion = null;            // { token, renovar, expira (ms), usuario: { id, correo } }
   let sincronizado = {};        // tabla → { id: JSON de la fila confirmada por la nube }
   let nubeLista = false;        // no se sube nada hasta saber de quién es la copia local
   let sincronizando = false, otraVez = false, errorSync = null, esperaSync = null, renovando = null;
-  let accesoRegistro = false, confirmandoSalida = false;
+  let accesoModo = 'entrar'; // entrar | registro | recuperar | nueva-clave
+  let confirmandoSalida = false;
 
   function leerJSON(clave, defecto) {
     try { return JSON.parse(localStorage.getItem(clave)) ?? defecto; } catch { return defecto; }
@@ -1428,7 +1435,7 @@
   }
 
   async function api(ruta, { metodo = 'GET', cuerpo, prefer, autenticado = true } = {}) {
-    const cabeceras = { apikey: SUPABASE_CLAVE };
+    const cabeceras = {};
     if (cuerpo !== undefined) cabeceras['Content-Type'] = 'application/json';
     if (prefer) cabeceras.Prefer = prefer;
     if (autenticado) {
@@ -1438,7 +1445,7 @@
     }
     let r;
     try {
-      r = await fetch(SUPABASE_URL + ruta, { method: metodo, headers: cabeceras, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo) });
+      r = await fetch(API + ruta, { method: metodo, headers: cabeceras, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo) });
     } catch {
       throw Object.assign(new Error(ERRORES_ACCESO.sin_conexion), { codigo: 'sin_conexion' });
     }
@@ -1480,58 +1487,95 @@
     await renovando;
   }
 
-  async function autenticar(registro, correo, clave) {
-    const d = await api(registro ? '/auth/v1/signup' : '/auth/v1/token?grant_type=password', {
-      metodo: 'POST', cuerpo: { email: correo, password: clave }, autenticado: false,
-    });
-    // Con «Confirm email» activo, el registro no devuelve sesión hasta confirmar
-    if (!d?.access_token) throw Object.assign(new Error(ERRORES_ACCESO.confirmar), { codigo: 'confirmar' });
-    guardarSesion(d);
+  // Dirección a la que vuelven Google y los enlaces de correo (debe estar en Redirect URLs de Supabase)
+  function urlDeVuelta() {
+    return location.origin + location.pathname;
   }
 
-  // ---- Acceso con Google (OAuth con PKCE) ----
-  // Se va a Supabase → Google → vuelve a esta misma página con ?code=…, que se canjea por la sesión
-  // usando el verificador guardado en sessionStorage. Los tokens nunca viajan en la URL.
+  async function autenticar(modo, correo, clave) {
+    if (location.protocol === 'file:') throw Object.assign(new Error(ERRORES_ACCESO.archivo), { codigo: 'archivo' });
+    if (modo === 'registro') {
+      // Con «Confirm email» activo no hay sesión hasta abrir el enlace del correo, que vuelve con ?code=…
+      const reto = await nuevoPKCE('registro');
+      const d = await api(`/auth/v1/signup?redirect_to=${encodeURIComponent(urlDeVuelta())}`, {
+        metodo: 'POST', autenticado: false,
+        cuerpo: { email: correo, password: clave, code_challenge: reto, code_challenge_method: 's256' },
+      });
+      if (!d?.access_token) throw Object.assign(new Error(ERRORES_ACCESO.confirmar), { codigo: 'confirmar' });
+      guardarSesion(d);
+      return;
+    }
+    guardarSesion(await api('/auth/v1/token?grant_type=password', {
+      metodo: 'POST', cuerpo: { email: correo, password: clave }, autenticado: false,
+    }));
+  }
+
+  // Envía el enlace para elegir una nueva contraseña (la respuesta es la misma exista o no la cuenta)
+  async function recuperarClave(correo) {
+    if (location.protocol === 'file:') throw Object.assign(new Error(ERRORES_ACCESO.archivo), { codigo: 'archivo' });
+    const reto = await nuevoPKCE('recuperar');
+    await api(`/auth/v1/recover?redirect_to=${encodeURIComponent(urlDeVuelta())}`, {
+      metodo: 'POST', autenticado: false, cuerpo: { email: correo, code_challenge: reto, code_challenge_method: 's256' },
+    });
+  }
+
+  async function cambiarClave(nueva) {
+    await api('/auth/v1/user', { metodo: 'PUT', cuerpo: { password: nueva } });
+  }
+
+  // ---- Acceso con PKCE (Google y enlaces de correo) ----
+  // Google y los enlaces de confirmación y de nueva contraseña vuelven a esta página con ?code=…,
+  // que solo sirve junto con el verificador guardado aquí: los tokens nunca viajan en la URL y un
+  // código ajeno no permite entrar. Se guarda en localStorage para que el enlace del correo funcione
+  // aunque se abra en otra pestaña del mismo navegador; caduca a las 24 h.
   const CLAVE_PKCE = 'finanzas.pkce';
+  const VIDA_PKCE = 24 * 60 * 60 * 1000;
 
   function base64url(bytes) {
     return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
 
+  // Crea y guarda un verificador nuevo; devuelve el reto (su SHA-256) que se envía a Supabase
+  async function nuevoPKCE(tipo) {
+    const verificador = base64url(crypto.getRandomValues(new Uint8Array(32)));
+    escribirJSON(CLAVE_PKCE, { verificador, tipo, creado: Date.now() });
+    return base64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verificador))));
+  }
+
   async function entrarConGoogle() {
-    if (location.protocol === 'file:') throw Object.assign(new Error(ERRORES_ACCESO.google_archivo), { codigo: 'google_archivo' });
+    if (location.protocol === 'file:') throw Object.assign(new Error(ERRORES_ACCESO.archivo), { codigo: 'archivo' });
     const ajustes = await api('/auth/v1/settings', { autenticado: false });
     if (!ajustes?.external?.google) throw Object.assign(new Error(ERRORES_ACCESO.google_desactivado), { codigo: 'google_desactivado' });
-    const verificador = base64url(crypto.getRandomValues(new Uint8Array(32)));
-    const reto = base64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verificador))));
-    sessionStorage.setItem(CLAVE_PKCE, verificador);
     const parametros = new URLSearchParams({
       provider: 'google',
-      redirect_to: location.origin + location.pathname,
-      code_challenge: reto,
+      redirect_to: urlDeVuelta(),
+      code_challenge: await nuevoPKCE('google'),
       code_challenge_method: 's256',
     });
-    location.assign(`${SUPABASE_URL}/auth/v1/authorize?${parametros}`);
+    location.assign(`${API}/auth/v1/authorize?${parametros}`);
   }
 
   // Al volver de Google: canjea el código por la sesión y limpia la URL. Devuelve true si entró.
-  async function completarGoogle() {
+  // Al volver con ?code=… (Google o enlace de correo): canjea el código por la sesión y limpia la URL.
+  // Devuelve el tipo de acceso ('google' | 'registro' | 'recuperar') o null si no se volvía de ahí.
+  async function completarAcceso() {
     const consulta = new URLSearchParams(location.search);
     const fragmento = new URLSearchParams(location.hash.startsWith('#error') ? location.hash.slice(1) : '');
     const codigo = consulta.get('code');
     const error = consulta.get('error_description') || consulta.get('error') ||
       fragmento.get('error_description') || fragmento.get('error');
-    if (!codigo && !error) return false;
+    if (!codigo && !error) return null;
     history.replaceState(null, '', location.pathname + (location.hash.startsWith('#error') ? '' : location.hash));
-    const verificador = sessionStorage.getItem(CLAVE_PKCE);
-    sessionStorage.removeItem(CLAVE_PKCE);
-    if (error || !verificador) {
-      throw Object.assign(new Error(error ? `${ERRORES_ACCESO.google_fallo} (${error})` : ERRORES_ACCESO.google_fallo), { codigo: 'google_fallo_detalle' });
+    const pkce = leerJSON(CLAVE_PKCE, null);
+    try { localStorage.removeItem(CLAVE_PKCE); } catch {}
+    if (error) throw Object.assign(new Error(`${ERRORES_ACCESO.acceso_fallo} (${error})`), { codigo: 'acceso_fallo_detalle' });
+    if (!pkce?.verificador || Date.now() - pkce.creado > VIDA_PKCE) {
+      throw Object.assign(new Error(ERRORES_ACCESO.sin_verificador), { codigo: 'sin_verificador' });
     }
     guardarSesion(await api('/auth/v1/token?grant_type=pkce', {
-      metodo: 'POST', cuerpo: { auth_code: codigo, code_verifier: verificador }, autenticado: false,
+      metodo: 'POST', cuerpo: { auth_code: codigo, code_verifier: pkce.verificador }, autenticado: false,
     }));
-    return true;
+    return pkce.tipo;
   }
 
   function cerrarSesionLocal() {
@@ -1639,10 +1683,20 @@
     }
   }
 
+  // Trae todas las filas de una consulta en páginas de TAM_PAGINA (ordenadas para que no se repitan)
+  async function traerTodo(ruta, orden) {
+    const filas = [];
+    for (let desde = 0; ; desde += TAM_PAGINA) {
+      const pagina = await api(`${ruta}&order=${orden}&limit=${TAM_PAGINA}&offset=${desde}`);
+      filas.push(...pagina);
+      if (pagina.length < TAM_PAGINA) return filas;
+    }
+  }
+
   async function descargarDeLaNube() {
     const [ts, gs, is, ps, tcs, prefs] = await Promise.all([
-      ...ORDEN_TABLAS.map((t) => api(`/rest/v1/${t}?select=*`)),
-      api('/rest/v1/tipos_cambio?select=banco,fecha,compra,venta'),
+      ...ORDEN_TABLAS.map((t) => traerTodo(`/rest/v1/${t}?select=*`, 'id')),
+      traerTodo('/rest/v1/tipos_cambio?select=banco,fecha,compra,venta', 'banco,fecha'),
       api('/rest/v1/preferencias?select=simulacion'),
     ]);
     return { tarjetas: ts, gastos: gs, ingresos: is, pagos: ps, tipos_cambio: tcs, preferencias: prefs };
@@ -1779,18 +1833,42 @@
     estado.title = errorSync ? errorSync.message : 'Tus datos están guardados en tu cuenta';
   }
 
-  function mostrarAcceso() {
+  function mostrarAcceso(modo = 'entrar') {
+    accesoModo = modo;
     pintarAcceso();
     $('acceso').classList.remove('hidden');
     $('acceso-correo').focus();
   }
 
-  function pintarAcceso(mensaje = '') {
-    $('acceso-titulo').textContent = accesoRegistro ? 'Crea tu cuenta' : 'Inicia sesión';
-    $('acceso-entrar').textContent = accesoRegistro ? 'Crear cuenta' : 'Entrar';
-    $('acceso-alternar').textContent = accesoRegistro ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Crear una';
-    $('acceso-clave').autocomplete = accesoRegistro ? 'new-password' : 'current-password';
+  // Pinta la pantalla de acceso según accesoModo; `ok` muestra el mensaje como aviso y no como error
+  function pintarAcceso(mensaje = '', ok = false) {
+    const m = accesoModo;
+    const textos = {
+      entrar: ['Inicia sesión', 'Tus datos se guardan en tu cuenta y los ves desde cualquier dispositivo.', 'Entrar'],
+      registro: ['Crea tu cuenta', 'Te enviaremos un correo para confirmarla. La contraseña debe tener al menos 8 caracteres.', 'Crear cuenta'],
+      recuperar: ['Recupera tu contraseña', 'Escribe tu correo y te enviaremos un enlace para elegir una nueva.', 'Enviar enlace'],
+      'nueva-clave': ['Elige una nueva contraseña', 'Al menos 8 caracteres, con letras y números.', 'Guardar contraseña'],
+    }[m];
+    $('acceso-titulo').textContent = textos[0];
+    $('acceso-texto').textContent = textos[1];
+    $('acceso-entrar').textContent = textos[2];
+    const conCorreo = m !== 'nueva-clave', conClave = m !== 'recuperar';
+    $('acceso-correo-campo').classList.toggle('hidden', !conCorreo);
+    $('acceso-correo').required = conCorreo;
+    $('acceso-clave-campo').classList.toggle('hidden', !conClave);
+    $('acceso-clave').required = conClave;
+    $('acceso-clave-label').textContent = m === 'nueva-clave' ? 'Nueva contraseña' : 'Contraseña';
+    $('acceso-clave').autocomplete = m === 'entrar' ? 'current-password' : 'new-password';
+    // En «entrar» no se exige el mínimo: las cuentas antiguas pueden tener contraseñas más cortas
+    $('acceso-clave').minLength = m === 'entrar' ? 1 : 8;
+    const otros = m === 'entrar' || m === 'registro';
+    for (const id of ['acceso-separador', 'acceso-google']) $(id).classList.toggle('hidden', !otros);
+    $('acceso-olvido').classList.toggle('hidden', m !== 'entrar');
+    $('acceso-local').classList.toggle('hidden', m === 'nueva-clave');
+    $('acceso-alternar').classList.toggle('hidden', m === 'nueva-clave');
+    $('acceso-alternar').textContent = m === 'entrar' ? '¿No tienes cuenta? Crear una' : 'Volver a iniciar sesión';
     $('acceso-msg').textContent = mensaje;
+    $('acceso-msg').classList.toggle('error', !ok);
     $('acceso-msg').classList.toggle('hidden', !mensaje);
   }
 
@@ -3678,8 +3756,13 @@
     }
   });
   $('acceso-alternar').addEventListener('click', () => {
-    accesoRegistro = !accesoRegistro;
+    accesoModo = accesoModo === 'entrar' ? 'registro' : 'entrar';
     pintarAcceso();
+  });
+  $('acceso-olvido').addEventListener('click', () => {
+    accesoModo = 'recuperar';
+    pintarAcceso();
+    $('acceso-correo').focus();
   });
   $('acceso-local').addEventListener('click', () => {
     try { localStorage.setItem(CLAVE_MODO, 'local'); } catch {}
@@ -3692,13 +3775,25 @@
     boton.disabled = true;
     pintarAcceso();
     try {
-      await autenticar(accesoRegistro, $('acceso-correo').value.trim(), $('acceso-clave').value);
+      const correo = $('acceso-correo').value.trim(), clave = $('acceso-clave').value;
+      if (accesoModo === 'recuperar') {
+        await recuperarClave(correo);
+        pintarAcceso(ERRORES_ACCESO.enlace_enviado, true);
+        return;
+      }
+      if (accesoModo === 'nueva-clave') {
+        await cambiarClave(clave);
+        avisoNube(ERRORES_ACCESO.clave_cambiada);
+      } else {
+        await autenticar(accesoModo, correo, clave);
+      }
       try { localStorage.removeItem(CLAVE_MODO); } catch {}
       $('acceso-clave').value = '';
+      accesoModo = 'entrar';
       $('acceso').classList.add('hidden');
       await iniciarNube();
     } catch (err) {
-      pintarAcceso(ERRORES_ACCESO[err.codigo] || err.message);
+      pintarAcceso(ERRORES_ACCESO[err.codigo] || err.message, err.codigo === 'confirmar');
     } finally {
       boton.disabled = false;
     }
@@ -3806,23 +3901,29 @@
   sesion = leerJSON(CLAVE_SESION, null);
   pintarCuenta();
   (async () => {
-    let errorGoogle = '';
+    let errorAcceso = '', tipo = null;
     try {
-      if (await completarGoogle()) {
+      tipo = await completarAcceso();
+      if (tipo) {
         try { localStorage.removeItem(CLAVE_MODO); } catch {}
       }
     } catch (err) {
-      errorGoogle = ERRORES_ACCESO[err.codigo] || err.message;
+      errorAcceso = ERRORES_ACCESO[err.codigo] || err.message;
     }
     pintarCuenta();
-    if (sesion) {
+    if (tipo === 'recuperar') {
+      // Se volvió del enlace de nueva contraseña: primero se elige la contraseña
+      mostrarAcceso('nueva-clave');
+      $('acceso-clave').focus();
+    } else if (sesion) {
       iniciarNube();
-    } else if (errorGoogle || localStorage.getItem(CLAVE_MODO) !== 'local') {
+    } else if (errorAcceso || localStorage.getItem(CLAVE_MODO) !== 'local') {
       mostrarAcceso();
-      if (errorGoogle) pintarAcceso(errorGoogle);
+      if (errorAcceso) pintarAcceso(errorAcceso, false);
     }
+    if (location.protocol === 'file:') avisoNube(ERRORES_ACCESO.archivo);
   })();
-  actualizarBCRP();
+  cargarBCRP();
 </script>
 </body>
 </html>

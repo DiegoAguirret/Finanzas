@@ -7,7 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Web de finanzas personales de **Diego Aguirre**: `finanzas.html` (HTML + CSS + JS vanilla en un solo archivo) con los datos en **Supabase** (PostgreSQL; esquema en `supabase/esquema.sql`). Sin dependencias, sin build, sin tests ni linter. El usuario escribe en español: la interfaz, los identificadores y los comentarios del código también están en español; mantenlo así.
 
 Restricciones que el usuario pidió explícitamente:
-- La web sigue en **un solo archivo HTML** sin librerías ni CDNs: Supabase se usa con `fetch` directo (REST y Auth), sin `supabase-js`.
+- La web es para **muchos usuarios** y debe poder escalar.
+- **Ninguna credencial en el front**: ni la URL ni la clave de Supabase están en `finanzas.html`. La web llama a `/api/…` de su propio dominio y `functions/api/[[ruta]].js` (Cloudflare Pages Functions) reenvía a Supabase añadiendo la clave desde variables de entorno (`SUPABASE_URL`, `SUPABASE_CLAVE`).
+- La web sigue en **un solo archivo HTML** sin librerías ni CDNs (REST y Auth con `fetch`, sin `supabase-js`).
 - Monedas: **soles** (`S/ 1,250.00`, `Intl.NumberFormat('es-PE', { currency: 'PEN' })`) y **dólares** (`US$ 80.00`, formateado a mano en `dinero()` porque es-PE escribe `USD`).
 - El tipo de cambio debe ser **el de cada banco** (BCP e Interbank tienen tasas distintas). No publican una fuente abierta: los registra el usuario; el del BCRP se trae solo y es el respaldo. No raspar las webs de los bancos.
 - Estilo limpio y moderno, con modo claro/oscuro y diseño responsive (móvil a 375 px sin scroll horizontal).
@@ -15,24 +17,27 @@ Restricciones que el usuario pidió explícitamente:
 
 ## Supabase
 
-- Proyecto `https://incynxtdufsfjewjqffe.supabase.co`; en la web van la URL y la clave **publishable** (pública). Nunca pedir ni usar la `service_role` / secret.
-- `supabase/esquema.sql` crea tablas, Row Level Security (cada usuario solo ve sus filas), la función `actualizar_tipo_cambio_bcrp()` (extensión `http`, consulta al BCRP como mucho una vez por hora) y un trabajo de `pg_cron`. Es idempotente: el usuario lo pega en **SQL Editor → Run**. Cambios de esquema = editar ese archivo y pedir al usuario que lo vuelva a ejecutar.
+- Proyecto `https://incynxtdufsfjewjqffe.supabase.co`. La clave **publishable** vive solo en las variables de Cloudflare y en `.dev.vars` (local, ignorado por git). Nunca pedir ni usar la `service_role` / secret.
+- El intermediario solo permite las rutas que usa la web (lista `RUTAS`, igual en `pruebas/proxy_local.py`): `auth/v1/{signup,token,logout,user,settings,authorize,recover}` y las tablas. Responde 403 a peticiones de otros sitios (`Sec-Fetch-Site`), no guarda en caché y pasa `CF-Connecting-IP` como `X-Forwarded-For`. Una ruta nueva en la web = añadirla en los dos sitios.
+- `supabase/esquema.sql` crea tablas, Row Level Security (cada usuario solo ve sus filas), la función `actualizar_tipo_cambio_bcrp()` (extensión `http`; solo la ejecuta `pg_cron` cada hora en días hábiles, sin permiso para `anon`/`authenticated`; nunca lanza error: si el BCRP no devuelve el JSON esperado, devuelve 0) y el trabajo de `pg_cron`. El script no debe terminar con llamadas que dependan de servicios externos: si fallan, el editor de Supabase deshace todo el script. Desde octubre de 2026 el BCRP a veces responde con una página anti-bots («Pardon Our Interruption»): no intentar esquivarla. Es idempotente: el usuario lo pega en **SQL Editor → Run**. Cambios de esquema = editar ese archivo y pedir al usuario que lo vuelva a ejecutar.
 - Tablas: `tarjetas`, `gastos` (`medio` = efectivo | debito | credito | tarjeta + columna `tarjeta`), `ingresos`, `pagos`, `tipos_cambio` (por usuario: bcp/interbank), `preferencias` (simulador) y `tipos_cambio_bcrp` (pública, solo lectura).
-- Acceso: correo + contraseña y **Google** (OAuth con PKCE: `entrarConGoogle()` va a `/auth/v1/authorize`, vuelve con `?code=…` y `completarGoogle()` lo canjea en `/auth/v1/token?grant_type=pkce` con el verificador de `sessionStorage`). Google no funciona abriendo el archivo con doble clic (`file://`): la web debe abrirse desde una dirección `http(s)` que esté en **Authentication → URL Configuration → Redirect URLs**. Antes de redirigir se lee `/auth/v1/settings` para avisar si Google está desactivado.
+- Acceso (pantalla `#acceso`, modos `accesoModo` = entrar | registro | recuperar | nueva-clave): correo + contraseña (mínimo 8), **confirmación por correo** activada en Supabase, recuperación de contraseña y **Google**. Google, la confirmación y la nueva contraseña usan **PKCE**: `nuevoPKCE(tipo)` guarda el verificador en `localStorage` (24 h, para que el enlace del correo funcione en otra pestaña), Supabase vuelve con `?code=…` y `completarAcceso()` lo canjea en `/auth/v1/token?grant_type=pkce`; si el tipo era `recuperar`, se pide la nueva contraseña (`PUT /auth/v1/user`). La dirección de vuelta (`urlDeVuelta()`) debe estar en **Authentication → URL Configuration → Redirect URLs**.
+- Abierta con doble clic (`file://`) la web no puede usar `/api`: solo funciona «Usar sin cuenta».
+- Descargas siempre paginadas (`traerTodo()`, páginas de 1000 ordenadas), porque Supabase devuelve como mucho 1000 filas por consulta.
 - No crear cuentas ni iniciar sesión en el Supabase real para probar. Desde fuera solo se puede comprobar lo público (p. ej. que `tipos_cambio_bcrp` responda y que `gastos` sin sesión devuelva vacío/401).
 
 ## Cómo ejecutarlo y probarlo
 
 Se abre con doble clic, pero la extensión de Chrome no puede abrir `file://`, así que para pruebas automatizadas se sirve en local. No hay Node (no se puede usar `node --check`); Python 3 sí.
 
-- **Interfaz sin nube**: `python -m http.server 8765 --bind 127.0.0.1` → `http://127.0.0.1:8765/finanzas.html` y elegir «Usar sin cuenta».
-- **Con nube simulada**: `python -I pruebas/supabase_falso.py finanzas.html 8766` → `http://127.0.0.1:8766/finanzas.html`. Imita Auth (también Google: `/auth/v1/authorize` aprueba al instante como `google@ejemplo.test`), las tablas (filtradas por usuario, como RLS) y el tipo de cambio del BCRP; `/__estado` vuelca las tablas y `/__caida?activa=1` simula que el servidor no responde. Lee el HTML al arrancar: reiniciarlo tras editar la web. Ahí sí se pueden crear cuentas de prueba (`@ejemplo.test`).
+- **Contra Supabase real (uso local)**: `python -I pruebas/proxy_local.py` → `http://localhost:8765/` (lee `.dev.vars`). No usarlo para crear cuentas de prueba.
+- **Con nube simulada**: `python -I construir.py` y luego `python -I pruebas/supabase_falso.py public/index.html 8766` → `http://127.0.0.1:8766/`. Imita el intermediario `/api` + Supabase y aplica las cabeceras de `public/_headers` (CSP incluida). Simula Auth (Google aprueba al instante como `google@ejemplo.test`; `/__confirmar?activo=1` exige confirmar por correo y `/__correo` da el último enlace de confirmación o de nueva contraseña), las tablas (filtradas por usuario, límite de 1000 filas por consulta) y el BCRP; `/__estado` vuelca las tablas y `/__caida?activa=1` simula una caída. Se pueden encadenar: `proxy_local.py` con `SUPABASE_URL=http://127.0.0.1:8766/api` prueba las reglas del intermediario. Ahí sí se pueden crear cuentas de prueba (`@ejemplo.test`).
 
 Verificación en el navegador: cargar datos de prueba en `localStorage`, recorrer las vistas, revisar la consola y comprobar anchos de 375 a 1920 px. Al terminar, borrar el `localStorage` de esos orígenes, parar los servidores y borrar `pruebas/supabase_falso_estado.json`. No tocar los datos del origen `file://` del usuario.
 
 ## Publicación
 
-Repositorio git **privado** en GitHub, publicado con **Cloudflare Pages** (se despliega solo con cada `git push` a `main`). Solo se publica la web: el comando de compilación de Cloudflare es `mkdir -p public && cp finanzas.html public/index.html` con directorio de salida `public` (así no se exponen `supabase/`, `pruebas/` ni este archivo, y la web queda en la raíz `/`). La dirección publicada debe estar en Supabase → Authentication → URL Configuration (Site URL y Redirect URLs con `/**`) para que funcione el acceso con Google. Hacer commit y push solo cuando el usuario lo pida.
+Repositorio git **privado** en GitHub (`DiegoAguirret/Finanzas`), publicado con **Cloudflare Pages** (se despliega solo con cada `git push` a `main`). Comando de compilación: `python3 construir.py`; directorio de salida: `public`. `construir.py` copia la web a `public/index.html` (normalizando los saltos de línea a LF, como hace el navegador antes de calcular el hash: en Windows el archivo tiene CRLF) y escribe `public/_headers` con cabeceras de seguridad y una **Content-Security-Policy** que solo permite los `<script>` de la página por su hash SHA-256 y conexiones a su mismo dominio: no añadir scripts externos ni manejadores `on…` en el HTML, y no conectar a otros dominios desde la web. `functions/` se despliega como el intermediario `/api`. No se publican `supabase/`, `pruebas/` ni este archivo. La dirección publicada debe estar en Supabase → Authentication → URL Configuration (Site URL y Redirect URLs con `/**`) para que funcione el acceso con Google. Hacer commit y push solo cuando el usuario lo pida.
 
 ## Arquitectura
 
@@ -52,7 +57,7 @@ Repositorio git **privado** en GitHub, publicado con **Cloudflare Pages** (se de
   - luego descarga todo (`descargarDeLaNube()` / `aplicarNube()`).
   Cerrar sesión borra la copia local (`borrarCopiaLocal()`). Sin conexión, el estado muestra «⚠️ Sin guardar · reintentar» y se reintenta solo (`online` y cada 30 s).
 
-**Moneda y tipo de cambio**: todos los totales son en soles; `sumar()` usa `enSoles(x)`. Gastos en dólares → **venta** del banco de la tarjeta con que se pagó (`tasaPara(banco, fecha, lado)`; si el banco no tiene tasa, BCRP); ingresos en dólares → **compra**. `tasa()` toma el último tipo de cambio hasta esa fecha. Sin ningún tipo de cambio, los dólares no suman y `#aviso-tc` lo avisa. `actualizarBCRP()` llama a la función de Supabase y descarga `tipos_cambio_bcrp` (público, también sin sesión).
+**Moneda y tipo de cambio**: todos los totales son en soles; `sumar()` usa `enSoles(x)`. Gastos en dólares → **venta** del banco de la tarjeta con que se pagó (`tasaPara(banco, fecha, lado)`; si el banco no tiene tasa, BCRP); ingresos en dólares → **compra**. `tasa()` toma el último tipo de cambio hasta esa fecha. Sin ningún tipo de cambio, los dólares no suman y `#aviso-tc` lo avisa. `cargarBCRP()` solo lee `tipos_cambio_bcrp` (público, también sin sesión); la actualiza `pg_cron`.
 
 `CATEGORIAS` es la lista fija de categorías; cada una tiene clases `.tag-<Categoria>` (claro y oscuro) en el CSS, así que añadir una categoría implica añadir también sus estilos.
 
