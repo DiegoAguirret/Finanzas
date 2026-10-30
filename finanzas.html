@@ -13,6 +13,10 @@
       tema = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
     document.documentElement.dataset.theme = tema;
+    // Paleta elegida en Ajustes (sin atributo = azul, la de por defecto)
+    let paleta = null;
+    try { paleta = localStorage.getItem('finanzas.paleta'); } catch {}
+    if (['indigo', 'esmeralda', 'terracota', 'grafito'].includes(paleta)) document.documentElement.dataset.paleta = paleta;
   })();
 </script>
 <style>
@@ -22,10 +26,17 @@
     --text: #1f2333;
     --muted: #6b7085;
     --border: #e4e6ef;
-    --accent: #4f46e5;
-    --accent-hover: #4338ca;
-    --accent-soft: #eef0ff;
+    --accent: #1d4ed8;
+    --accent-hover: #1e40af;
+    --accent-soft: #eff6ff;
     --on-accent: #ffffff;
+    --cabecera-1: #1e3a8a;
+    --cabecera-2: #2563eb;
+    --muestra-azul: #1d4ed8;
+    --muestra-indigo: #4f46e5;
+    --muestra-esmeralda: #047857;
+    --muestra-terracota: #c2410c;
+    --muestra-grafito: #27272a;
     --danger: #dc2626;
     --danger-soft: #fdecec;
     --ok: #006300;
@@ -44,9 +55,9 @@
     --text: #e8eaf2;
     --muted: #9aa0b4;
     --border: #2a2e3b;
-    --accent: #818cf8;
-    --accent-hover: #a5b4fc;
-    --accent-soft: #23264a;
+    --accent: #60a5fa;
+    --accent-hover: #93c5fd;
+    --accent-soft: #172554;
     --on-accent: #0f1117;
     --danger: #f87171;
     --danger-soft: #3a1d1d;
@@ -58,6 +69,16 @@
     --google-borde: #8e918f;
     --google-texto: #e3e3e3;
   }
+
+  /* Otras paletas (Ajustes → Apariencia); cada una con su versión oscura */
+  :root[data-paleta="indigo"] { --accent: #4f46e5; --accent-hover: #4338ca; --accent-soft: #eef0ff; --cabecera-1: #4f46e5; --cabecera-2: #7c3aed; }
+  :root[data-paleta="indigo"][data-theme="dark"] { --accent: #818cf8; --accent-hover: #a5b4fc; --accent-soft: #23264a; }
+  :root[data-paleta="esmeralda"] { --accent: #047857; --accent-hover: #065f46; --accent-soft: #ecfdf5; --cabecera-1: #064e3b; --cabecera-2: #0f766e; }
+  :root[data-paleta="esmeralda"][data-theme="dark"] { --accent: #34d399; --accent-hover: #6ee7b7; --accent-soft: #052e24; }
+  :root[data-paleta="terracota"] { --accent: #c2410c; --accent-hover: #9a3412; --accent-soft: #fff7ed; --cabecera-1: #7c2d12; --cabecera-2: #c2410c; }
+  :root[data-paleta="terracota"][data-theme="dark"] { --accent: #fb923c; --accent-hover: #fdba74; --accent-soft: #3b1708; }
+  :root[data-paleta="grafito"] { --accent: #27272a; --accent-hover: #18181b; --accent-soft: #f4f4f5; --cabecera-1: #18181b; --cabecera-2: #3f3f46; }
+  :root[data-paleta="grafito"][data-theme="dark"] { --accent: #e4e4e7; --accent-hover: #fafafa; --accent-soft: #27272a; }
 
   * { box-sizing: border-box; }
   body {
@@ -71,7 +92,7 @@
 
   /* Cabecera */
   header {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: linear-gradient(135deg, var(--cabecera-1), var(--cabecera-2));
     color: #fff;
     padding: 24px 0 64px;
   }
@@ -115,18 +136,47 @@
     display: grid; place-items: center; padding: 16px;
     background: rgba(15, 17, 23, .55); backdrop-filter: blur(4px);
   }
-  form.acceso-caja { display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: min(400px, 100%); }
-  form.acceso-caja h2 { margin: 0; }
+  form.acceso-caja { display: flex; flex-direction: column; align-items: stretch; gap: 14px; width: min(400px, 100%); padding: 28px; }
+  form.acceso-caja h2 { margin: 0; font-size: 1.35rem; }
+  form.acceso-caja #acceso-texto { margin: -8px 0 4px; }
   .enlace { background: none; color: var(--accent); padding: 4px; font-weight: 500; }
   .clave-con-ojo { position: relative; }
-  .clave-con-ojo input { padding-right: 46px; }
+  .clave-con-ojo input { padding-right: 84px; }
   .ver-clave {
-    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
-    background: none; padding: 6px 9px; font-size: 1.25rem; line-height: 1; border-radius: 8px;
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    min-width: 70px; min-height: 32px; padding: 4px 10px;
+    background: none; color: var(--accent); font-size: .8rem; font-weight: 600; border-radius: 8px;
   }
-  .ver-clave:active { transform: translateY(-50%) scale(.95); }
+  .ver-clave:active { transform: translateY(-50%) scale(.97); }
   .ver-clave:hover { background: var(--accent-soft); }
   .ver-clave:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .fila-etiqueta { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .fila-etiqueta label { margin: 0; }
+  .enlace-mini { font-size: .8rem; padding: 0; }
+  .enlace-tenue { color: var(--muted); font-size: .85rem; align-self: center; }
+  .acceso-pie { margin: 2px 0 0; text-align: center; font-size: .9rem; color: var(--muted); }
+  .acceso-pie .enlace { padding: 0 2px; }
+
+  /* Apariencia */
+  .paletas { display: flex; flex-wrap: wrap; gap: 10px 14px; border: 0; margin: 0 0 18px; padding: 0; }
+  .paletas legend { width: 100%; margin-bottom: 10px; padding: 0; }
+  .paleta { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 0; cursor: pointer; font-size: .8rem; color: var(--muted); min-width: 56px; }
+  .paleta, .segmentado label { position: relative; }
+  .paleta input, .segmentado input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+  .muestra { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--surface); box-shadow: 0 0 0 1px color-mix(in srgb, var(--muted) 60%, transparent); transition: box-shadow .15s; }
+  .paleta input:checked + .muestra { box-shadow: 0 0 0 2px var(--text); }
+  .paleta input:checked ~ span:last-child { color: var(--text); font-weight: 600; }
+  .paleta input:focus-visible + .muestra { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .muestra-azul { background: var(--muestra-azul); }
+  .muestra-indigo { background: var(--muestra-indigo); }
+  .muestra-esmeralda { background: var(--muestra-esmeralda); }
+  .muestra-terracota { background: var(--muestra-terracota); }
+  .muestra-grafito { background: var(--muestra-grafito); }
+  .segmentado { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 3px; }
+  .segmentado label { margin: 0; cursor: pointer; }
+  .segmentado span { display: block; padding: 6px 14px; border-radius: 8px; font-size: .85rem; font-weight: 500; color: var(--muted); }
+  .segmentado input:checked + span { background: var(--accent); color: var(--on-accent); }
+  .segmentado input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
   .btn-google {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     background: var(--google-fondo); color: var(--google-texto); border: 1px solid var(--google-borde);
@@ -143,8 +193,8 @@
   .importe-moneda input { min-width: 0; }
   .importe-moneda select { width: auto; flex-shrink: 0; }
   #aviso-tc, #aviso-nube { margin-bottom: 20px; }
-  #tc-form { grid-template-columns: 1fr 1fr; }
-  #tc-form .acciones-form button { flex: 1; }
+  #tc-form { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 16px; }
+  @media (max-width: 640px) { #tc-form { grid-template-columns: 1fr 1fr; } }
 
   /* Estructura: barra lateral + contenido */
   .layout {
@@ -377,7 +427,9 @@
   .nota { color: var(--muted); font-size: .82rem; margin: 12px 0 0; }
 
   /* Cuadre de cuentas */
-  .cuadre { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; margin-top: 8px; max-width: 720px; }
+  .cuadre-bloques { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px 40px; margin-top: 8px; }
+  .cuadre-bloques h3 { margin: 0 0 4px; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+  .cuadre { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; }
   .cuadre > * { padding: 8px 0; }
   .cuadre .monto { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
   .cuadre .detalle { display: block; color: var(--muted); font-size: .82rem; font-weight: 400; }
@@ -401,11 +453,13 @@
 
   /* Responsive */
   @media (min-width: 1400px) {
+    .datos-grid > .apariencia { grid-column: span 2; }
     .columnas.lateral-izq { grid-template-columns: 360px minmax(0, 1fr); }
     .columnas.lateral-der { grid-template-columns: minmax(0, 1fr) 380px; }
     .estrecha { position: sticky; top: 16px; }
     .estrecha form { grid-template-columns: 1fr 1fr; }
     .estrecha form .campo-desc { grid-column: 1 / -1; }
+    .estrecha form > div:has(> .importe-moneda) { grid-column: 1 / -1; }
   }
   @media (max-width: 1100px) {
     form { grid-template-columns: repeat(4, 1fr); }
@@ -482,7 +536,7 @@
     <a class="nav-item" href="#dashboard" data-vista="dashboard"><span aria-hidden="true">📊</span><span class="nav-texto">Dashboard</span></a>
     <a class="nav-item" href="#tarjeta" data-vista="tarjeta"><span aria-hidden="true">💳</span><span class="nav-texto">Tarjetas</span></a>
     <a class="nav-item" href="#simulador" data-vista="simulador"><span aria-hidden="true">🧮</span><span class="nav-texto">Simulaciones</span></a>
-    <a class="nav-item" href="#datos" data-vista="datos"><span aria-hidden="true">💾</span><span class="nav-texto">Datos</span></a>
+    <a class="nav-item" href="#datos" data-vista="datos"><span aria-hidden="true">💾</span><span class="nav-texto">Ajustes</span></a>
     <div class="sidebar-pie">
       Gastado este mes
       <strong id="side-mes">S/ 0.00</strong>
@@ -592,7 +646,7 @@
       <section class="card vista-cabecera">
         <div>
           <h2>Ingresos y balance</h2>
-          <p>Registra tus ingresos con su fecha y mira cómo cuadran con tus gastos y los pagos de tus tarjetas</p>
+          <p>Tus ingresos frente a tus gastos y tarjetas</p>
         </div>
         <div class="filtros">
           <select id="bal-periodo" aria-label="Periodo">
@@ -634,8 +688,11 @@
         <section class="card">
           <h2>Cómo cuadran tus cuentas</h2>
           <p class="sub" id="bal-rango"></p>
-          <div class="cuadre" id="bal-cuadre"></div>
-          <p class="nota">Una compra con tarjeta es gasto el día que compras, pero tu dinero solo sale cuando pagas la tarjeta. Por eso tu ahorro y el cambio en tu dinero se diferencian justo en lo que subió o bajó tu deuda.</p>
+          <div class="cuadre-bloques">
+          <div><h3>Tu dinero</h3><div class="cuadre" id="bal-cuadre"></div></div>
+          <div><h3>Tu ahorro</h3><div class="cuadre" id="bal-cuadre-2"></div></div>
+        </div>
+          <p class="nota">Las compras con tarjeta son gasto al comprar; tu dinero sale al pagar la tarjeta.</p>
         </section>
 
         <section class="card estrecha">
@@ -685,7 +742,7 @@
           <span class="emoji">💰</span>
           No hay movimientos en este periodo.
         </div>
-        <p class="nota">Los ingresos se editan aquí; los gastos, en Gastos, y los pagos de tarjeta, en Tarjetas.</p>
+        <p class="nota">Los gastos se editan en Gastos y los pagos en Tarjetas.</p>
       </section>
 
       <section class="card">
@@ -767,11 +824,33 @@
       <section class="card vista-cabecera">
         <div>
           <h2>Tarjetas de crédito</h2>
-          <p>Tus consumos por ciclo de facturación y cuánto te toca pagar en cada tarjeta</p>
+          <p>Consumos por ciclo y lo que te toca pagar</p>
         </div>
       </section>
 
       <div class="mensaje hidden" id="tar-msg" role="status"></div>
+
+      <section class="card">
+        <h2>Mis tarjetas</h2>
+        <table id="tabla-tarjetas">
+          <thead>
+            <tr>
+              <th>Tarjeta</th>
+              <th>Corte / pago</th>
+              <th class="num">A pagar</th>
+              <th>Próximo vencimiento</th>
+              <th class="num">Deuda</th>
+              <th class="num">Disponible</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tar-lista"></tbody>
+        </table>
+        <div class="vacio hidden" id="tar-vacio">
+          <span class="emoji">💳</span>
+          Aún no tienes tarjetas. ¡Añade la primera!
+        </div>
+      </section>
 
       <div class="columnas lateral-izq">
         <section class="card estrecha">
@@ -806,38 +885,14 @@
               <button type="button" class="btn-secondary hidden" id="tar-cancelar">Cancelar</button>
             </div>
           </form>
-          <p class="nota">El día de corte y el último día de pago figuran en tu estado de cuenta. El banco define qué tipo de cambio se usa para tus compras en dólares. Al registrar un gasto, elige la tarjeta como medio de pago.</p>
+          <p class="nota">El corte y el pago figuran en tu estado de cuenta.</p>
         </section>
 
-        <section class="card">
-          <h2>Mis tarjetas</h2>
-          <table id="tabla-tarjetas">
-            <thead>
-              <tr>
-                <th>Tarjeta</th>
-                <th>Corte / pago</th>
-                <th class="num">A pagar</th>
-                <th>Próximo vencimiento</th>
-                <th class="num">Deuda</th>
-                <th class="num">Disponible</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="tar-lista"></tbody>
-          </table>
-          <div class="vacio hidden" id="tar-vacio">
-            <span class="emoji">💳</span>
-            Aún no tienes tarjetas. ¡Añade la primera!
+        <section class="card" id="tc-card">
+          <div class="lista-header">
+            <h2>Tipo de cambio (S/ por US$)</h2>
+            <span class="sub" id="tc-estado"></span>
           </div>
-        </section>
-      </div>
-
-      <section class="card" id="tc-card">
-        <div class="lista-header">
-          <h2>Tipo de cambio (S/ por US$)</h2>
-          <span class="sub" id="tc-estado"></span>
-        </div>
-        <div class="columnas lateral-der">
           <table id="tabla-tc">
             <thead>
               <tr>
@@ -850,7 +905,7 @@
             </thead>
             <tbody id="tc-filas"></tbody>
           </table>
-          <form id="tc-form" class="estrecha" autocomplete="off">
+          <form id="tc-form" autocomplete="off">
             <div>
               <label for="tc-banco">Banco</label>
               <select id="tc-banco">
@@ -874,9 +929,9 @@
               <button type="submit" class="btn-primary">Guardar tipo de cambio</button>
             </div>
           </form>
-        </div>
-        <p class="nota">BCP e Interbank no publican su tipo de cambio en un formato que la web pueda leer sola: cópialo de su web o app (enlaces «Ver en su web»). Se usa la <strong>venta</strong> para tus compras y pagos en dólares con tarjetas de ese banco. El del BCRP (promedio oficial del sistema bancario) se actualiza solo y se usa cuando no hay tipo de cambio del banco.</p>
-      </section>
+          <p class="nota">Cópialo de la web o app de tu banco. El del BCRP se actualiza solo y se usa si falta el del banco.</p>
+        </section>
+      </div>
 
       <div class="pila" id="tar-detalle">
         <section class="card vista-cabecera">
@@ -887,7 +942,7 @@
           <select id="tar-sel" aria-label="Tarjeta a mostrar"></select>
         </section>
 
-        <div class="mensaje hidden" id="tar-aviso">Esta tarjeta no tiene día de corte o de pago. Edítala para ver sus ciclos de facturación.</div>
+        <div class="mensaje hidden" id="tar-aviso">Falta el día de corte o de pago: edita la tarjeta.</div>
 
         <div class="resumen" id="tar-resumen">
           <div class="card">
@@ -973,7 +1028,7 @@
               <tbody id="tar-pagos"></tbody>
             </table>
             <div class="vacio hidden" id="pagos-vacio">Aún no registras pagos a esta tarjeta.</div>
-            <p class="nota">Registra cada pago con la fecha en que lo hiciste, aunque sea parcial. Si pagas en soles tu deuda en dólares, pon el tipo de cambio que aplicó el banco (sale en tu comprobante o estado de cuenta).</p>
+            <p class="nota">Si pagas en soles una deuda en dólares, usa el tipo de cambio de tu comprobante.</p>
           </section>
         </div>
       </div>
@@ -984,7 +1039,7 @@
       <section class="card vista-cabecera">
         <div>
           <h2>Simulaciones de gasto</h2>
-          <p>Prueba qué pasaría si cambias tus hábitos de gasto</p>
+          <p>Prueba cómo cambiaría tu ahorro</p>
         </div>
         <button type="button" class="btn-secondary" id="sim-reiniciar">Restablecer</button>
       </section>
@@ -1022,7 +1077,7 @@
           <span>Categoría</span><span>Base mensual</span><span>Ajuste</span><span style="text-align:right">Simulado</span>
         </div>
         <div id="sim-filas"></div>
-        <p class="nota">La base es tu gasto mensual promedio de los últimos 3 meses según tus registros. Puedes editarla para probar otros escenarios.</p>
+        <p class="nota">Base: tu promedio de los últimos 3 meses. Puedes editarla.</p>
       </section>
 
       <div class="resumen">
@@ -1062,15 +1117,30 @@
     <div class="vista hidden" id="vista-datos">
       <section class="card vista-cabecera">
         <div>
-          <h2>Datos</h2>
-          <p>Haz copias de seguridad o lleva tus gastos a otra hoja</p>
+          <h2>Ajustes</h2>
+          <p>Apariencia, copias y datos</p>
         </div>
       </section>
       <div class="mensaje hidden" id="datos-msg" role="status"></div>
       <div class="datos-grid">
+        <section class="card apariencia">
+          <h2>Apariencia</h2>
+          <fieldset class="paletas" id="paletas">
+            <legend class="sub">Color</legend>
+            <label class="paleta"><input type="radio" name="paleta" value="azul"><span class="muestra muestra-azul"></span><span>Azul</span></label>
+            <label class="paleta"><input type="radio" name="paleta" value="indigo"><span class="muestra muestra-indigo"></span><span>Índigo</span></label>
+            <label class="paleta"><input type="radio" name="paleta" value="esmeralda"><span class="muestra muestra-esmeralda"></span><span>Esmeralda</span></label>
+            <label class="paleta"><input type="radio" name="paleta" value="terracota"><span class="muestra muestra-terracota"></span><span>Terracota</span></label>
+            <label class="paleta"><input type="radio" name="paleta" value="grafito"><span class="muestra muestra-grafito"></span><span>Grafito</span></label>
+          </fieldset>
+          <div class="segmentado" role="radiogroup" aria-label="Tema">
+            <label><input type="radio" name="tema" value="light"><span>Claro</span></label>
+            <label><input type="radio" name="tema" value="dark"><span>Oscuro</span></label>
+          </div>
+        </section>
         <section class="card">
           <h2>Exportar</h2>
-          <p>Descarga tus gastos, ingresos, tarjetas y pagos. JSON sirve para restaurarlos aquí; CSV (solo gastos) se abre en Excel.</p>
+          <p>JSON para restaurar aquí; CSV para Excel (solo gastos).</p>
           <div class="botones">
             <button type="button" class="btn-primary" id="exp-json">JSON</button>
             <button type="button" class="btn-secondary" id="exp-csv">CSV</button>
@@ -1078,13 +1148,13 @@
         </section>
         <section class="card">
           <h2>Importar</h2>
-          <p>Añade gastos, ingresos, tarjetas y pagos desde un JSON exportado antes. Los que ya existen no se duplican.</p>
+          <p>Desde un JSON exportado. No duplica registros.</p>
           <input type="file" id="imp-archivo" accept=".json,application/json" class="hidden">
           <button type="button" class="btn-secondary" id="imp-json">Elegir archivo…</button>
         </section>
         <section class="card">
           <h2>Borrar todo</h2>
-          <p>Elimina todos los gastos, ingresos y pagos de tarjeta guardados en este navegador. Tus tarjetas se conservan. No se puede deshacer.</p>
+          <p>Gastos, ingresos y pagos. Conserva las tarjetas. No se puede deshacer.</p>
           <button type="button" class="btn-danger" id="borrar-todo">Borrar todos los movimientos</button>
         </section>
       </div>
@@ -1098,7 +1168,7 @@
 <div class="acceso hidden" id="acceso" role="dialog" aria-modal="true" aria-labelledby="acceso-titulo">
   <form class="card acceso-caja" id="acceso-form">
     <h2 id="acceso-titulo">Inicia sesión</h2>
-    <p class="sub" id="acceso-texto">Tus datos se guardan en tu cuenta y los ves desde cualquier dispositivo.</p>
+    <p class="sub" id="acceso-texto">Tus finanzas, en cualquier dispositivo.</p>
     <div id="acceso-nombre-campo" class="hidden">
       <label for="acceso-nombre">Nombre</label>
       <input id="acceso-nombre" autocomplete="name" maxlength="60">
@@ -1108,10 +1178,13 @@
       <input id="acceso-correo" type="email" autocomplete="email" maxlength="254" required>
     </div>
     <div id="acceso-clave-campo">
-      <label for="acceso-clave" id="acceso-clave-label">Contraseña</label>
+      <div class="fila-etiqueta">
+        <label for="acceso-clave" id="acceso-clave-label">Contraseña</label>
+        <button type="button" class="enlace enlace-mini" id="acceso-olvido">¿La olvidaste?</button>
+      </div>
       <div class="clave-con-ojo">
         <input id="acceso-clave" type="password" autocomplete="current-password" minlength="8" maxlength="72" required>
-        <button type="button" class="ver-clave" id="ver-clave" aria-controls="acceso-clave acceso-clave2" aria-pressed="false" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁️</button>
+        <button type="button" class="ver-clave" id="ver-clave" aria-controls="acceso-clave acceso-clave2" aria-pressed="false" aria-label="Mostrar contraseña">Ver</button>
       </div>
     </div>
     <div id="acceso-clave2-campo" class="hidden">
@@ -1120,7 +1193,6 @@
     </div>
     <div class="mensaje error hidden" id="acceso-msg" role="alert"></div>
     <button type="submit" class="btn-primary" id="acceso-entrar">Entrar</button>
-    <button type="button" class="enlace" id="acceso-olvido">¿Olvidaste tu contraseña?</button>
     <div class="separador-o" id="acceso-separador">o</div>
     <button type="button" class="btn-google" id="acceso-google">
       <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
@@ -1131,8 +1203,8 @@
       </svg>
       Continuar con Google
     </button>
-    <button type="button" class="btn-secondary" id="acceso-alternar">¿No tienes cuenta? Crear una</button>
-    <button type="button" class="enlace" id="acceso-local">Usar sin cuenta (solo en este navegador)</button>
+    <p class="acceso-pie" id="acceso-pie"><span id="acceso-alternar-texto">¿No tienes cuenta?</span> <button type="button" class="enlace" id="acceso-alternar">Crear cuenta</button></p>
+    <button type="button" class="enlace enlace-tenue" id="acceso-local">Usar sin cuenta</button>
   </form>
 </div>
 
@@ -1363,7 +1435,7 @@
       escribirJSON(CLAVE_TC, tiposCambio);
       estadoTC = '';
     } catch {
-      estadoTC = 'No se pudo actualizar el tipo de cambio del BCRP; se usa el último descargado.';
+      estadoTC = 'BCRP sin actualizar: se usa el último disponible.';
     }
     render();
     renderVista();
@@ -1419,29 +1491,29 @@
 
   const ERRORES_ACCESO = {
     invalid_credentials: 'Correo o contraseña incorrectos.',
-    email_not_confirmed: 'Tu cuenta aún no está confirmada: abre el enlace que te llegó por correo.',
-    confirmar: 'Te enviamos un correo para confirmar tu cuenta. Abre el enlace (desde este mismo navegador) y entrarás directamente.',
-    enlace_enviado: 'Si existe una cuenta con ese correo, te enviamos un enlace para elegir una nueva contraseña. Ábrelo desde este mismo navegador.',
-    clave_cambiada: 'Listo: tu contraseña quedó cambiada.',
-    claves_distintas: 'Las contraseñas no coinciden. Escríbelas de nuevo.',
-    same_password: 'La nueva contraseña debe ser distinta de la anterior.',
-    sin_verificador: 'Tu correo quedó confirmado, pero el enlace se abrió en otro navegador o pestaña privada. Inicia sesión aquí con tu correo y contraseña.',
-    bad_code_verifier: 'Ese enlace no corresponde a este navegador o ya no es el último que pediste. Si acabas de confirmar tu correo, inicia sesión con tu correo y contraseña; si querías cambiar tu contraseña, pide un enlace nuevo.',
-    flow_state_not_found: 'Ese enlace ya se usó o caducó. Inicia sesión o pide un enlace nuevo.',
-    flow_state_expired: 'Ese enlace caducó. Pide uno nuevo.',
-    otp_expired: 'Ese enlace caducó. Pide uno nuevo.',
-    user_already_exists: 'Ya existe una cuenta con ese correo. Inicia sesión con tu contraseña o con Google, según cómo la creaste. Si nunca le pusiste contraseña, usa «¿Olvidaste tu contraseña?» para ponerle una.',
-    email_exists: 'Ya existe una cuenta con ese correo. Inicia sesión con tu contraseña o con Google, según cómo la creaste. Si nunca le pusiste contraseña, usa «¿Olvidaste tu contraseña?» para ponerle una.',
-    weak_password: 'La contraseña es muy débil: usa al menos 8 caracteres, con letras y números.',
-    email_provider_disabled: 'El acceso con correo está desactivado en Supabase (Authentication → Sign In / Providers → Email).',
-    signup_disabled: 'La creación de cuentas está desactivada en Supabase.',
-    over_request_rate_limit: 'Demasiados intentos. Espera unos minutos y vuelve a probar.',
-    over_email_send_rate_limit: 'Demasiados correos enviados. Espera unos minutos y vuelve a probar.',
+    email_not_confirmed: 'Confirma tu correo para entrar.',
+    confirmar: 'Te enviamos un correo de confirmación.',
+    enlace_enviado: 'Si el correo está registrado, te enviamos un enlace.',
+    clave_cambiada: 'Contraseña actualizada.',
+    claves_distintas: 'Las contraseñas no coinciden.',
+    same_password: 'Usa una contraseña distinta a la actual.',
+    sin_verificador: 'Correo confirmado. Ya puedes iniciar sesión.',
+    bad_code_verifier: 'Este enlace no es válido aquí. Inicia sesión o pide otro.',
+    flow_state_not_found: 'El enlace ya se usó o caducó.',
+    flow_state_expired: 'El enlace caducó. Pide otro.',
+    otp_expired: 'El enlace caducó. Pide otro.',
+    user_already_exists: 'Ese correo ya tiene una cuenta.',
+    email_exists: 'Ese correo ya tiene una cuenta.',
+    weak_password: 'Usa al menos 8 caracteres, con letras y números.',
+    email_provider_disabled: 'El acceso con correo no está disponible.',
+    signup_disabled: 'El registro no está disponible.',
+    over_request_rate_limit: 'Demasiados intentos. Espera unos minutos.',
+    over_email_send_rate_limit: 'Demasiados correos. Espera unos minutos.',
     validation_failed: 'Revisa el correo y la contraseña.',
-    sin_conexion: 'Sin conexión con el servidor. Revisa tu internet.',
-    archivo: 'Abierta con doble clic, la web no puede conectarse con tu cuenta. Úsala desde su dirección publicada o con el servidor local (pruebas/proxy_local.py).',
-    google_desactivado: 'El acceso con Google aún no está activado en Supabase (Authentication → Sign In / Providers → Google).',
-    acceso_fallo: 'No se pudo completar el acceso. Vuelve a intentarlo.',
+    sin_conexion: 'Sin conexión.',
+    archivo: 'Abre la web desde su dirección, no como archivo.',
+    google_desactivado: 'Google no está disponible.',
+    acceso_fallo: 'No se pudo entrar. Inténtalo de nuevo.',
   };
 
   let sesion = null;            // { token, renovar, expira (ms), usuario: { id, correo } }
@@ -1835,8 +1907,8 @@
         await sincronizar();
         if (!errorSync) {
           avisoNube(nubeVacia
-            ? 'Subimos a tu cuenta los datos que tenías guardados en este navegador.'
-            : 'Juntamos los datos de este navegador con los de tu cuenta.');
+            ? 'Tus datos de este navegador se subieron a tu cuenta.'
+            : 'Tus datos de este navegador se unieron a tu cuenta.');
         }
       }
     } catch (e) {
@@ -1901,7 +1973,7 @@
     $('cabecera-app').classList.toggle('hidden', !nombre);
     $('avatar').textContent = nombre ? iniciales(nombre) || '👤' : '👤';
     if (!confirmandoSalida) $('btn-cuenta').textContent = sesion ? 'Cerrar sesión' : 'Iniciar sesión';
-    $('cuenta-correo').textContent = sesion ? sesion.usuario.correo : 'Sin cuenta · solo en este navegador';
+    $('cuenta-correo').textContent = sesion ? sesion.usuario.correo : 'Sin cuenta';
     const estado = $('sync-estado');
     estado.classList.toggle('hidden', !sesion);
     estado.classList.toggle('error', !!errorSync);
@@ -1921,10 +1993,10 @@
   function pintarAcceso(mensaje = '', ok = false) {
     const m = accesoModo;
     const textos = {
-      entrar: ['Inicia sesión', 'Tus datos se guardan en tu cuenta y los ves desde cualquier dispositivo.', 'Entrar'],
-      registro: ['Crea tu cuenta', 'Te enviaremos un correo para confirmarla. La contraseña debe tener al menos 8 caracteres.', 'Crear cuenta'],
-      recuperar: ['Recupera tu contraseña', 'Escribe tu correo y te enviaremos un enlace para elegir una nueva.', 'Enviar enlace'],
-      'nueva-clave': ['Elige una nueva contraseña', 'Al menos 8 caracteres, con letras y números.', 'Guardar contraseña'],
+      entrar: ['Inicia sesión', 'Tus finanzas, en cualquier dispositivo.', 'Entrar'],
+      registro: ['Crea tu cuenta', 'Te enviaremos un correo para confirmarla.', 'Crear cuenta'],
+      recuperar: ['Recupera tu contraseña', 'Te enviaremos un enlace para cambiarla.', 'Enviar enlace'],
+      'nueva-clave': ['Nueva contraseña', 'Mínimo 8 caracteres.', 'Guardar'],
     }[m];
     $('acceso-titulo').textContent = textos[0];
     $('acceso-texto').textContent = textos[1];
@@ -1950,8 +2022,9 @@
     for (const id of ['acceso-separador', 'acceso-google']) $(id).classList.toggle('hidden', !otros);
     $('acceso-olvido').classList.toggle('hidden', m !== 'entrar');
     $('acceso-local').classList.toggle('hidden', m === 'nueva-clave');
-    $('acceso-alternar').classList.toggle('hidden', m === 'nueva-clave');
-    $('acceso-alternar').textContent = m === 'entrar' ? '¿No tienes cuenta? Crear una' : 'Volver a iniciar sesión';
+    $('acceso-pie').classList.toggle('hidden', m === 'nueva-clave');
+    $('acceso-alternar-texto').textContent = m === 'entrar' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?';
+    $('acceso-alternar').textContent = m === 'entrar' ? 'Crear cuenta' : 'Inicia sesión';
     $('acceso-msg').textContent = mensaje;
     $('acceso-msg').classList.toggle('error', !ok);
     $('acceso-msg').classList.toggle('hidden', !mensaje);
@@ -1961,9 +2034,8 @@
   function verClave(mostrar) {
     for (const id of ['acceso-clave', 'acceso-clave2']) $(id).type = mostrar ? 'text' : 'password';
     const b = $('ver-clave');
-    b.textContent = mostrar ? '🙈' : '👁️';
-    b.title = mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña';
-    b.setAttribute('aria-label', b.title);
+    b.textContent = mostrar ? 'Ocultar' : 'Ver';
+    b.setAttribute('aria-label', mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña');
     b.setAttribute('aria-pressed', String(mostrar));
   }
 
@@ -2100,7 +2172,7 @@
     const hayDolares = gastos.some((g) => g.moneda === 'USD') || ingresos.some((i) => i.moneda === 'USD');
     const sinTC = !tiposCambio.bcrp.length && !tiposCambio.bcp.length && !tiposCambio.interbank.length;
     $('aviso-tc').classList.toggle('hidden', !(hayDolares && sinTC));
-    $('aviso-tc').textContent = 'Tienes importes en dólares, pero aún no hay ningún tipo de cambio: no se suman a los totales en soles. Regístralo en Tarjetas → Tipo de cambio.';
+    $('aviso-tc').textContent = 'Hay importes en dólares sin tipo de cambio. Regístralo en Tarjetas.';
 
     // Filtro y orden
     const texto = $('buscar').value.trim().toLowerCase();
@@ -2567,7 +2639,7 @@
     } else if (c.ahorro >= 0) {
       $('bal-res-label').textContent = quedan ? 'Te queda' : 'Ahorraste';
       resSub.textContent = quedan > 1
-        ? `Puedes gastar ≈ ${soles.format(c.ahorro / quedan)} por día hasta el ${formatearFecha(hasta)}`
+        ? `≈ ${soles.format(c.ahorro / quedan)} por día hasta el ${fechaCorta(hasta)}`
         : `El ${pct(c.ahorro)} de tus ingresos`;
     } else {
       $('bal-res-label').textContent = quedan ? 'Vas en pérdida' : 'Pérdida';
@@ -2585,24 +2657,29 @@
 
     // Cuadre: del cambio en tu dinero al ahorro, pasando por la deuda de tarjetas
     $('bal-rango').textContent = `Del ${formatearFecha(desde)} al ${formatearFecha(hasta)}` +
-      (c.hayDolares ? ' · los montos en dólares van convertidos a soles con el tipo de cambio de su fecha' : '');
-    const cuadre = $('bal-cuadre');
+      (c.hayDolares ? ' · dólares convertidos a soles' : '');
+    const cuadre = $('bal-cuadre'), cuadre2 = $('bal-cuadre-2');
     cuadre.replaceChildren();
+    cuadre2.replaceChildren();
     const hayTarjetas = tarjetas.length > 0 || c.pagos > 0;
     filaCuadre(cuadre, 'Ingresos', '', conSigno(c.ingresos));
-    filaCuadre(cuadre, 'Gastos pagados al momento', hayTarjetas ? 'Efectivo, débito u otras tarjetas' : '', conSigno(-c.sinTarjeta));
+    filaCuadre(cuadre, 'Gastos pagados al momento', hayTarjetas ? 'Efectivo o débito' : '', conSigno(-c.sinTarjeta));
     if (hayTarjetas) filaCuadre(cuadre, 'Pagos de tarjetas', '', conSigno(-c.pagos));
     filaCuadre(cuadre, 'Cambio en tu dinero', '', montoConSigno(c.dinero, true), true);
     if (hayTarjetas) {
-      filaCuadre(cuadre, 'Compras con tus tarjetas', 'No sacan dinero al comprar: suben tu deuda', conSigno(-c.conTarjeta));
-      filaCuadre(cuadre, 'Pagos de tarjetas', 'Ya restados arriba; no son gasto, bajan tu deuda', conSigno(c.pagos));
+      filaCuadre(cuadre2, 'Cambio en tu dinero', '', conSigno(c.dinero));
+      filaCuadre(cuadre2, 'Compras con tus tarjetas', 'Suben tu deuda', conSigno(-c.conTarjeta));
+      filaCuadre(cuadre2, 'Pagos de tarjetas', 'Bajan tu deuda; no son gasto', conSigno(c.pagos));
+    } else {
+      filaCuadre(cuadre2, 'Ingresos', '', conSigno(c.ingresos));
+      filaCuadre(cuadre2, 'Gastos', '', conSigno(-c.gastos));
     }
-    filaCuadre(cuadre, 'Ahorro del periodo', 'Ingresos menos todos tus gastos', montoConSigno(c.ahorro, true), true);
+    filaCuadre(cuadre2, 'Ahorro del periodo', '', montoConSigno(c.ahorro, true), true);
     if (hayTarjetas) {
       const cambios = MONEDAS.filter((m) => c.deudaPor[m])
         .map((m) => `${c.deudaPor[m] > 0 ? 'subió' : 'bajó'} ${dinero(Math.abs(c.deudaPor[m]), m)}`);
       const texto = cambios.length ? cambios.join(' · ') + ' en el periodo' : 'sin cambios en el periodo';
-      filaCuadre(cuadre, `Deuda de tarjetas al ${formatearFecha(hasta)}`,
+      filaCuadre(cuadre2, `Deuda de tarjetas al ${formatearFecha(hasta)}`,
         texto.charAt(0).toUpperCase() + texto.slice(1), textoDeuda(deudaAl(hasta)));
     }
 
@@ -3302,9 +3379,7 @@
     guardar();
     guardarPagos();
     tarjetasCambiadas();
-    mensajeTarjeta(`Se eliminó la tarjeta ${t.nombre}.` +
-      (n ? ` ${n === 1 ? 'Su gasto quedó' : `Sus ${n} gastos quedaron`} como «${MEDIOS_FIJOS.credito}».` : '') +
-      (nPagos ? ` ${nPagos === 1 ? 'Su pago se eliminó' : `Sus ${nPagos} pagos se eliminaron`}.` : ''));
+    mensajeTarjeta(`Tarjeta ${t.nombre} eliminada.` + (n ? ` Sus gastos pasaron a «${MEDIOS_FIJOS.credito}».` : ''));
   }
 
   function pagosCambiados() {
@@ -3678,7 +3753,7 @@
         : 'No había datos nuevos para importar') +
         (omitidos ? ` (${contar(omitidos, 'registro omitido', 'registros omitidos')} por duplicados o inválidos).` : '.'));
     } catch {
-      mensajeDatos('No se pudo leer el archivo. Asegúrate de que sea un JSON exportado desde esta página.', true);
+      mensajeDatos('Archivo no válido: usa un JSON exportado de esta web.', true);
     }
   });
 
@@ -3806,8 +3881,8 @@
     pagoSugerido = null;
     $('pago-form').reset();
     $('pago-fecha').value = hoyISO();
-    mensajeTarjeta(`Pago de ${dinero(p.pagado, p.pagadoMoneda)} a ${tarjetaDe(p.tarjeta).nombre} registrado el ${formatearFecha(p.fecha)}` +
-      (p.tipoCambio ? `: abona ${dinero(p.importe, 'USD')} a tu deuda en dólares (tipo de cambio ${formatoTC(p.tipoCambio)}).` : '.'));
+    mensajeTarjeta(`Pago de ${dinero(p.pagado, p.pagadoMoneda)} registrado` +
+      (p.tipoCambio ? ` (abona ${dinero(p.importe, 'USD')}).` : '.'));
     pagosCambiados();
   });
   $('pago-moneda').addEventListener('change', () => actualizarFormPago(true));
@@ -3821,13 +3896,13 @@
     const t = tcValido({ fecha: $('tc-fecha').value, compra: $('tc-compra').value, venta: $('tc-venta').value });
     if (!t || !BANCOS[banco] || banco === 'otro') return;
     if (t.compra > t.venta) {
-      mensajeTarjeta('La compra no puede ser mayor que la venta: revisa los valores.');
+      mensajeTarjeta('La compra no puede superar a la venta.');
       return;
     }
     guardarTasaBanco(banco, t);
     $('tc-compra').value = '';
     $('tc-venta').value = '';
-    mensajeTarjeta(`Tipo de cambio de ${BANCOS[banco]} del ${formatearFecha(t.fecha)} guardado: compra ${formatoTC(t.compra)}, venta ${formatoTC(t.venta)}.`);
+    mensajeTarjeta(`Tipo de cambio de ${BANCOS[banco]} guardado.`);
     render();
     renderTarjeta();
   });
@@ -3919,12 +3994,12 @@
     const editada = tarjetaDe(tarEditandoId);
     if (editada) {
       Object.assign(editada, datos);
-      mensajeTarjeta(`Se guardaron los cambios de ${datos.nombre}.`);
+      mensajeTarjeta('Cambios guardados.');
     } else {
       const t = { id: nuevoId(), ...datos };
       tarjetas.push(t);
       tarSeleccion = t.id;
-      mensajeTarjeta(`Tarjeta ${datos.nombre} añadida. Ya puedes elegirla como medio de pago al registrar gastos.`);
+      mensajeTarjeta(`Tarjeta ${datos.nombre} añadida.`);
     }
     salirEdicionTarjeta();
     tarjetasCambiadas();
@@ -3960,17 +4035,32 @@
     b.textContent = oscuro ? '☀️' : '🌙';
     b.title = oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
     b.setAttribute('aria-label', b.title);
+    for (const r of document.querySelectorAll('input[name="tema"]')) r.checked = r.value === (oscuro ? 'dark' : 'light');
   }
 
-  $('btn-tema').addEventListener('click', () => {
-    const tema = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  function aplicarTema(tema) {
     document.documentElement.dataset.theme = tema;
     try { localStorage.setItem('finanzas.tema', tema); } catch {}
     pintarBotonTema();
-  });
+  }
+
+  // Paleta de color (se guarda en este navegador); «azul» es la de por defecto
+  function aplicarPaleta(paleta) {
+    if (paleta === 'azul') delete document.documentElement.dataset.paleta;
+    else document.documentElement.dataset.paleta = paleta;
+    try { localStorage.setItem('finanzas.paleta', paleta); } catch {}
+    renderVista(); // los gráficos se repintan con los colores nuevos
+  }
+
+  $('btn-tema').addEventListener('click', () => aplicarTema(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+  for (const r of document.querySelectorAll('input[name="tema"]')) r.addEventListener('change', () => aplicarTema(r.value));
+  for (const r of document.querySelectorAll('input[name="paleta"]')) r.addEventListener('change', () => aplicarPaleta(r.value));
 
   // ---- Inicio ----
   pintarBotonTema();
+  for (const r of document.querySelectorAll('input[name="paleta"]')) {
+    r.checked = r.value === (document.documentElement.dataset.paleta || 'azul');
+  }
   for (const c of CATEGORIAS) {
     $('categoria').add(new Option(c, c));
     $('filtro-categoria').add(new Option(c, c));
