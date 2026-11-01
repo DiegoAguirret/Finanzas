@@ -673,6 +673,9 @@ tbody tr.editando { background: var(--accent-soft); }
   .plan-propia { grid-template-columns: minmax(0, 1fr); }
 }
 
+.sal-elegir { max-width: 320px; margin: 12px 0; }
+#sal-aviso { margin-bottom: 12px; }
+
 /* Plan */
 .progreso div.ok { background: var(--ok); }
 .progreso div.mal { background: var(--danger); }

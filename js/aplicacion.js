@@ -2874,9 +2874,17 @@ function renderTarjeta() {
 
 // Deuda anterior: se elige la fecha de pago entre los ciclos cercanos de la tarjeta
 function renderSaldos(t) {
-  const lista = configurada(t) ? saldosDe(t) : [];
-  $('sal-card').classList.toggle('hidden', !configurada(t));
-  if (!configurada(t)) return;
+  const lista = saldosDe(t);
+  // Se elige la tarjeta aquí mismo; las fechas salen del corte y el pago de la elegida
+  $('sal-tarjeta').replaceChildren(...tarjetas.map((x) => new Option(x.nombre, x.id)));
+  $('sal-tarjeta').value = t.id;
+  $('sal-aviso').classList.toggle('hidden', configurada(t));
+  $('sal-form').classList.toggle('hidden', !configurada(t));
+  if (!configurada(t)) {
+    $('sal-lista').replaceChildren();
+    $('tabla-saldos').classList.add('hidden');
+    return;
+  }
   const actual = indiceCiclo(hoyISO(), t.corte);
   const ciclos = [];
   for (let n = actual - 2; n <= actual + 11; n++) ciclos.push(cicloDe(n, t));
@@ -4510,6 +4518,12 @@ $('tar-form').addEventListener('submit', (e) => {
   tarjetasCambiadas();
 });
 $('tar-cancelar').addEventListener('click', () => { salirEdicionTarjeta(); renderTarjeta(); });
+$('sal-tarjeta').addEventListener('change', () => {
+  tarSeleccion = $('sal-tarjeta').value;
+  pagoSugerido = null;
+  $('pago-tc').value = '';
+  renderTarjeta();
+});
 $('sal-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const t = tarjetaDe(tarSeleccion);

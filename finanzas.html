@@ -572,6 +572,11 @@
         <section class="card" id="sal-card">
           <h2>Deuda anterior</h2>
           <p class="sub">Lo que ya debías al empezar a registrar, por fecha de pago. Si son cuotas, indica cuántas faltan.</p>
+          <div class="sal-elegir">
+            <label for="sal-tarjeta">Tarjeta</label>
+            <select id="sal-tarjeta"></select>
+          </div>
+          <div class="mensaje hidden" id="sal-aviso">A esta tarjeta le falta el día de corte o de pago: edítala en «Mis tarjetas».</div>
           <form id="sal-form" class="form-movimiento" autocomplete="off">
             <div>
               <label for="sal-vence">Primer pago hasta</label>
