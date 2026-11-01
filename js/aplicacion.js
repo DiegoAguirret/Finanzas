@@ -698,7 +698,6 @@ function cerrarSesionLocal() {
 
 // Borra la copia local (al cerrar sesión o si pertenece a otra cuenta)
 function borrarCopiaLocal() {
-  borrarBorradores();
   gastos = [];
   ingresos = [];
   tarjetas = [];
@@ -1005,7 +1004,7 @@ function refrescarTodo() {
   if (editandoId && !gastos.some((x) => x.id === editandoId)) salirEdicion();
   if (ingEditandoId && !ingresos.some((x) => x.id === ingEditandoId)) salirEdicionIngreso();
   if (tarEditandoId && !tarjetaDe(tarEditandoId)) salirEdicionTarjeta();
-  if (salEditandoId && !saldos.some((x) => x.id === salEditandoId)) salirEdicionSaldo();
+  if (salEditandoIds.length && !saldos.some((x) => salEditandoIds.includes(x.id))) salirEdicionSaldo();
   if (deuEditandoId && !deudaDe(deuEditandoId)) salirEdicionDeuda();
   if (metEditandoId && !metaDe(metEditandoId)) salirEdicionMeta();
   poblarMedios();
@@ -1017,23 +1016,40 @@ function refrescarTodo() {
 // Ventana de confirmación; resuelve true si se acepta (Escape o clic fuera = cancelar)
 function confirmar({ titulo, texto, accion, peligro = false }) {
   const d = $('dialogo');
+  if (d.open) return Promise.resolve(false);
   $('dialogo-titulo').textContent = titulo;
   $('dialogo-texto').textContent = texto;
   $('dialogo-si').textContent = accion;
   $('dialogo-si').className = peligro ? 'btn-danger' : 'btn-primary';
   d.returnValue = 'no';
   d.showModal();
-  return new Promise((resolver) => d.addEventListener('close', () => resolver(d.returnValue === 'si'), { once: true }));
+  // La respuesta se toma al pulsar el botón: el evento `close` llega después y, si se retrasa,
+  // podría confundirse con la siguiente ventana. Escape o clic fuera solo disparan `close`.
+  const formulario = d.querySelector('form');
+  return new Promise((resolver) => {
+    const responder = (valor) => {
+      formulario.removeEventListener('submit', alEnviar);
+      d.removeEventListener('close', alCerrar);
+      resolver(valor);
+    };
+    const alEnviar = (e) => responder(e.submitter?.value === 'si');
+    // Con la ventana abierta, este `close` es el atrasado de la ventana anterior: se ignora
+    const alCerrar = () => { if (!d.open) responder(false); };
+    formulario.addEventListener('submit', alEnviar);
+    d.addEventListener('close', alCerrar);
+  });
 }
 
 let saliendo = false;
 async function cerrarSesion() {
   if (saliendo || !sesion) return;
-  const sinGuardar = hayCambiosSinSubir();
+  // Lo escrito en un formulario o lo que aún no llegó a la nube
+  const sinGuardar = hayCambiosSinSubir() || sucios.size || repartoSinTerminar();
   const ok = await confirmar(sinGuardar
-    ? { titulo: 'Tienes cambios sin guardar', texto: 'Si sales ahora, se perderán.', accion: 'Salir sin guardar', peligro: true }
+    ? { titulo: 'Tienes cambios sin guardar', texto: 'Si cierras sesión, se perderá lo que no guardaste.', accion: 'Salir sin guardar', peligro: true }
     : { titulo: '¿Cerrar sesión?', texto: 'Tus datos seguirán en tu cuenta. Podrás volver a entrar cuando quieras.', accion: 'Cerrar sesión' });
   if (!ok || !sesion) return;
+  descartarEn(document.body);
   saliendo = true;
   avisoGuardado('Cerrando sesión…');
   try { await api('/auth/v1/logout', { metodo: 'POST' }); } catch {}
@@ -2875,30 +2891,40 @@ function renderTarjeta() {
 }
 
 // Deuda anterior: se elige la fecha de pago entre los ciclos cercanos de la tarjeta
-let salEditandoId = null;
+let salEditandoIds = [];
 
-function editarSaldo(s) {
-  salEditandoId = s.id;
-  $('sal-importe').value = s.importe;
-  $('sal-moneda').value = s.moneda;
-  $('sal-vence').value = s.fecha;
-  $('sal-etiqueta-vence').textContent = 'Se paga hasta';
-  $('sal-etiqueta-monto').textContent = 'Monto';
-  $('sal-cuotas-campo').classList.add('hidden');
+// Pagos iguales en ciclos seguidos (las cuotas) se muestran y corrigen como un solo registro
+function gruposSaldos(t) {
+  const clave = (s) => `${s.moneda}|${s.importe}`;
+  const orden = [...saldosDe(t)].sort((x, y) => (clave(x) < clave(y) ? -1 : clave(x) > clave(y) ? 1 : x.fecha < y.fecha ? -1 : 1));
+  const grupos = [];
+  for (const s of orden) {
+    const ultimo = grupos.at(-1)?.at(-1);
+    if (ultimo && clave(ultimo) === clave(s) && indiceCiclo(s.fecha, t.corte) === indiceCiclo(ultimo.fecha, t.corte) + 1) grupos.at(-1).push(s);
+    else grupos.push([s]);
+  }
+  return grupos.sort((x, y) => (x[0].fecha < y[0].fecha ? -1 : x[0].fecha > y[0].fecha ? 1 : 0));
+}
+
+function editarSaldo(grupo) {
+  salEditandoIds = grupo.map((s) => s.id);
+  $('sal-importe').value = grupo[0].importe;
+  $('sal-moneda').value = grupo[0].moneda;
+  $('sal-cuotas').value = grupo.length;
+  $('sal-vence').value = grupo[0].fecha;
   $('sal-guardar').textContent = 'Guardar cambios';
   $('sal-cancelar').classList.remove('hidden');
-  renderSaldos(tarjetaDe(s.tarjeta));
+  renderSaldos(tarjetaDe(grupo[0].tarjeta));
   $('sal-form').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
   $('sal-importe').focus();
 }
 
 function salirEdicionSaldo() {
-  salEditandoId = null;
+  salEditandoIds = [];
+  sucios.delete('sal-form');
+  delete basesForm['sal-form'];
   $('sal-importe').value = '';
   $('sal-cuotas').value = '1';
-  $('sal-etiqueta-vence').textContent = 'Primer pago hasta';
-  $('sal-etiqueta-monto').textContent = 'Monto de cada pago';
-  $('sal-cuotas-campo').classList.remove('hidden');
   $('sal-guardar').textContent = 'Añadir deuda anterior';
   $('sal-cancelar').classList.add('hidden');
 }
@@ -2922,21 +2948,24 @@ function renderSaldos(t) {
   const previo = sel.dataset.tarjeta === t.id ? sel.value : '';
   sel.replaceChildren(...ciclos.map((c) => new Option(formatearFecha(c.vence), c.hasta)));
   // Una fecha ya registrada puede quedar fuera de los ciclos cercanos: también se puede elegir
-  const editando = saldos.find((x) => x.id === salEditandoId);
+  const editando = saldos.find((x) => x.id === salEditandoIds[0]);
   if (editando && !ciclos.some((c) => c.hasta === editando.fecha)) sel.add(new Option(formatearFecha(venceSaldo(editando)), editando.fecha));
   sel.dataset.tarjeta = t.id;
   sel.value = previo || (ciclos.find((c) => c.vence >= hoyISO()) || ciclos[0]).hasta;
   const tbody = $('sal-lista');
   tbody.replaceChildren();
-  for (const s of [...lista].sort((a, b) => (a.fecha < b.fecha ? -1 : 1))) {
+  for (const grupo of gruposSaldos(t)) {
+    const [s] = grupo;
+    const n = grupo.length;
     const tr = document.createElement('tr');
-    if (s.id === salEditandoId) tr.classList.add('editando');
-    celda(tr, 'Se paga hasta', formatearFecha(venceSaldo(s)), 'fecha');
-    celda(tr, 'Monto', dinero(s.importe, s.moneda), 'num');
+    if (salEditandoIds.includes(s.id)) tr.classList.add('editando');
+    celda(tr, 'Se paga hasta', n > 1 ? `${formatearFecha(venceSaldo(s))} – ${formatearFecha(venceSaldo(grupo[n - 1]))} · ${n} pagos` : formatearFecha(venceSaldo(s)), 'fecha');
+    celda(tr, 'Monto', dinero(s.importe, s.moneda) + (n > 1 ? ' c/u' : ''), 'num');
     const acciones = celda(tr, '', '', 'acciones');
-    acciones.append(boton('Editar', 'Editar deuda anterior', () => editarSaldo(s)), botonEliminar('Eliminar deuda anterior', () => {
-      saldos = saldos.filter((x) => x !== s);
-      if (salEditandoId === s.id) salirEdicionSaldo();
+    const ids = grupo.map((x) => x.id);
+    acciones.append(boton('Editar', 'Editar deuda anterior', () => editarSaldo(grupo)), botonEliminar('Eliminar deuda anterior', () => {
+      saldos = saldos.filter((x) => !ids.includes(x.id));
+      if (salEditandoIds.some((id) => ids.includes(id))) salirEdicionSaldo();
       saldosCambiados();
     }));
     tbody.appendChild(tr);
@@ -3253,58 +3282,100 @@ $('borrar-todo').addEventListener('click', () => {
   mensajeDatos(`Se eliminaron ${n[0]} gastos, ${n[1]} ingresos y ${n[2]} pagos de tarjeta.`);
 });
 
-// ---- Borradores ----
-// Lo escrito y aún sin guardar sobrevive a una recarga o a que el celular cierre la pestaña.
-// Se guarda en sessionStorage (se borra al cerrar la pestaña y al cerrar sesión) y nunca
-// mientras se edita un registro: al restaurarlo se crearía uno repetido.
-const CLAVE_BORRADORES = 'finanzas.borradores';
-const FORMS_BORRADOR = ['form', 'ing-form', 'tar-form', 'tc-form', 'pago-form', 'sal-form', 'deu-form', 'abo-form', 'met-form', 'apo-form', 'cat-form'];
+// ---- Cambios sin guardar ----
+// Un formulario queda «sucio» si lo escrito difiere de cómo estaba antes de empezar a escribir.
+// Salir de él (apartado, hoja, sesión, recarga) pide confirmar; si se acepta, lo escrito se pierde.
+const FORMS_CONTROLADOS = ['form', 'ing-form', 'tar-form', 'tc-form', 'pago-form', 'sal-form', 'deu-form', 'abo-form', 'met-form', 'apo-form', 'cat-form', 'cuenta-form'];
+const sucios = new Set();
+const basesForm = {};
 
-function leerBorradores() {
-  try { return JSON.parse(sessionStorage.getItem(CLAVE_BORRADORES)) || {}; } catch { return {}; }
+function estadoForm(f) {
+  const estado = {};
+  for (const c of f.elements) {
+    const nombre = c.name || c.id;
+    if (!nombre || c.tagName === 'BUTTON' || c.tagName === 'FIELDSET' || c.type === 'file' || (c.type === 'radio' && !c.checked)) continue;
+    estado[nombre] = c.value;
+  }
+  return estado;
 }
 
-function escribirBorradores(b) {
-  try { sessionStorage.setItem(CLAVE_BORRADORES, JSON.stringify(b)); } catch {}
-}
-
-function borrarBorradores() {
-  try { sessionStorage.removeItem(CLAVE_BORRADORES); } catch {}
-}
-
-function iniciarBorradores() {
-  const guardados = leerBorradores();
-  for (const id of FORMS_BORRADOR) {
+function iniciarFormularios() {
+  for (const id of FORMS_CONTROLADOS) {
     const f = $(id);
-    for (const [nombre, valor] of Object.entries(guardados[id] || {})) {
+    const tomarBase = () => { if (!sucios.has(id)) basesForm[id] = estadoForm(f); };
+    const limpiar = () => {
+      sucios.delete(id);
+      delete basesForm[id];
+    };
+    const revisar = () => {
+      const base = basesForm[id];
+      if (!base || JSON.stringify(estadoForm(f)) !== JSON.stringify(base)) sucios.add(id);
+      else sucios.delete(id);
+    };
+    f.addEventListener('focusin', tomarBase);
+    f.addEventListener('pointerdown', tomarBase);
+    f.addEventListener('input', revisar);
+    f.addEventListener('change', revisar);
+    f.addEventListener('reset', limpiar);
+    f.addEventListener('submit', () => setTimeout(limpiar));
+  }
+}
+
+// Deja el formulario como estaba: si se editaba un registro, cancela la edición
+function descartarFormulario(id) {
+  const f = $(id);
+  const cancelar = f.querySelector('.acciones-form .btn-secondary:not(.hidden)');
+  if (cancelar) cancelar.click();
+  else {
+    for (const [nombre, valor] of Object.entries(basesForm[id] || {})) {
       const c = f.elements[nombre];
       if (!c) continue;
       c.value = valor;
-      // Los selectores de ícono y color actualizan su vista previa al cambiar
       if (c instanceof RadioNodeList) f.querySelector(`input[name="${nombre}"]:checked`)?.dispatchEvent(new Event('change', { bubbles: true }));
     }
-    const quitar = () => {
-      const b = leerBorradores();
-      delete b[id];
-      escribirBorradores(b);
-    };
-    const anotar = (e) => {
-      const c = e.target;
-      const nombre = c.name || c.id;
-      if (!nombre || c.type === 'file') return;
-      if (f.querySelector('.acciones-form .btn-secondary:not(.hidden)')) return; // se está editando
-      const b = leerBorradores();
-      (b[id] ||= {})[nombre] = c.value;
-      escribirBorradores(b);
-    };
-    f.addEventListener('input', anotar);
-    f.addEventListener('change', anotar);
-    f.addEventListener('reset', quitar);
-    f.addEventListener('submit', () => setTimeout(quitar));
+  }
+  sucios.delete(id);
+  delete basesForm[id];
+}
+
+// Formularios con cambios dentro de un elemento (una vista, un panel, una hoja)
+function suciosEn(contenedor) {
+  return [...sucios].filter((id) => contenedor.contains($(id)));
+}
+
+function repartoSinTerminar() {
+  return !!$('plan-suma').textContent;
+}
+
+// Descarta lo escrito dentro del contenedor y repinta lo que depende de esos campos
+function descartarEn(contenedor) {
+  for (const id of suciosEn(contenedor)) descartarFormulario(id);
+  if (contenedor.contains($('plan-suma')) && repartoSinTerminar()) {
+    $('plan-suma').textContent = '';
+    renderPlan();
   }
   pintarNotaMedio();
   pintarModoPago();
   actualizarFormPago();
+}
+
+// true si no hay nada que perder o si el usuario acepta perderlo
+async function confirmarSalida(contenedor, texto) {
+  const hay = suciosEn(contenedor).length || (contenedor.contains($('plan-suma')) && repartoSinTerminar());
+  if (!hay) return true;
+  const ok = await confirmar({ titulo: '¿Salir sin guardar?', texto, accion: 'Salir sin guardar', peligro: true });
+  if (ok) descartarEn(contenedor);
+  return ok;
+}
+
+// Al cambiar de apartado: vuelve al actual mientras el usuario decide
+async function alCambiarHash() {
+  const destino = location.hash;
+  const actual = $('vista-' + vistaActual);
+  const hay = suciosEn(actual).length || (vistaActual === 'plan' && repartoSinTerminar());
+  if (!hay) return mostrarVista();
+  history.replaceState(null, '', '#' + vistaActual);
+  if (await confirmarSalida(actual, 'Si cambias de apartado, se perderá lo que escribiste.')) location.hash = destino;
 }
 
 // ---- Navegación entre vistas ----
@@ -3392,6 +3463,15 @@ function cerrarHoja(devolverFoco = true) {
   hojaAbierta = null;
   hojaInertes = [];
   if (devolverFoco) $('fab').focus();
+}
+
+// Cerrar la hoja con «Cerrar», tocando fuera o con Escape: avisa si hay algo escrito;
+// si se estaba editando, cerrar equivale a cancelar
+async function pedirCerrarHoja() {
+  const hoja = hojaAbierta;
+  if (!hoja || !(await confirmarSalida(hoja, 'Si cierras, se perderá lo que escribiste.'))) return;
+  hoja.querySelector('.acciones-form .btn-secondary:not(.hidden)')?.click();
+  cerrarHoja();
 }
 
 function cerrarMenuMovil() {
@@ -3570,7 +3650,7 @@ function guardarCategoriaForm(e) {
 }
 
 function eliminarCategoria(c) {
-  categorias = categorias.filter((x) => x !== c);
+  categorias = categorias.filter((x) => x.nombre !== c.nombre);
   let n = 0;
   for (const g of gastos) if (g.categoria === c.nombre) { g.categoria = CATEGORIA_FIJA; n++; }
   moverCategoriaEnSim(c.nombre, null);
@@ -4083,7 +4163,7 @@ function renderDeudas() {
         }),
         boton('Editar', `Editar ${d.nombre}`, () => editarDeuda(d)),
         botonEliminar(`Eliminar ${d.nombre}`, () => {
-          deudas = deudas.filter((x) => x !== d);
+          deudas = deudas.filter((x) => x.id !== d.id);
           abonos = abonos.filter((a) => a.deuda !== d.id);
           if (deuEditandoId === d.id) salirEdicionDeuda();
           guardarDeudas();
@@ -4114,7 +4194,7 @@ function renderDeudas() {
     celda(tr, 'Fecha', formatearFecha(a.fecha), 'fecha');
     celda(tr, 'Abono', dinero(a.importe, elegida.moneda), 'num');
     celda(tr, '', botonEliminar('Eliminar abono', () => {
-      abonos = abonos.filter((x) => x !== a);
+      abonos = abonos.filter((x) => x.id !== a.id);
       guardarDeudas();
       render();
       renderDeudas();
@@ -4190,7 +4270,7 @@ function renderAhorro() {
         }),
         boton('Editar', `Editar ${m.nombre}`, () => editarMeta(m)),
         botonEliminar(`Eliminar ${m.nombre}`, () => {
-          metas = metas.filter((x) => x !== m);
+          metas = metas.filter((x) => x.id !== m.id);
           aportes = aportes.filter((a) => a.meta !== m.id);
           if (metEditandoId === m.id) salirEdicionMeta();
           guardarMetas();
@@ -4222,7 +4302,7 @@ function renderAhorro() {
     celda(tr, 'Movimiento', a.importe > 0 ? 'Aporte' : 'Retiro');
     celda(tr, 'Importe', dinero(Math.abs(a.importe), elegida.moneda), 'num');
     celda(tr, '', botonEliminar('Eliminar movimiento', () => {
-      aportes = aportes.filter((x) => x !== a);
+      aportes = aportes.filter((x) => x.id !== a.id);
       guardarMetas();
       renderAhorro();
     }), 'acciones');
@@ -4302,7 +4382,11 @@ $('apo-form').addEventListener('submit', (e) => {
 });
 
 // Ajustes
-for (const b of document.querySelectorAll('.ajustes-menu button')) b.addEventListener('click', () => abrirAjuste(b.dataset.ajuste));
+for (const b of document.querySelectorAll('.ajustes-menu button')) {
+  b.addEventListener('click', async () => {
+    if (await confirmarSalida($('aj-' + ajusteActual), 'Si cambias de sección, se perderá lo que escribiste.')) abrirAjuste(b.dataset.ajuste);
+  });
+}
 $('ir-categorias').addEventListener('click', () => { ajusteActual = 'categorias'; });
 $('cat-form').addEventListener('submit', guardarCategoriaForm);
 $('cat-cancelar').addEventListener('click', salirEdicionCategoria);
@@ -4511,19 +4595,14 @@ addEventListener('online', () => {
 $('btn-menu').addEventListener('click', () => alternarMenu(true));
 $('tab-mas').addEventListener('click', () => alternarMenu(true));
 $('fab').addEventListener('click', () => abrirHoja());
-$('hoja-fondo').addEventListener('click', () => cerrarHoja());
+$('hoja-fondo').addEventListener('click', pedirCerrarHoja);
 for (const [vista, [idForm]] of Object.entries(HOJAS)) {
   const hoja = $(idForm).closest('.hoja');
   const cerrar = document.createElement('button');
   cerrar.type = 'button';
   cerrar.className = 'hoja-cerrar';
   cerrar.textContent = 'Cerrar';
-  // Si se estaba editando, cerrar equivale a cancelar
-  cerrar.addEventListener('click', () => {
-    const cancelar = hoja.querySelector('.acciones-form .btn-secondary:not(.hidden)');
-    if (cancelar) cancelar.click();
-    cerrarHoja();
-  });
+  cerrar.addEventListener('click', pedirCerrarHoja);
   hoja.prepend(cerrar);
   hoja.querySelector('.acciones-form .btn-secondary').addEventListener('click', () => cerrarHoja());
   $(idForm).addEventListener('submit', () => { if (vista === vistaActual) setTimeout(cerrarHoja); });
@@ -4536,7 +4615,7 @@ document.querySelector('.barra-nav').addEventListener('click', cerrarMenuMovil);
 addEventListener('keydown', (e) => {
   // Con el menú del usuario o una ventana abiertos, Escape solo cierra eso
   if (e.key !== 'Escape' || $('dialogo').open || $('menu-usuario').matches(':popover-open')) return;
-  cerrarHoja();
+  if (hojaAbierta) return pedirCerrarHoja();
   cerrarMenuMovil();
 });
 pantallaMovil.addEventListener('change', () => {
@@ -4610,7 +4689,7 @@ $('tar-form').addEventListener('submit', (e) => {
 $('tar-cancelar').addEventListener('click', () => { salirEdicionTarjeta(); renderTarjeta(); });
 $('sal-cancelar').addEventListener('click', () => { salirEdicionSaldo(); renderTarjeta(); });
 $('sal-tarjeta').addEventListener('change', () => {
-  salirEdicionSaldo();
+  if (salEditandoIds.length) salirEdicionSaldo();
   tarSeleccion = $('sal-tarjeta').value;
   pagoSugerido = null;
   $('pago-tc').value = '';
@@ -4621,24 +4700,15 @@ $('sal-form').addEventListener('submit', (e) => {
   const t = tarjetaDe(tarSeleccion);
   const cuotas = Math.min(60, Math.max(1, Math.trunc(numero($('sal-cuotas').value))));
   if (!t || !configurada(t)) return;
-  const editado = saldos.find((x) => x.id === salEditandoId);
-  if (editado) {
-    const s = saldoValido({ ...editado, fecha: $('sal-vence').value, moneda: $('sal-moneda').value, importe: $('sal-importe').value });
-    if (!s) return;
-    Object.assign(editado, s);
-    salirEdicionSaldo();
-    saldosCambiados();
-    return;
-  }
-  // Con varias cuotas, un pago en cada ciclo a partir del elegido
+  // Con varias cuotas, un pago en cada ciclo a partir del elegido; al editar se reemplaza el grupo
+  const ids = salEditandoIds;
   const primero = indiceCiclo($('sal-vence').value, t.corte);
   const nuevos = Array.from({ length: cuotas }, (_, i) => saldoValido({
-    id: nuevoId(), tarjeta: t.id, fecha: cicloDe(primero + i, t).hasta, moneda: $('sal-moneda').value, importe: $('sal-importe').value,
+    id: ids[i] || nuevoId(), tarjeta: t.id, fecha: cicloDe(primero + i, t).hasta, moneda: $('sal-moneda').value, importe: $('sal-importe').value,
   }));
   if (nuevos.some((s) => !s)) return;
-  saldos.push(...nuevos);
-  $('sal-importe').value = '';
-  $('sal-cuotas').value = '1';
+  saldos = saldos.filter((x) => !ids.includes(x.id)).concat(nuevos);
+  salirEdicionSaldo();
   saldosCambiados();
 });
 $('tar-modo-pago').addEventListener('change', () => {
@@ -4694,7 +4764,11 @@ $('sim-reiniciar').addEventListener('click', () => {
   renderSimulador();
 });
 
-addEventListener('hashchange', mostrarVista);
+addEventListener('hashchange', alCambiarHash);
+// Recargar o cerrar la pestaña con cambios sin guardar: el navegador pide confirmar
+addEventListener('beforeunload', (e) => {
+  if (sucios.size || repartoSinTerminar()) e.preventDefault();
+});
 let esperaResize;
 addEventListener('resize', () => {
   clearTimeout(esperaResize);
@@ -4805,7 +4879,7 @@ salirEdicion();
 salirEdicionDeuda();
 salirEdicionMeta();
 salirEdicionCategoria();
-iniciarBorradores();
+iniciarFormularios();
 render();
 mostrarVista();
 
