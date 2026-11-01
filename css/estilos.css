@@ -117,6 +117,23 @@ body {
 @keyframes aviso-entra { from { opacity: 0; transform: translateY(6px); } }
 @media (prefers-reduced-motion: reduce) { .aviso-guardado { animation: none; } }
 
+/* Esperas: barra fina arriba, cifras en espera durante la primera descarga y botones ocupados */
+.barra-carga { position: fixed; inset: 0 0 auto; z-index: 30; height: 3px; overflow: hidden; background: var(--accent-soft); pointer-events: none; }
+.barra-carga::before { content: ''; display: block; width: 40%; height: 100%; background: var(--accent); animation: barra-carga 1.2s ease-in-out infinite; }
+@keyframes barra-carga { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+.cargando-datos .vacio { visibility: hidden; }
+.cargando-datos .resumen .valor, .cargando-datos .sidebar-pie strong {
+  width: fit-content; min-width: 7ch; border-radius: 6px; color: transparent;
+  background: var(--border); animation: cifra-espera 1.2s ease-in-out infinite alternate;
+}
+.cargando-datos .sidebar-pie strong { background: rgba(255, 255, 255, .25); }
+@keyframes cifra-espera { to { opacity: .45; } }
+button[aria-busy="true"] { cursor: progress; opacity: .75; }
+@media (prefers-reduced-motion: reduce) {
+  .barra-carga::before { width: 100%; animation: none; }
+  .cargando-datos .resumen .valor, .cargando-datos .sidebar-pie strong { animation: none; }
+}
+
 /* Pantalla de acceso */
 .acceso {
   position: fixed; inset: 0; z-index: 20;
@@ -209,6 +226,7 @@ form.acceso-caja #acceso-texto { margin: -8px 0 4px; }
 .menu-fila .segmentado { display: flex; }
 .menu-fila .segmentado label { flex: 1; }
 .menu-fila .segmentado span { padding: 6px 4px; text-align: center; font-size: .82rem; }
+.menu-fila:has(+ .hidden) { border-bottom: 0; margin-bottom: 0; }
 .menu-opcion {
   display: block; width: 100%; padding: 8px 10px; border-radius: 8px; background: transparent;
   color: var(--text); font-size: .9rem; font-weight: 500; text-align: left; text-decoration: none;
@@ -230,7 +248,7 @@ form.acceso-caja #acceso-texto { margin: -8px 0 4px; }
 .importe-moneda { display: flex; gap: 6px; }
 .importe-moneda input { min-width: 0; }
 .importe-moneda select { width: auto; flex-shrink: 0; }
-#aviso-tc, #aviso-nube { margin-bottom: 20px; }
+#aviso-carga, #aviso-tc, #aviso-nube { margin-bottom: 20px; }
 #tc-form { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 16px; }
 @media (max-width: 640px) { #tc-form { grid-template-columns: 1fr 1fr; } }
 
@@ -623,6 +641,21 @@ tbody tr.editando { background: var(--accent-soft); }
 .fa-nombre { display: flex; gap: 8px; flex-shrink: 0; width: min(360px, 100%); }
 .fa-nombre input { min-width: 0; }
 #cuenta-form { display: block; }
+/* Opciones a la vista, cada una con su explicación */
+.opciones-ajuste { border: 0; margin: 0; padding: 16px 0 0; max-width: 640px; }
+.opciones-ajuste legend { padding: 16px 0 0; }
+.opcion-ajuste {
+  display: flex; align-items: flex-start; gap: 10px; margin: 8px 0 0; padding: 12px;
+  border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.opcion-ajuste:first-of-type { margin-top: 10px; }
+.opcion-ajuste:hover { border-color: var(--muted); }
+.opcion-ajuste:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.opcion-ajuste input { width: auto; flex-shrink: 0; margin: 3px 0 0; accent-color: var(--accent); }
+.opcion-ajuste strong { display: block; font-size: .92rem; font-weight: 600; color: var(--text); }
+.opcion-ajuste small { display: block; font-size: .85rem; font-weight: 400; color: var(--muted); }
+.opcion-ajuste:has(input:checked) small { color: var(--text); }
+.opciones-ajuste .fa-texto { margin-top: 10px; }
 #aj-datos > h2 { margin-bottom: 0; }
 .columnas-categorias { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
 .lista-categorias { display: flex; flex-direction: column; }

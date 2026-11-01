@@ -429,6 +429,38 @@ function escribirJSON(clave, valor) {
   }
 }
 
+// Barra fina arriba mientras haya llamadas en curso; solo aparece si tardan más de 300 ms
+let cargasActivas = 0, esperaBarraCarga = null;
+function marcarCarga(cambio) {
+  cargasActivas += cambio;
+  if (cargasActivas > 0) {
+    esperaBarraCarga ??= setTimeout(() => $('barra-carga').classList.remove('hidden'), 300);
+    return;
+  }
+  clearTimeout(esperaBarraCarga);
+  esperaBarraCarga = null;
+  $('barra-carga').classList.add('hidden');
+}
+
+// Primera descarga de una cuenta: aviso y cifras en espera, para no enseñar «S/ 0.00» ni «Aún no hay gastos»
+function cargaInicial(activa) {
+  document.documentElement.classList.toggle('cargando-datos', activa);
+  $('aviso-carga').classList.toggle('hidden', !activa);
+}
+
+// Mientras un botón espera: se desactiva y dice qué está haciendo; devuelve cómo restaurarlo
+function botonOcupado(boton, texto, destino = boton) {
+  const original = destino.textContent;
+  boton.disabled = true;
+  boton.setAttribute('aria-busy', 'true');
+  destino.textContent = texto;
+  return () => {
+    boton.disabled = false;
+    boton.removeAttribute('aria-busy');
+    destino.textContent = original;
+  };
+}
+
 async function api(ruta, { metodo = 'GET', cuerpo, prefer, autenticado = true } = {}) {
   const cabeceras = {};
   if (cuerpo !== undefined) cabeceras['Content-Type'] = 'application/json';
@@ -438,16 +470,19 @@ async function api(ruta, { metodo = 'GET', cuerpo, prefer, autenticado = true } 
     if (!sesion) throw Object.assign(new Error('Tu sesión terminó. Vuelve a iniciar sesión.'), { codigo: 'sin_sesion' });
     cabeceras.Authorization = 'Bearer ' + sesion.token;
   }
-  let r;
+  let r, texto;
+  marcarCarga(1);
   try {
     r = await fetch(API + ruta, {
       method: metodo, headers: cabeceras, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
       signal: AbortSignal.timeout(20000), // sin respuesta en 20 s se trata como sin conexión
     });
+    texto = await r.text();
   } catch {
     throw Object.assign(new Error(ERRORES_ACCESO.sin_conexion), { codigo: 'sin_conexion' });
+  } finally {
+    marcarCarga(-1);
   }
-  const texto = await r.text();
   let datos = null;
   try { datos = texto ? JSON.parse(texto) : null; } catch {}
   if (!r.ok) {
@@ -835,6 +870,7 @@ async function iniciarNube() {
   const dueno = leerJSON(CLAVE_DUENO, null);
   errorSync = null;
   pintarCuenta();
+  cargaInicial(dueno !== id);
   try {
     if (dueno && dueno !== id) {
       borrarCopiaLocal(); // la copia local es de otra cuenta
@@ -877,6 +913,7 @@ async function iniciarNube() {
       mostrarAcceso();
     }
   }
+  cargaInicial(false);
   pintarCuenta();
 }
 
@@ -978,6 +1015,7 @@ async function cerrarSesion() {
     : { titulo: '¿Cerrar sesión?', texto: 'Tus datos seguirán en tu cuenta. Podrás volver a entrar cuando quieras.', accion: 'Cerrar sesión' });
   if (!ok || !sesion) return;
   saliendo = true;
+  avisoGuardado('Cerrando sesión…');
   try { await api('/auth/v1/logout', { metodo: 'POST' }); } catch {}
   saliendo = false;
   cerrarMenuMovil();
@@ -3333,7 +3371,7 @@ function renderAjustes() {
     if (b.dataset.ajuste === ajusteActual) b.setAttribute('aria-current', 'true');
     else b.removeAttribute('aria-current');
   }
-  $('aj-compras').value = ajustes.compras;
+  for (const r of document.querySelectorAll('input[name="aj-compras"]')) r.checked = r.value === ajustes.compras;
   for (const nombre of ['cuenta', 'apariencia', 'preferencias', 'categorias', 'datos']) $('aj-' + nombre).classList.toggle('activo', nombre === ajusteActual);
   if (ajusteActual === 'categorias') renderCategorias();
 }
@@ -3342,6 +3380,7 @@ async function guardarNombreCuenta(e) {
   e.preventDefault();
   const nombre = $('aj-nombre').value.trim();
   if (!sesion || !nombre) return;
+  const listo = botonOcupado($('aj-nombre-guardar'), 'Guardando…');
   try {
     const usuario = await api('/auth/v1/user', { metodo: 'PUT', cuerpo: { data: { full_name: nombre } } });
     sesion.usuario.nombre = nombreDe(usuario) || nombre;
@@ -3351,6 +3390,8 @@ async function guardarNombreCuenta(e) {
     mensajeDatos('Nombre actualizado.');
   } catch (err) {
     mensajeDatos(ERRORES_ACCESO[err.codigo] || err.message, true);
+  } finally {
+    listo();
   }
 }
 
@@ -3914,12 +3955,6 @@ $('menu-usuario').addEventListener('beforetoggle', (e) => {
   $('menu-usuario').style.left = `${Math.max(8, fila.left)}px`;
   $('menu-usuario').style.bottom = `${innerHeight - fila.top + 8}px`;
 });
-$('menu-ajustes').addEventListener('click', () => {
-  ajusteActual = 'cuenta';
-  $('menu-usuario').hidePopover();
-  cerrarMenuMovil();
-  if (location.hash === '#datos') renderAjustes();
-});
 $('btn-salir').addEventListener('click', () => {
   $('menu-usuario').hidePopover();
   $('btn-usuario').focus(); // al cancelar, el foco vuelve aquí
@@ -3932,16 +3967,18 @@ $('sync-reintentar').addEventListener('click', () => {
   else iniciarNube();
 });
 $('acceso-google').addEventListener('click', async () => {
-  const boton = $('acceso-google');
-  boton.disabled = true;
   pintarAcceso();
+  soltarGoogle = botonOcupado($('acceso-google'), 'Conectando con Google…', $('acceso-google-texto'));
   try {
     await entrarConGoogle(); // si todo va bien, la página se va a Google
   } catch (err) {
     pintarAcceso(ERRORES_ACCESO[err.codigo] || err.message);
-    boton.disabled = false;
+    soltarGoogle();
   }
 });
+// Al volver atrás desde Google, el navegador restaura la página tal como quedó
+let soltarGoogle = () => {};
+addEventListener('pageshow', (e) => { if (e.persisted) soltarGoogle(); });
 $('acceso-alternar').addEventListener('click', () => {
   accesoModo = accesoModo === 'entrar' ? 'registro' : 'entrar';
   pintarAcceso();
@@ -3959,9 +3996,8 @@ $('acceso-local').addEventListener('click', () => {
 });
 $('acceso-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const boton = $('acceso-entrar');
-  boton.disabled = true;
   pintarAcceso();
+  const listo = botonOcupado($('acceso-entrar'), { entrar: 'Entrando…', registro: 'Creando cuenta…', recuperar: 'Enviando…', 'nueva-clave': 'Guardando…' }[accesoModo]);
   try {
     const correo = $('acceso-correo').value.trim(), clave = $('acceso-clave').value;
     if ((accesoModo === 'registro' || accesoModo === 'nueva-clave') && clave !== $('acceso-clave2').value) {
@@ -3989,7 +4025,7 @@ $('acceso-form').addEventListener('submit', async (e) => {
   } catch (err) {
     pintarAcceso(ERRORES_ACCESO[err.codigo] || err.message, err.codigo === 'confirmar');
   } finally {
-    boton.disabled = false;
+    listo();
   }
 });
 addEventListener('online', () => {
@@ -4079,12 +4115,13 @@ $('tar-modo-pago').addEventListener('change', () => {
 });
 for (const id of ['tar-corte', 'tar-pago']) $(id).addEventListener('input', pintarModoPago);
 for (const id of ['medio', 'fecha']) $(id).addEventListener('change', pintarNotaMedio);
-$('aj-compras').addEventListener('change', () => {
-  ajustes = ajustesValidos({ compras: $('aj-compras').value });
-  guardarAjustes();
-  render();
-  mensajeDatos(ajustes.compras === 'vence' ? 'Las compras con tarjeta se restan cuando vence su pago.' : 'Las compras con tarjeta se restan el día de la compra.');
-});
+for (const r of document.querySelectorAll('input[name="aj-compras"]')) {
+  r.addEventListener('change', () => {
+    ajustes = ajustesValidos({ compras: r.value });
+    guardarAjustes();
+    render();
+  });
+}
 $('tar-sel').addEventListener('change', () => {
   tarSeleccion = $('tar-sel').value;
   pagoSugerido = null;
@@ -4218,6 +4255,8 @@ sesion = leerJSON(CLAVE_SESION, null);
 pintarCuenta();
 (async () => {
   let errorAcceso = '', tipo = null;
+  // Se vuelve de Google o de un enlace del correo: mientras se canjea, se avisa que se está entrando
+  if (new URLSearchParams(location.search).has('code')) cargaInicial(true);
   try {
     tipo = await completarAcceso();
     if (tipo) {
@@ -4226,6 +4265,7 @@ pintarCuenta();
   } catch (err) {
     errorAcceso = ERRORES_ACCESO[err.codigo] || err.message;
   }
+  cargaInicial(false);
   pintarCuenta();
   if (tipo === 'recuperar') {
     // Se volvió del enlace de nueva contraseña: primero se elige la contraseña
