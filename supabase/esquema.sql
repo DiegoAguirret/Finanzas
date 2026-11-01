@@ -86,6 +86,12 @@ create table if not exists public.preferencias (
   actualizado timestamptz not null default now()
 );
 
+-- Días para pagar tras el corte, en tarjetas sin un día fijo de pago (entonces `pago` queda vacío)
+alter table public.tarjetas add column if not exists plazo smallint check (plazo between 1 and 90);
+
+-- Preferencias de cálculo: { compras: 'vence' | 'compra' }
+alter table public.preferencias add column if not exists ajustes jsonb;
+
 -- Categorías propias: [{ nombre, icono, color }]. Null = las de siempre. gastos.categoria guarda el nombre.
 alter table public.preferencias add column if not exists categorias jsonb;
 

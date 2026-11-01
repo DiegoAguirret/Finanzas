@@ -13,6 +13,7 @@ const CLAVE_ABONOS = 'finanzas.abonos';
 const CLAVE_METAS = 'finanzas.metas';
 const CLAVE_APORTES = 'finanzas.aportes';
 const CLAVE_INICIO = 'finanzas.inicio';
+const CLAVE_AJUSTES = 'finanzas.ajustes';
 // Trazos propios en una cuadrícula de 24 × 24 (ver .icono-cat en el CSS)
 const circulo = (x, y, r) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
 const ICONOS = {
@@ -77,6 +78,7 @@ let deudas = [];
 let abonos = [];
 let metas = [];
 let aportes = [];
+let ajustes = { compras: 'vence' }; // compras con tarjeta: se restan al vencer su pago o el día de la compra
 let editandoId = null;
 let confirmandoId = null;
 let vistaActual = 'gastos';
@@ -310,7 +312,7 @@ const CLAVE_DUENO = 'finanzas.dueno';               // usuario dueño de la copi
 const TABLAS = {
   tarjetas: {
     lista: () => tarjetas,
-    aFila: (t) => ({ id: t.id, nombre: t.nombre, banco: t.banco, corte: t.corte, pago: t.pago, linea: t.linea }),
+    aFila: (t) => ({ id: t.id, nombre: t.nombre, banco: t.banco, corte: t.corte, pago: t.pago, plazo: t.plazo, linea: t.linea }),
     deFila: (f) => tarjetaValida(f),
   },
   gastos: {
@@ -653,6 +655,7 @@ function borrarCopiaLocal() {
   tiposCambio.bcp = [];
   tiposCambio.interbank = [];
   categorias = CATEGORIAS_BASE.map((x) => ({ ...x }));
+  ajustes = ajustesValidos(null);
   deudas = [];
   abonos = [];
   metas = [];
@@ -661,7 +664,7 @@ function borrarCopiaLocal() {
   tarSeleccion = null;
   deuSeleccion = null;
   metSeleccion = null;
-  for (const clave of [CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_CATEGORIAS, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO, CLAVE_DUENO]) {
+  for (const clave of [CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_CATEGORIAS, CLAVE_AJUSTES, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO, CLAVE_DUENO]) {
     try { localStorage.removeItem(clave); } catch {}
   }
   escribirJSON(CLAVE_TC, tiposCambio);
@@ -687,7 +690,7 @@ function filasTiposCambio() {
 function hayCambiosSinSubir() {
   const actuales = { ...Object.fromEntries(ORDEN_TABLAS.map((t) => [t, filasDe(t)])), tipos_cambio: filasTiposCambio() };
   const prefs = sincronizado.preferencias || {};
-  if (prefs.sim !== JSON.stringify(sim) || prefs.cats !== JSON.stringify(categorias)) return true;
+  if (prefs.sim !== JSON.stringify(sim) || prefs.cats !== JSON.stringify(categorias) || prefs.aj !== JSON.stringify(ajustes)) return true;
   return Object.entries(actuales).some(([t, filas]) => {
     const previas = sincronizado[t] || {};
     return Object.keys(filas).some((id) => previas[id] !== filas[id]) ||
@@ -728,10 +731,10 @@ async function subirCambios() {
   if (tcNuevos.length) {
     await api('/rest/v1/tipos_cambio?on_conflict=usuario,banco,fecha', { metodo: 'POST', cuerpo: tcNuevos, prefer: 'resolution=merge-duplicates,return=minimal' });
   }
-  const preferencias = { sim: JSON.stringify(sim), cats: JSON.stringify(categorias) };
+  const preferencias = { sim: JSON.stringify(sim), cats: JSON.stringify(categorias), aj: JSON.stringify(ajustes) };
   const previas = sincronizado.preferencias || {};
-  if (previas.sim !== preferencias.sim || previas.cats !== preferencias.cats) {
-    await api('/rest/v1/preferencias?on_conflict=usuario', { metodo: 'POST', cuerpo: { simulacion: sim, categorias }, prefer: 'resolution=merge-duplicates,return=minimal' });
+  if (previas.sim !== preferencias.sim || previas.cats !== preferencias.cats || previas.aj !== preferencias.aj) {
+    await api('/rest/v1/preferencias?on_conflict=usuario', { metodo: 'POST', cuerpo: { simulacion: sim, categorias, ajustes }, prefer: 'resolution=merge-duplicates,return=minimal' });
   }
   sincronizado = { ...actuales, tipos_cambio: tcs, preferencias };
   escribirJSON(CLAVE_SINCRONIZADO, sincronizado);
@@ -776,7 +779,7 @@ async function descargarDeLaNube() {
   const [filas, tcs, prefs] = await Promise.all([
     Promise.all(ORDEN_TABLAS.map((t) => traerTodo(`/rest/v1/${t}?select=*`, 'id'))),
     traerTodo('/rest/v1/tipos_cambio?select=banco,fecha,compra,venta', 'banco,fecha'),
-    api('/rest/v1/preferencias?select=simulacion,categorias'),
+    api('/rest/v1/preferencias?select=simulacion,categorias,ajustes'),
   ]);
   return { ...Object.fromEntries(ORDEN_TABLAS.map((t, i) => [t, filas[i]])), tipos_cambio: tcs, preferencias: prefs };
 }
@@ -811,6 +814,9 @@ function aplicarNube(nube, unir) {
     if (unir) categorias = normalizarCategorias(categorias.concat(locales));
   }
 
+  const ajustesNube = nube.preferencias[0]?.ajustes;
+  if (ajustesNube) ajustes = ajustesValidos(ajustesNube);
+
   // Lo que la nube tiene es lo ya sincronizado; lo local que se unió se subirá en la próxima sincronización
   const filas = (t, lista) => Object.fromEntries(lista.map((x) => {
     const f = TABLAS[t].aFila(x);
@@ -820,7 +826,7 @@ function aplicarNube(nube, unir) {
     ...Object.fromEntries(ORDEN_TABLAS.map((t) => [t, filas(t, deNube[t])])),
     tipos_cambio: Object.fromEntries(['bcp', 'interbank'].flatMap((banco) =>
       tcNube[banco].map((t) => [banco + '|' + t.fecha, JSON.stringify({ banco, ...t })]))),
-    preferencias: { ...(simNube ? { sim: JSON.stringify(sim) } : {}), ...(catsConfirmadas ? { cats: catsConfirmadas } : {}) },
+    preferencias: { ...(simNube ? { sim: JSON.stringify(sim) } : {}), ...(catsConfirmadas ? { cats: catsConfirmadas } : {}), ...(ajustesNube ? { aj: JSON.stringify(ajustes) } : {}) },
   };
 }
 
@@ -884,6 +890,7 @@ function guardarCopiaLocal() {
   escribirJSON(CLAVE_TC, tiposCambio);
   guardarSim();
   guardarCategorias();
+  guardarAjustes();
   guardarDeudas();
   guardarMetas();
 }
@@ -952,9 +959,9 @@ function refrescarTodo() {
 }
 
 async function cerrarSesion() {
-  if (hayCambiosSinSubir() && !confirmandoSalida) {
+  if (!confirmandoSalida) {
     confirmandoSalida = true;
-    $('btn-cuenta').textContent = '¿Salir sin guardar? Pulsa otra vez';
+    $('btn-cuenta').textContent = hayCambiosSinSubir() ? '¿Salir sin guardar? Pulsa otra vez' : '¿Cerrar sesión? Pulsa otra vez';
     setTimeout(() => { confirmandoSalida = false; pintarCuenta(); }, 3000);
     return;
   }
@@ -1230,6 +1237,7 @@ function etiquetaTarjeta(t) {
 }
 
 function render() {
+  pintarNotaMedio();
   // Resumen
   const mesActual = hoyISO().slice(0, 7);
   const total = sumar(gastos);
@@ -1240,7 +1248,8 @@ function render() {
   $('registros').textContent = gastos.length;
 
   // Balance del mes en la barra lateral (solo si el usuario registra ingresos)
-  const balance = sumar(ingresos.filter((i) => i.fecha.startsWith(mesActual))) - delMes;
+  const [anioHoy, mesHoy] = mesActual.split('-').map(Number);
+  const balance = cifrasPeriodo(mesActual + '-01', isoDia(new Date(anioHoy, mesHoy, 0))).ahorro;
   $('side-balance-caja').classList.toggle('hidden', !ingresos.length);
   $('side-balance').textContent = soles.format(balance);
   $('side-balance').className = balance >= 0 ? 'ok' : 'mal';
@@ -1554,6 +1563,7 @@ function nombreMes(mes) {
 function mesesBalance() {
   const meses = new Set([hoyISO().slice(0, 7)]);
   for (const lista of [gastos, ingresos, pagos]) for (const x of lista) meses.add(x.fecha.slice(0, 7));
+  for (const g of gastos) meses.add(fechaDeCuenta(g).slice(0, 7));
   return [...meses].sort().reverse();
 }
 
@@ -1575,8 +1585,17 @@ function rangoBalance() {
 
 // Cifras en soles (los dólares, con el tipo de cambio de su fecha) y el cambio real de tu dinero
 // y de tu deuda de tarjetas en cada moneda
+function gastosDeCuenta(desde, hasta) {
+  return gastos.filter((g) => {
+    const f = fechaDeCuenta(g);
+    return f >= desde && f <= hasta;
+  });
+}
+
 function cifrasPeriodo(desde, hasta) {
-  const gas = entre(gastos, desde, hasta);
+  const gas = gastosDeCuenta(desde, hasta);
+  // La deuda sube el día de la compra, sea cual sea el criterio del ahorro
+  const comprasTarjeta = entre(gastos, desde, hasta).filter((g) => tarjetaDe(g.medio));
   const ing = entre(ingresos, desde, hasta);
   const pag = entre(pagos, desde, hasta);
   const abo = entre(abonos, desde, hasta);
@@ -1588,6 +1607,7 @@ function cifrasPeriodo(desde, hasta) {
     ingresos: redondear(sumar(ing)),
     gastos: redondear(sumar(gas)),
     conTarjeta: redondear(sumar(conT)),
+    porVencer: redondear(sumar(comprasTarjeta.filter((g) => fechaDeCuenta(g) > hasta))),
     sinTarjeta: redondear(sumar(sinT)),
     pagos: redondear(pag.reduce((s, x) => s + pagoEnSoles(x), 0)),
     abonos: redondear(abo.reduce((s, x) => s + abonoEnSoles(x), 0)),
@@ -1599,7 +1619,7 @@ function cifrasPeriodo(desde, hasta) {
   for (const m of MONEDAS) {
     const abonadoEn = abo.reduce((s, x) => s + (deudaDe(x.deuda)?.moneda === m ? x.importe : 0), 0);
     c.dineroPor[m] = redondear(en(ing, m) - en(sinT, m) - pagadoEn(m) - abonadoEn);
-    c.deudaPor[m] = redondear(en(conT, m) - en(pag, m)); // compras con tarjeta − abonos
+    c.deudaPor[m] = redondear(en(comprasTarjeta, m) - en(pag, m)); // compras con tarjeta − abonos
   }
   c.ahorro = redondear(c.ingresos - c.gastos);
   c.dinero = redondear(c.ingresos - c.sinTarjeta - c.pagos - c.abonos);
@@ -1691,7 +1711,7 @@ function renderBalance() {
   const { desde, hasta } = rangoBalance();
   const c = cifrasPeriodo(desde, hasta);
   const ingPeriodo = entre(ingresos, desde, hasta);
-  const gasPeriodo = entre(gastos, desde, hasta);
+  const gasPeriodo = gastosDeCuenta(desde, hasta);
   const pagPeriodo = entre(pagos, desde, hasta);
   const pct = (n) => Math.round((n / c.ingresos) * 100) + ' %';
 
@@ -1705,6 +1725,7 @@ function renderBalance() {
   const subGastos = [];
   if (c.ingresos && c.gastos) subGastos.push(`${pct(c.gastos)} de tus ingresos`);
   if (c.conTarjeta) subGastos.push(`${soles.format(c.conTarjeta)} con tarjeta`);
+  if (c.porVencer) subGastos.push(`${soles.format(c.porVencer)} se pagan después`);
   $('bal-gastos-sub').textContent = subGastos.join(' · ') ||
     (gasPeriodo.length ? `${gasPeriodo.length} registros` : 'Sin gastos');
 
@@ -1739,6 +1760,9 @@ function renderBalance() {
   // Cuadre: del cambio en tu dinero al ahorro, pasando por la deuda de tarjetas
   $('bal-rango').textContent = `Del ${formatearFecha(desde)} al ${formatearFecha(hasta)}` +
     (c.hayDolares ? ' · dólares convertidos a soles' : '');
+  $('bal-nota').textContent = ajustes.compras === 'vence'
+    ? 'Las compras con tarjeta cuentan cuando vence su pago; tu dinero sale al pagarlas.'
+    : 'Las compras con tarjeta son gasto al comprar; tu dinero sale al pagar la tarjeta.';
   const cuadre = $('bal-cuadre'), cuadre2 = $('bal-cuadre-2');
   cuadre.replaceChildren();
   cuadre2.replaceChildren();
@@ -1750,7 +1774,8 @@ function renderBalance() {
   filaCuadre(cuadre, 'Cambio en tu dinero', '', montoConSigno(c.dinero, true), true);
   if (hayTarjetas) {
     filaCuadre(cuadre2, 'Cambio en tu dinero', '', conSigno(c.dinero));
-    filaCuadre(cuadre2, 'Compras con tus tarjetas', 'Suben tu deuda', conSigno(-c.conTarjeta));
+    filaCuadre(cuadre2, ajustes.compras === 'vence' ? 'Compras que vencen en el periodo' : 'Compras con tus tarjetas',
+      ajustes.compras === 'vence' ? 'Las hiciste antes o en el periodo' : 'Suben tu deuda', conSigno(-c.conTarjeta));
     filaCuadre(cuadre2, 'Pagos de tarjetas', 'Bajan tu deuda; no son gasto', conSigno(c.pagos));
     if (c.abonos) filaCuadre(cuadre2, 'Abonos a otras deudas', 'No son gasto', conSigno(c.abonos));
   } else {
@@ -1772,7 +1797,9 @@ function renderBalance() {
       fecha: i.fecha, descripcion: i.descripcion, tipo: 'Ingreso', importe: i.importe, moneda: i.moneda, efecto: i.importe, ingreso: i,
     })),
     ...gasPeriodo.map((g) => ({
-      fecha: g.fecha, descripcion: g.descripcion, tipo: 'Gasto · ' + nombreMedio(g.medio), importe: g.importe, moneda: g.moneda,
+      fecha: fechaDeCuenta(g),
+      descripcion: g.descripcion + (fechaDeCuenta(g) !== g.fecha ? ` (compra del ${fechaCorta(g.fecha)})` : ''),
+      tipo: 'Gasto · ' + nombreMedio(g.medio), importe: g.importe, moneda: g.moneda,
       efecto: tarjetaDe(g.medio) ? null : -g.importe,
     })),
     ...pagPeriodo.map((x) => ({
@@ -2191,7 +2218,7 @@ function diaDelMes(v) {
 }
 
 function configurada(t) {
-  return !!(t.corte && t.pago);
+  return !!(t.corte && (t.pago || t.plazo));
 }
 
 function tarjetaValida(t) {
@@ -2201,7 +2228,8 @@ function tarjetaValida(t) {
   const id = typeof t.id === 'string' && t.id && !Object.hasOwn(MEDIOS_FIJOS, t.id) ? t.id : nuevoId();
   // Tarjetas de versiones anteriores sin banco: se deduce del nombre
   const banco = BANCOS[t.banco] ? t.banco : /bcp/i.test(nombre) ? 'bcp' : /interbank/i.test(nombre) ? 'interbank' : 'otro';
-  return { id, nombre, banco, corte: diaDelMes(t.corte), pago: diaDelMes(t.pago), linea: numero(t.linea) };
+  const plazo = Number.isInteger(Number(t.plazo)) && t.plazo >= 1 && t.plazo <= 90 ? Number(t.plazo) : null;
+  return { id, nombre, banco, corte: diaDelMes(t.corte), pago: plazo ? null : diaDelMes(t.pago), plazo, linea: numero(t.linea) };
 }
 
 function cargarTarjetas() {
@@ -2307,6 +2335,22 @@ function diasHasta(iso) {
   return Math.round((new Date(a, m - 1, d) - new Date(ha, hm - 1, hd)) / 864e5);
 }
 
+function textoPago(t) {
+  return t.plazo ? `pago ${t.plazo} días después` : `pago hasta el ${t.pago}`;
+}
+
+// Último día para pagar una compra hecha en esa fecha con esa tarjeta
+function vencimientoCompra(fecha, t) {
+  return cicloDe(indiceCiclo(fecha, t.corte), t).vence;
+}
+
+// Fecha en que un gasto cuenta para el ahorro: las compras con tarjeta, cuando vence su pago
+// (salvo que el usuario prefiera el día de la compra o la tarjeta no tenga corte y pago)
+function fechaDeCuenta(g) {
+  const t = tarjetaDe(g.medio);
+  return ajustes.compras === 'vence' && t && configurada(t) ? vencimientoCompra(g.fecha, t) : g.fecha;
+}
+
 // Índice (año * 12 + mes) del corte que cierra el ciclo en que cae la fecha
 function indiceCiclo(iso, corte) {
   const [a, m, d] = iso.split('-').map(Number);
@@ -2315,12 +2359,15 @@ function indiceCiclo(iso, corte) {
 }
 
 // Ciclo que cierra en el mes de índice n: va del día siguiente al corte anterior hasta el corte
-function cicloDe(n, corte, pago) {
+function cicloDe(n, t) {
+  const { corte, pago, plazo } = t;
   const a = Math.floor(n / 12), m0 = n % 12;
   const inicio = fechaEnMes(a, m0 - 1, corte);
   inicio.setDate(inicio.getDate() + 1);
   // Si el día de pago no es posterior al corte, el vencimiento cae el mes siguiente
-  const vence = fechaEnMes(a, m0 + (pago > corte ? 0 : 1), pago);
+  // Con plazo, el vencimiento cuenta esos días desde el corte
+  const vence = plazo ? fechaEnMes(a, m0, corte) : fechaEnMes(a, m0 + (pago > corte ? 0 : 1), pago);
+  if (plazo) vence.setDate(vence.getDate() + plazo);
   return { desde: isoDia(inicio), hasta: isoDia(fechaEnMes(a, m0, corte)), vence: isoDia(vence) };
 }
 
@@ -2342,7 +2389,7 @@ function ciclosTarjeta(t) {
   for (let n = Math.max(...indices); n >= Math.min(...indices); n--) {
     const lista = porCiclo[n] || [];
     if (!lista.length && n !== actual) continue;
-    const c = cicloDe(n, t.corte, t.pago);
+    const c = cicloDe(n, t);
     c.total = montos();
     for (const g of lista) c.total[g.moneda] = redondear(c.total[g.moneda] + g.importe);
     c.consumos = lista.length;
@@ -2412,7 +2459,7 @@ function textoVencimiento(proximo) {
 }
 
 function textoCortePago(t) {
-  return configurada(t) ? `Corte el ${t.corte} · pago hasta el ${t.pago}` : 'Sin configurar';
+  return configurada(t) ? `Corte el ${t.corte} · ${textoPago(t)}` : 'Sin configurar';
 }
 
 function mensajeTarjeta(texto) {
@@ -2435,7 +2482,9 @@ function editarTarjeta(id) {
   $('tar-nombre').value = t.nombre;
   $('tar-banco').value = t.banco;
   $('tar-corte').value = t.corte ?? '';
-  $('tar-pago').value = t.pago ?? '';
+  $('tar-modo-pago').value = t.plazo ? 'plazo' : 'dia';
+  $('tar-pago').value = t.plazo ?? t.pago ?? '';
+  pintarModoPago();
   $('tar-linea').value = t.linea || '';
   $('tar-form-titulo').textContent = 'Editar tarjeta';
   $('tar-guardar').textContent = 'Guardar cambios';
@@ -2448,6 +2497,7 @@ function editarTarjeta(id) {
 function salirEdicionTarjeta() {
   tarEditandoId = null;
   $('tar-form').reset();
+  pintarModoPago();
   $('tar-form-titulo').textContent = 'Nueva tarjeta';
   $('tar-guardar').textContent = 'Añadir tarjeta';
   $('tar-cancelar').classList.add('hidden');
@@ -2561,7 +2611,7 @@ function renderTarjeta() {
     const tr = document.createElement('tr');
     if (t.id === tarEditandoId) tr.classList.add('editando');
     celda(tr, 'Tarjeta', etiquetaTarjeta(t));
-    celda(tr, 'Corte / pago', configurada(t) ? `Corte ${t.corte} · pago ${t.pago}` : 'Sin configurar', 'pago');
+    celda(tr, 'Corte / pago', configurada(t) ? `Corte ${t.corte} · ${textoPago(t)}` : 'Sin configurar', 'pago');
     celda(tr, 'A pagar', r.ciclos ? textoMontos(r.aPagar) : '—', 'num');
     const [venceTexto, venceClase] = r.ciclos ? textoVencimiento(r.proximo) : ['—', ''];
     const vence = document.createElement('span');
@@ -2760,7 +2810,7 @@ function normalizarIds() {
 }
 
 $('exp-json').addEventListener('click', () => {
-  descargar(`finanzas-${hoyISO()}.json`, JSON.stringify({ gastos, ingresos, tarjetas, pagos, categorias, deudas, abonos, metas, aportes, tiposCambio: { bcp: tiposCambio.bcp, interbank: tiposCambio.interbank } }, null, 2), 'application/json');
+  descargar(`finanzas-${hoyISO()}.json`, JSON.stringify({ gastos, ingresos, tarjetas, pagos, categorias, ajustes, deudas, abonos, metas, aportes, tiposCambio: { bcp: tiposCambio.bcp, interbank: tiposCambio.interbank } }, null, 2), 'application/json');
   mensajeDatos(`Exportados ${gastos.length} gastos, ${ingresos.length} ingresos, ${tarjetas.length} tarjetas y ${pagos.length} pagos de tarjeta en JSON.`);
 });
 
@@ -2818,6 +2868,10 @@ $('imp-archivo').addEventListener('change', async (e) => {
       idsPagos.add(p.id);
       pagos.push(p);
       nuevosPagos++;
+    }
+    if (datos?.ajustes) {
+      ajustes = ajustesValidos(datos.ajustes);
+      guardarAjustes();
     }
     if (Array.isArray(datos?.categorias)) {
       categorias = normalizarCategorias(categorias.concat(datos.categorias));
@@ -2959,7 +3013,7 @@ function categoriaValida(x) {
   return { nombre, icono: x.icono in ICONOS ? x.icono : 'otros', color: COLORES.includes(x.color) ? x.color : 'gris' };
 }
 
-// Sin repetidos (sin distinguir mayúsculas) y siempre con «Otros»
+// Sin repetidos (sin distinguir mayúsculas) y siempre con «Otros», que va al final
 function normalizarCategorias(lista) {
   const vistos = new Set();
   const salida = [];
@@ -2970,8 +3024,8 @@ function normalizarCategorias(lista) {
     salida.push(x);
   }
   if (!salida.length) return CATEGORIAS_BASE.map((x) => ({ ...x }));
-  if (!vistos.has(CATEGORIA_FIJA.toLowerCase())) salida.push(CATEGORIAS_BASE.at(-1));
-  return salida;
+  const fija = salida.find((x) => x.nombre.toLowerCase() === CATEGORIA_FIJA.toLowerCase()) || CATEGORIAS_BASE.at(-1);
+  return [...salida.filter((x) => x !== fija), fija];
 }
 
 function nombresCategorias() {
@@ -3115,7 +3169,7 @@ function guardarCategoriaForm(e) {
     }
     mensajeDatos('Categoría actualizada.');
   } else {
-    categorias.push(nueva);
+    categorias = normalizarCategorias([...categorias, nueva]);
     mensajeDatos(`Categoría ${nueva.nombre} creada.`);
   }
   salirEdicionCategoria();
@@ -3146,6 +3200,43 @@ function renderCategorias() {
   }));
 }
 
+// ---- Preferencias de cálculo ----
+function ajustesValidos(x) {
+  return { compras: x?.compras === 'compra' ? 'compra' : 'vence' };
+}
+
+function guardarAjustes() {
+  escribirJSON(CLAVE_AJUSTES, ajustes);
+  programarSync();
+}
+
+// Formulario de tarjeta: el campo cambia según el pago sea un día fijo o días tras el corte
+function leerPagoTarjeta() {
+  return $('tar-modo-pago').value === 'plazo'
+    ? { pago: null, plazo: Math.min(90, Math.max(0, Math.trunc(numero($('tar-pago').value)))) || null }
+    : { pago: diaDelMes($('tar-pago').value), plazo: null };
+}
+
+function pintarModoPago() {
+  const conPlazo = $('tar-modo-pago').value === 'plazo';
+  $('tar-pago-etiqueta').textContent = conPlazo ? 'Días para pagar' : 'Último día de pago';
+  $('tar-pago').max = conPlazo ? 90 : 31;
+  $('tar-pago').placeholder = conPlazo ? 'Ej. 25' : 'Ej. 15';
+  const t = { corte: diaDelMes($('tar-corte').value), ...leerPagoTarjeta() };
+  const nota = $('tar-plazo-nota');
+  nota.classList.toggle('hidden', !configurada(t));
+  if (configurada(t)) nota.textContent = `Una compra de hoy se paga hasta el ${fechaCorta(vencimientoCompra(hoyISO(), t))}.`;
+}
+
+// Bajo el medio de pago: cuándo se paga esta compra
+function pintarNotaMedio() {
+  const t = tarjetaDe($('medio').value), fecha = $('fecha').value;
+  const nota = $('medio-nota');
+  const ver = !!(t && configurada(t) && fecha);
+  nota.classList.toggle('hidden', !ver);
+  if (ver) nota.textContent = `Se paga hasta el ${fechaCorta(vencimientoCompra(fecha, t))}`;
+}
+
 // ---- Ajustes por secciones ----
 let ajusteActual = 'cuenta';
 function abrirAjuste(nombre) {
@@ -3158,7 +3249,8 @@ function renderAjustes() {
     if (b.dataset.ajuste === ajusteActual) b.setAttribute('aria-current', 'true');
     else b.removeAttribute('aria-current');
   }
-  for (const nombre of ['cuenta', 'apariencia', 'categorias', 'datos']) $('aj-' + nombre).classList.toggle('activo', nombre === ajusteActual);
+  $('aj-compras').value = ajustes.compras;
+  for (const nombre of ['cuenta', 'apariencia', 'calculos', 'categorias', 'datos']) $('aj-' + nombre).classList.toggle('activo', nombre === ajusteActual);
   if (ajusteActual === 'categorias') renderCategorias();
 }
 
@@ -3224,6 +3316,7 @@ function cargarObjetivos() {
     return Array.isArray(datos) ? datos.map(valida).filter(Boolean) : [];
   };
   categorias = normalizarCategorias(leerJSON(CLAVE_CATEGORIAS, null));
+  ajustes = ajustesValidos(leerJSON(CLAVE_AJUSTES, null));
   deudas = lista(CLAVE_DEUDAS, deudaValida);
   abonos = lista(CLAVE_ABONOS, abonoValido);
   metas = lista(CLAVE_METAS, metaValida);
@@ -3465,8 +3558,10 @@ function editarMeta(m) {
 
 function renderAhorro() {
   const hoy = hoyISO();
-  const mes = cifrasPeriodo(hoy.slice(0, 8) + '01', hoy).ahorro;
-  const acumulado = cifrasPeriodo('0000-01-01', hoy).ahorro;
+  const [anioHoy, mesHoy] = hoy.split('-').map(Number);
+  const finMes = isoDia(new Date(anioHoy, mesHoy, 0)); // incluye lo que vence más adelante en el mes
+  const mes = cifrasPeriodo(hoy.slice(0, 8) + '01', finMes).ahorro;
+  const acumulado = cifrasPeriodo('0000-01-01', finMes).ahorro;
   let enMetas = 0;
   const lista = $('met-lista');
   lista.replaceChildren();
@@ -3836,7 +3931,7 @@ addEventListener('storage', (e) => {
     for (const r of document.querySelectorAll('input[name="paleta"]')) r.checked = r.value === (e.newValue || 'azul');
     renderVista();
   }
-  if (![CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_TC, CLAVE_SIM, CLAVE_CATEGORIAS, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO].includes(e.key)) return;
+  if (![CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_TC, CLAVE_SIM, CLAVE_CATEGORIAS, CLAVE_AJUSTES, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO].includes(e.key)) return;
   // Un guardado puede tocar varias claves seguidas: se repinta una sola vez
   clearTimeout(esperaPestana);
   esperaPestana = setTimeout(() => {
@@ -3853,11 +3948,11 @@ $('tar-form').addEventListener('submit', (e) => {
   const datos = {
     nombre: $('tar-nombre').value.trim().slice(0, 40),
     corte: diaDelMes($('tar-corte').value),
-    pago: diaDelMes($('tar-pago').value),
+    ...leerPagoTarjeta(),
     linea: Math.round(numero($('tar-linea').value) * 100) / 100,
     banco: BANCOS[$('tar-banco').value] ? $('tar-banco').value : 'otro',
   };
-  if (!datos.nombre || !datos.corte || !datos.pago) return;
+  if (!datos.nombre || !datos.corte || !(datos.pago || datos.plazo)) return;
   const editada = tarjetaDe(tarEditandoId);
   if (editada) {
     Object.assign(editada, datos);
@@ -3872,6 +3967,18 @@ $('tar-form').addEventListener('submit', (e) => {
   tarjetasCambiadas();
 });
 $('tar-cancelar').addEventListener('click', () => { salirEdicionTarjeta(); renderTarjeta(); });
+$('tar-modo-pago').addEventListener('change', () => {
+  $('tar-pago').value = '';
+  pintarModoPago();
+});
+for (const id of ['tar-corte', 'tar-pago']) $(id).addEventListener('input', pintarModoPago);
+for (const id of ['medio', 'fecha']) $(id).addEventListener('change', pintarNotaMedio);
+$('aj-compras').addEventListener('change', () => {
+  ajustes = ajustesValidos({ compras: $('aj-compras').value });
+  guardarAjustes();
+  render();
+  mensajeDatos(ajustes.compras === 'vence' ? 'Las compras con tarjeta se restan cuando vence su pago.' : 'Las compras con tarjeta se restan el día de la compra.');
+});
 $('tar-sel').addEventListener('change', () => {
   tarSeleccion = $('tar-sel').value;
   pagoSugerido = null;

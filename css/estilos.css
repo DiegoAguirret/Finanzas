@@ -490,6 +490,7 @@ tbody tr.editando { background: var(--accent-soft); }
 .cat-chip span:last-child { overflow-wrap: anywhere; }
 .etiqueta { display: block; font-size: .8rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
 .campo-ancho { grid-column: 1 / -1; }
+.nota-campo { margin: 4px 0 0; font-size: .78rem; color: var(--muted); }
 .fila-etiqueta { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .fila-etiqueta .etiqueta { margin: 0; }
 

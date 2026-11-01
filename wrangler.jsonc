@@ -1,4 +1,4 @@
-// Configuración del Worker de Cloudflare «finanzas» (https://finanzas.diego-aguito.workers.dev).
+// Configuración del Worker de Cloudflare «finanzas» (https://finanzas.prueba-go.workers.dev).
 // Cloudflare compila con «python3 construir.py» y publica con «npx wrangler deploy», que lee este archivo.
 {
   "name": "finanzas",

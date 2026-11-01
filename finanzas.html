@@ -104,6 +104,7 @@
             <div>
               <label for="medio">Medio de pago</label>
               <select id="medio"></select>
+              <p class="nota-campo hidden" id="medio-nota"></p>
             </div>
             <div>
               <label for="fecha">Fecha</label>
@@ -206,7 +207,7 @@
           <div><h3>Tu dinero</h3><div class="cuadre" id="bal-cuadre"></div></div>
           <div><h3>Tu ahorro</h3><div class="cuadre" id="bal-cuadre-2"></div></div>
         </div>
-          <p class="nota">Las compras con tarjeta son gasto al comprar; tu dinero sale al pagar la tarjeta.</p>
+          <p class="nota" id="bal-nota"></p>
         </section>
 
         <section class="card estrecha">
@@ -385,9 +386,17 @@
               <input id="tar-corte" type="number" min="1" max="31" step="1" required placeholder="Ej. 20">
             </div>
             <div>
-              <label for="tar-pago">Último día de pago</label>
+              <label for="tar-modo-pago">Cómo se fija el pago</label>
+              <select id="tar-modo-pago">
+                <option value="dia">Día fijo</option>
+                <option value="plazo">Días tras el corte</option>
+              </select>
+            </div>
+            <div>
+              <label for="tar-pago" id="tar-pago-etiqueta">Último día de pago</label>
               <input id="tar-pago" type="number" min="1" max="31" step="1" required placeholder="Ej. 15">
             </div>
+            <p class="nota-campo campo-ancho hidden" id="tar-plazo-nota"></p>
             <div>
               <label for="tar-linea">Línea de crédito (S/)</label>
               <input id="tar-linea" type="number" min="0" step="0.01" placeholder="Opcional">
@@ -817,6 +826,7 @@
         <nav class="ajustes-menu" aria-label="Secciones de ajustes">
           <button type="button" data-ajuste="cuenta">Cuenta</button>
           <button type="button" data-ajuste="apariencia">Apariencia</button>
+          <button type="button" data-ajuste="calculos">Cálculos</button>
           <button type="button" data-ajuste="categorias">Categorías</button>
           <button type="button" data-ajuste="datos">Mis datos</button>
         </nav>
@@ -860,6 +870,17 @@
             <label for="aj-inicio">Al abrir, ir a</label>
             <select id="aj-inicio"></select>
           </div>
+        </section>
+        <section class="card ajuste-panel" id="aj-calculos">
+          <h2>Cálculos</h2>
+          <div class="campo-inicio">
+            <label for="aj-compras">Restar las compras con tarjeta</label>
+            <select id="aj-compras">
+              <option value="vence">Cuando vence su pago</option>
+              <option value="compra">El día de la compra</option>
+            </select>
+          </div>
+          <p class="nota">Cambia tu ahorro e Ingresos. Tu deuda y tu dinero no cambian.</p>
         </section>
         <div class="ajuste-panel columnas-categorias" id="aj-categorias">
           <section class="card">
