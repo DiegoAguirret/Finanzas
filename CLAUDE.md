@@ -103,6 +103,7 @@ Las categorías las crea el usuario en Ajustes → Categorías (`poblarCategoria
 
 ## Convenciones
 
+- **Borradores**: lo escrito en los formularios (`FORMS_BORRADOR`) se guarda en `sessionStorage` (`iniciarBorradores()`) y se restaura al recargar; no se guarda mientras se edita un registro y se borra al guardar, al cancelar y al cerrar sesión. Un formulario nuevo se añade a esa lista.
 - **Datos dinámicos**: días de corte y pago, fechas, nombres y montos salen siempre de lo que registra el usuario; nunca fijos en textos ni ejemplos de la interfaz (los `placeholder` de ejemplo son la excepción).
 - Un gasto o un ingreso no puede tener fecha futura (`max` en `pintarFecha()` y control al guardar).
 - **Esperas**: toda llamada de `api()` activa `#barra-carga` si tarda más de 300 ms (`marcarCarga()`). La primera descarga de una cuenta usa `cargaInicial()` («Cargando tus datos…», cifras en espera, sin estados vacíos). Un botón que espera usa `botonOcupado()` y dice qué hace.

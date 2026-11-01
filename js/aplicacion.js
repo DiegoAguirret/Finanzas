@@ -698,6 +698,7 @@ function cerrarSesionLocal() {
 
 // Borra la copia local (al cerrar sesión o si pertenece a otra cuenta)
 function borrarCopiaLocal() {
+  borrarBorradores();
   gastos = [];
   ingresos = [];
   tarjetas = [];
@@ -1004,6 +1005,7 @@ function refrescarTodo() {
   if (editandoId && !gastos.some((x) => x.id === editandoId)) salirEdicion();
   if (ingEditandoId && !ingresos.some((x) => x.id === ingEditandoId)) salirEdicionIngreso();
   if (tarEditandoId && !tarjetaDe(tarEditandoId)) salirEdicionTarjeta();
+  if (salEditandoId && !saldos.some((x) => x.id === salEditandoId)) salirEdicionSaldo();
   if (deuEditandoId && !deudaDe(deuEditandoId)) salirEdicionDeuda();
   if (metEditandoId && !metaDe(metEditandoId)) salirEdicionMeta();
   poblarMedios();
@@ -2873,6 +2875,34 @@ function renderTarjeta() {
 }
 
 // Deuda anterior: se elige la fecha de pago entre los ciclos cercanos de la tarjeta
+let salEditandoId = null;
+
+function editarSaldo(s) {
+  salEditandoId = s.id;
+  $('sal-importe').value = s.importe;
+  $('sal-moneda').value = s.moneda;
+  $('sal-vence').value = s.fecha;
+  $('sal-etiqueta-vence').textContent = 'Se paga hasta';
+  $('sal-etiqueta-monto').textContent = 'Monto';
+  $('sal-cuotas-campo').classList.add('hidden');
+  $('sal-guardar').textContent = 'Guardar cambios';
+  $('sal-cancelar').classList.remove('hidden');
+  renderSaldos(tarjetaDe(s.tarjeta));
+  $('sal-form').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
+  $('sal-importe').focus();
+}
+
+function salirEdicionSaldo() {
+  salEditandoId = null;
+  $('sal-importe').value = '';
+  $('sal-cuotas').value = '1';
+  $('sal-etiqueta-vence').textContent = 'Primer pago hasta';
+  $('sal-etiqueta-monto').textContent = 'Monto de cada pago';
+  $('sal-cuotas-campo').classList.remove('hidden');
+  $('sal-guardar').textContent = 'Añadir deuda anterior';
+  $('sal-cancelar').classList.add('hidden');
+}
+
 function renderSaldos(t) {
   const lista = saldosDe(t);
   // Se elige la tarjeta aquí mismo; las fechas salen del corte y el pago de la elegida
@@ -2891,18 +2921,24 @@ function renderSaldos(t) {
   const sel = $('sal-vence');
   const previo = sel.dataset.tarjeta === t.id ? sel.value : '';
   sel.replaceChildren(...ciclos.map((c) => new Option(formatearFecha(c.vence), c.hasta)));
+  // Una fecha ya registrada puede quedar fuera de los ciclos cercanos: también se puede elegir
+  const editando = saldos.find((x) => x.id === salEditandoId);
+  if (editando && !ciclos.some((c) => c.hasta === editando.fecha)) sel.add(new Option(formatearFecha(venceSaldo(editando)), editando.fecha));
   sel.dataset.tarjeta = t.id;
   sel.value = previo || (ciclos.find((c) => c.vence >= hoyISO()) || ciclos[0]).hasta;
   const tbody = $('sal-lista');
   tbody.replaceChildren();
   for (const s of [...lista].sort((a, b) => (a.fecha < b.fecha ? -1 : 1))) {
     const tr = document.createElement('tr');
+    if (s.id === salEditandoId) tr.classList.add('editando');
     celda(tr, 'Se paga hasta', formatearFecha(venceSaldo(s)), 'fecha');
     celda(tr, 'Monto', dinero(s.importe, s.moneda), 'num');
-    celda(tr, '', botonEliminar('Eliminar deuda anterior', () => {
+    const acciones = celda(tr, '', '', 'acciones');
+    acciones.append(boton('Editar', 'Editar deuda anterior', () => editarSaldo(s)), botonEliminar('Eliminar deuda anterior', () => {
       saldos = saldos.filter((x) => x !== s);
+      if (salEditandoId === s.id) salirEdicionSaldo();
       saldosCambiados();
-    }), 'acciones');
+    }));
     tbody.appendChild(tr);
   }
   $('tabla-saldos').classList.toggle('hidden', !lista.length);
@@ -3216,6 +3252,60 @@ $('borrar-todo').addEventListener('click', () => {
   render();
   mensajeDatos(`Se eliminaron ${n[0]} gastos, ${n[1]} ingresos y ${n[2]} pagos de tarjeta.`);
 });
+
+// ---- Borradores ----
+// Lo escrito y aún sin guardar sobrevive a una recarga o a que el celular cierre la pestaña.
+// Se guarda en sessionStorage (se borra al cerrar la pestaña y al cerrar sesión) y nunca
+// mientras se edita un registro: al restaurarlo se crearía uno repetido.
+const CLAVE_BORRADORES = 'finanzas.borradores';
+const FORMS_BORRADOR = ['form', 'ing-form', 'tar-form', 'tc-form', 'pago-form', 'sal-form', 'deu-form', 'abo-form', 'met-form', 'apo-form', 'cat-form'];
+
+function leerBorradores() {
+  try { return JSON.parse(sessionStorage.getItem(CLAVE_BORRADORES)) || {}; } catch { return {}; }
+}
+
+function escribirBorradores(b) {
+  try { sessionStorage.setItem(CLAVE_BORRADORES, JSON.stringify(b)); } catch {}
+}
+
+function borrarBorradores() {
+  try { sessionStorage.removeItem(CLAVE_BORRADORES); } catch {}
+}
+
+function iniciarBorradores() {
+  const guardados = leerBorradores();
+  for (const id of FORMS_BORRADOR) {
+    const f = $(id);
+    for (const [nombre, valor] of Object.entries(guardados[id] || {})) {
+      const c = f.elements[nombre];
+      if (!c) continue;
+      c.value = valor;
+      // Los selectores de ícono y color actualizan su vista previa al cambiar
+      if (c instanceof RadioNodeList) f.querySelector(`input[name="${nombre}"]:checked`)?.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    const quitar = () => {
+      const b = leerBorradores();
+      delete b[id];
+      escribirBorradores(b);
+    };
+    const anotar = (e) => {
+      const c = e.target;
+      const nombre = c.name || c.id;
+      if (!nombre || c.type === 'file') return;
+      if (f.querySelector('.acciones-form .btn-secondary:not(.hidden)')) return; // se está editando
+      const b = leerBorradores();
+      (b[id] ||= {})[nombre] = c.value;
+      escribirBorradores(b);
+    };
+    f.addEventListener('input', anotar);
+    f.addEventListener('change', anotar);
+    f.addEventListener('reset', quitar);
+    f.addEventListener('submit', () => setTimeout(quitar));
+  }
+  pintarNotaMedio();
+  pintarModoPago();
+  actualizarFormPago();
+}
 
 // ---- Navegación entre vistas ----
 function renderVista() {
@@ -3670,8 +3760,8 @@ function renderPlan() {
   $('plan-base').value = plan.base;
   $('plan-regla').value = plan.regla;
   $('plan-meses').value = String(plan.meses);
-  ['plan-n', 'plan-g', 'plan-a'].forEach((id, i) => { if (document.activeElement !== $(id)) $(id).value = plan.pct[i]; });
-  $('plan-suma').textContent = '';
+  // Si los porcentajes aún no suman 100, se conserva lo escrito
+  if (!$('plan-suma').textContent) ['plan-n', 'plan-g', 'plan-a'].forEach((id, i) => { $(id).value = plan.pct[i]; });
   $('plan-categorias').replaceChildren(...nombresCategorias().map((nombre, i) => {
     const fila = document.createElement('div');
     fila.className = 'fila-categoria';
@@ -4518,7 +4608,9 @@ $('tar-form').addEventListener('submit', (e) => {
   tarjetasCambiadas();
 });
 $('tar-cancelar').addEventListener('click', () => { salirEdicionTarjeta(); renderTarjeta(); });
+$('sal-cancelar').addEventListener('click', () => { salirEdicionSaldo(); renderTarjeta(); });
 $('sal-tarjeta').addEventListener('change', () => {
+  salirEdicionSaldo();
   tarSeleccion = $('sal-tarjeta').value;
   pagoSugerido = null;
   $('pago-tc').value = '';
@@ -4529,6 +4621,15 @@ $('sal-form').addEventListener('submit', (e) => {
   const t = tarjetaDe(tarSeleccion);
   const cuotas = Math.min(60, Math.max(1, Math.trunc(numero($('sal-cuotas').value))));
   if (!t || !configurada(t)) return;
+  const editado = saldos.find((x) => x.id === salEditandoId);
+  if (editado) {
+    const s = saldoValido({ ...editado, fecha: $('sal-vence').value, moneda: $('sal-moneda').value, importe: $('sal-importe').value });
+    if (!s) return;
+    Object.assign(editado, s);
+    salirEdicionSaldo();
+    saldosCambiados();
+    return;
+  }
   // Con varias cuotas, un pago en cada ciclo a partir del elegido
   const primero = indiceCiclo($('sal-vence').value, t.corte);
   const nuevos = Array.from({ length: cuotas }, (_, i) => saldoValido({
@@ -4704,6 +4805,7 @@ salirEdicion();
 salirEdicionDeuda();
 salirEdicionMeta();
 salirEdicionCategoria();
+iniciarBorradores();
 render();
 mostrarVista();
 
