@@ -18,7 +18,7 @@
     <div class="barra-marca">
       <div class="barra-titulo">
         <h1>Mis Finanzas</h1>
-        <button type="button" class="barra-mini" id="btn-ocultar">Ocultar</button>
+        <button type="button" class="barra-mini solo-ico" id="btn-ocultar" aria-label="Ocultar" title="Ocultar"></button>
       </div>
     </div>
     <nav class="barra-nav" aria-label="Secciones">
@@ -57,7 +57,7 @@
 
   <div class="contenido" id="contenido">
   <div class="barra-superior">
-    <button type="button" class="btn-menu" id="btn-menu" aria-controls="barra" aria-expanded="false">Menú</button>
+    <button type="button" class="btn-menu solo-ico" id="btn-menu" aria-label="Menú" title="Menú" aria-controls="barra" aria-expanded="false"></button>
     <span class="sup-marca">Mis Finanzas</span>
     <span class="sup-saludo" id="saludo"></span>
     <time class="sup-fecha" id="hoy"><span class="larga" id="hoy-larga"></span><span class="corta" id="hoy-corta"></span></time>
@@ -71,16 +71,8 @@
     <div class="vista" id="vista-gastos">
       <div class="resumen">
         <div class="card">
-          <div class="label">Total gastado</div>
-          <div class="valor" id="total">S/ 0.00</div>
-        </div>
-        <div class="card">
           <div class="label">Este mes</div>
           <div class="valor" id="mes">S/ 0.00</div>
-        </div>
-        <div class="card">
-          <div class="label">Registros</div>
-          <div class="valor" id="registros">0</div>
         </div>
       </div>
 
@@ -126,7 +118,11 @@
           <div class="lista-header">
             <h2>Mis gastos</h2>
             <div class="filtros">
-              <input id="buscar" type="search" placeholder="Buscar…" aria-label="Buscar">
+              <div class="buscar-fila">
+                <input id="buscar" type="search" placeholder="Buscar…" aria-label="Buscar">
+                <button type="button" class="icon-btn solo-ico filtrar" id="btn-filtros" aria-label="Filtros" aria-expanded="false" title="Filtros"></button>
+              </div>
+              <div class="filtros-extra" id="filtros-extra">
               <select id="filtro-categoria" aria-label="Filtrar por categoría">
                 <option value="">Todas las categorías</option>
               </select>
@@ -139,6 +135,7 @@
                 <option value="importe-desc">Mayor importe</option>
                 <option value="importe-asc">Menor importe</option>
               </select>
+              </div>
             </div>
           </div>
           <table id="tabla-gastos">
@@ -166,7 +163,7 @@
       <section class="card vista-cabecera">
         <div>
           <h2>Ingresos y balance</h2>
-          <p>Tus ingresos frente a tus gastos y tarjetas</p>
+          
         </div>
         <div class="filtros">
           <select id="bal-periodo" aria-label="Periodo">
@@ -185,7 +182,6 @@
         <div class="card">
           <div class="label">Ingresos</div>
           <div class="valor" id="bal-ingresos">S/ 0.00</div>
-          <div class="sub" id="bal-ingresos-sub"></div>
         </div>
         <div class="card">
           <div class="label">Gastos</div>
@@ -197,11 +193,6 @@
           <div class="valor" id="bal-res">S/ 0.00</div>
           <div class="sub" id="bal-res-sub"></div>
         </div>
-        <div class="card">
-          <div class="label">Cambio en tu dinero</div>
-          <div class="valor" id="bal-caja">S/ 0.00</div>
-          <div class="sub" id="bal-caja-sub"></div>
-        </div>
         <div class="card card-acum">
           <div class="label">Saldo acumulado</div>
           <div class="valor" id="bal-acum">S/ 0.00</div>
@@ -209,17 +200,29 @@
         </div>
       </div>
 
+      
+      <div class="mensaje hidden" id="bal-msg" role="status"></div>
+
       <div class="columnas lateral-der">
         <section class="card">
-          <h2>Cómo cuadran tus cuentas</h2>
-          <p class="sub" id="bal-rango"></p>
-          <div class="cuadre-bloques">
-          <div><h3>Tu dinero</h3><div class="cuadre" id="bal-cuadre"></div></div>
-          <div><h3>Tu ahorro</h3><div class="cuadre" id="bal-cuadre-2"></div></div>
+        <h2>Movimientos</h2>
+        <table id="tabla-movs">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Descripción</th>
+              <th>Tipo</th>
+              <th class="num">Importe</th>
+              <th class="num">En tu dinero</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="bal-movs"></tbody>
+        </table>
+        <div class="vacio hidden" id="movs-vacio">
+          No hay movimientos en este periodo.
         </div>
-          <p class="nota" id="bal-nota"></p>
-        </section>
-
+      </section>
         <section class="card estrecha hoja">
           <h2 id="ing-form-titulo">Nuevo ingreso</h2>
           <form id="ing-form" autocomplete="off">
@@ -245,32 +248,14 @@
           </form>
         </section>
       </div>
-
-      <div class="mensaje hidden" id="bal-msg" role="status"></div>
-
-      <section class="card">
-        <h2>Movimientos del periodo</h2>
-        <table id="tabla-movs">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Descripción</th>
-              <th>Tipo</th>
-              <th class="num">Importe</th>
-              <th class="num">En tu dinero</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="bal-movs"></tbody>
-        </table>
-        <div class="vacio hidden" id="movs-vacio">
-          No hay movimientos en este periodo.
+      <section class="card plegable"><details><summary><h2>Cómo cuadra</h2></summary>
+          <p class="sub" id="bal-rango"></p>
+          <div class="cuadre-bloques">
+          <div><h3>Tu dinero</h3><div class="cuadre" id="bal-cuadre"></div></div>
+          <div><h3>Tu ahorro</h3><div class="cuadre" id="bal-cuadre-2"></div></div>
         </div>
-        <p class="nota">Los gastos se editan en Gastos y los pagos en Tarjetas.</p>
-      </section>
-
-      <section class="card">
-        <h2>Historial mensual</h2>
+        </details></section>
+      <section class="card plegable"><details><summary><h2>Historial</h2></summary>
         <table id="tabla-historial">
           <thead>
             <tr>
@@ -285,15 +270,17 @@
           </thead>
           <tbody id="bal-historial"></tbody>
         </table>
-      </section>
-    </div>
+      </details></section>
+
+      
+          </div>
 
     <!-- ===== Dashboard ===== -->
     <div class="vista hidden" id="vista-dashboard">
       <section class="card vista-cabecera">
         <div>
           <h2>Dashboard</h2>
-          <p>Cómo se reparten y evolucionan tus gastos</p>
+          
         </div>
         <div class="filtros">
           <select id="dash-base" aria-label="Agrupar por"></select>
@@ -349,32 +336,11 @@
       <section class="card vista-cabecera">
         <div>
           <h2>Tarjetas de crédito</h2>
-          <p>Consumos por ciclo y lo que te toca pagar</p>
+          
         </div>
       </section>
 
       <div class="mensaje hidden" id="tar-msg" role="status"></div>
-
-      <section class="card">
-        <h2>Mis tarjetas</h2>
-        <table id="tabla-tarjetas">
-          <thead>
-            <tr>
-              <th>Tarjeta</th>
-              <th>Corte / pago</th>
-              <th class="num">A pagar</th>
-              <th>Próximo vencimiento</th>
-              <th class="num">Deuda</th>
-              <th class="num">Disponible</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="tar-lista"></tbody>
-        </table>
-        <div class="vacio hidden" id="tar-vacio">
-          Aún no tienes tarjetas. ¡Añade la primera!
-        </div>
-      </section>
 
       <div class="columnas lateral-izq">
         <section class="card estrecha hoja">
@@ -417,54 +383,31 @@
               <button type="button" class="btn-secondary hidden" id="tar-cancelar">Cancelar</button>
             </div>
           </form>
-          <p class="nota">El corte y el pago figuran en tu estado de cuenta.</p>
         </section>
-
-        <section class="card" id="tc-card">
-          <div class="lista-header">
-            <h2>Tipo de cambio (S/ por US$)</h2>
-            <span class="sub" id="tc-estado"></span>
-          </div>
-          <table id="tabla-tc">
-            <thead>
-              <tr>
-                <th>Fuente</th>
-                <th class="num">Compra</th>
-                <th class="num">Venta</th>
-                <th>Fecha</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="tc-filas"></tbody>
-          </table>
-          <form id="tc-form" autocomplete="off">
-            <div>
-              <label for="tc-banco">Banco</label>
-              <select id="tc-banco">
-                <option value="bcp">BCP</option>
-                <option value="interbank">Interbank</option>
-              </select>
-            </div>
-            <div>
-              <label for="tc-fecha">Fecha</label>
-              <input id="tc-fecha" type="date" required>
-            </div>
-            <div>
-              <label for="tc-compra">Compra</label>
-              <input id="tc-compra" type="number" step="0.0001" min="0.0001" required placeholder="3.4000">
-            </div>
-            <div>
-              <label for="tc-venta">Venta</label>
-              <input id="tc-venta" type="number" step="0.0001" min="0.0001" required placeholder="3.5000">
-            </div>
-            <div class="acciones-form">
-              <button type="submit" class="btn-primary">Guardar tipo de cambio</button>
-            </div>
-          </form>
-          <p class="nota">Cópialo de la web o app de tu banco. El del BCRP se actualiza solo y se usa si falta el del banco.</p>
-        </section>
+        <section class="card">
+        <h2>Mis tarjetas</h2>
+        <table id="tabla-tarjetas">
+          <thead>
+            <tr>
+              <th>Tarjeta</th>
+              <th>Corte / pago</th>
+              <th class="num">A pagar</th>
+              <th>Próximo vencimiento</th>
+              <th class="num">Deuda</th>
+              <th class="num">Disponible</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tar-lista"></tbody>
+        </table>
+        <div class="vacio hidden" id="tar-vacio">
+          Aún no tienes tarjetas. ¡Añade la primera!
+        </div>
+      </section>
       </div>
 
+      
+      
       <div class="pila" id="tar-detalle">
         <section class="card vista-cabecera">
           <div>
@@ -476,32 +419,12 @@
 
         <div class="mensaje hidden" id="tar-aviso">Falta el día de corte o de pago: edita la tarjeta.</div>
 
-        <div class="resumen" id="tar-resumen">
-          <div class="card">
-            <div class="label">A pagar</div>
-            <div class="valor" id="tar-apagar">S/ 0.00</div>
-            <div class="sub" id="tar-apagar-sub"></div>
-          </div>
-          <div class="card">
-            <div class="label">Ciclo en curso</div>
-            <div class="valor" id="tar-curso">S/ 0.00</div>
-            <div class="sub" id="tar-curso-sub"></div>
-          </div>
-          <div class="card">
-            <div class="label">Deuda total</div>
-            <div class="valor" id="tar-deuda">S/ 0.00</div>
-            <div class="sub" id="tar-deuda-sub"></div>
-          </div>
-        </div>
-
+        
         <section class="card" id="tar-proximos">
-          <h2>Qué pagar y cuándo</h2>
+          <h2>Qué pagar</h2>
           <div class="cuadre" id="tar-proximos-lista"></div>
         </section>
-
-        <div class="columnas lateral-der">
-          <section class="card" id="tar-ciclos-card">
-            <h2>Ciclos de facturación</h2>
+        <section class="card plegable" id="tar-ciclos-card"><details data-escritorio><summary><h2>Ciclos</h2></summary>
             <table id="tabla-ciclos">
               <thead>
                 <tr>
@@ -516,11 +439,8 @@
               </thead>
               <tbody id="tar-ciclos"></tbody>
             </table>
-            <p class="nota">Los pagos se descuentan primero de los ciclos más antiguos. La deuda anterior se corrige abajo, en «Deuda anterior».</p>
-          </section>
-
-          <section class="card estrecha">
-            <h2>Pagos a la tarjeta</h2>
+          </details></section>
+        <section class="card plegable"><details data-escritorio><summary><h2>Registrar pago</h2></summary>
             <form id="pago-form" autocomplete="off">
               <div>
                 <label for="pago-moneda">Deuda que pagas</label>
@@ -565,13 +485,8 @@
               <tbody id="tar-pagos"></tbody>
             </table>
             <div class="vacio hidden" id="pagos-vacio">Aún no registras pagos a esta tarjeta.</div>
-            <p class="nota">Si pagas en soles una deuda en dólares, usa el tipo de cambio de tu comprobante.</p>
-          </section>
-        </div>
-
-        <section class="card" id="sal-card">
-          <h2>Deuda anterior</h2>
-          <p class="sub">Lo que ya debías al empezar a registrar, por fecha de pago. Si son cuotas, indica cuántas faltan.</p>
+          </details></section>
+        <section class="card plegable" id="sal-card"><details><summary><h2>Deuda anterior</h2></summary>
           <div class="sal-elegir">
             <label for="sal-tarjeta">Tarjeta</label>
             <select id="sal-tarjeta"></select>
@@ -598,13 +513,54 @@
               <button type="button" class="btn-secondary hidden" id="sal-cancelar">Cancelar</button>
             </div>
           </form>
+          <p class="nota" id="sal-vacio"></p>
           <table id="tabla-saldos">
             <thead><tr><th>Se paga hasta</th><th class="num">Monto</th><th></th></tr></thead>
             <tbody id="sal-lista"></tbody>
           </table>
-          <p class="nota">Paga esta deuda con «Pagos a la tarjeta». No aparece en tus gastos ni en el Dashboard.</p>
-        </section>
-      </div>
+        </details></section>
+
+        
+              </div>
+      <section class="card plegable" id="tc-card"><details><summary><h2>Tipo de cambio</h2></summary>
+          <span class="sub" id="tc-estado"></span>
+          <table id="tabla-tc">
+            <thead>
+              <tr>
+                <th>Fuente</th>
+                <th class="num">Compra</th>
+                <th class="num">Venta</th>
+                <th>Fecha</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tc-filas"></tbody>
+          </table>
+          <form id="tc-form" autocomplete="off">
+            <div>
+              <label for="tc-banco">Banco</label>
+              <select id="tc-banco">
+                <option value="bcp">BCP</option>
+                <option value="interbank">Interbank</option>
+              </select>
+            </div>
+            <div>
+              <label for="tc-fecha">Fecha</label>
+              <input id="tc-fecha" type="date" required>
+            </div>
+            <div>
+              <label for="tc-compra">Compra</label>
+              <input id="tc-compra" type="number" step="0.0001" min="0.0001" required placeholder="3.4000">
+            </div>
+            <div>
+              <label for="tc-venta">Venta</label>
+              <input id="tc-venta" type="number" step="0.0001" min="0.0001" required placeholder="3.5000">
+            </div>
+            <div class="acciones-form">
+              <button type="submit" class="btn-primary">Guardar tipo de cambio</button>
+            </div>
+          </form>
+        </details></section>
     </div>
 
     <!-- ===== Simulaciones ===== -->
@@ -612,7 +568,7 @@
       <section class="card vista-cabecera">
         <div>
           <h2>Simulaciones de gasto</h2>
-          <p>Prueba cómo cambiaría tu ahorro</p>
+          
         </div>
         <button type="button" class="btn-secondary" id="sim-reiniciar">Restablecer</button>
       </section>
@@ -650,7 +606,7 @@
           <span>Categoría</span><span>Base mensual</span><span>Ajuste</span><span class="derecha">Simulado</span>
         </div>
         <div id="sim-filas"></div>
-        <p class="nota">Base: tu promedio de los últimos 3 meses. Puedes editarla.</p>
+        
       </section>
 
       <div class="resumen">
@@ -691,7 +647,7 @@
       <section class="card vista-cabecera">
         <div>
           <h2>Plan</h2>
-          <p>Organiza tu dinero con reglas simples</p>
+          
         </div>
         <select id="plan-base" aria-label="Periodo que se compara">
           <option value="mes">Este mes</option>
@@ -724,20 +680,19 @@
           <div id="plan-filas"></div>
           <p class="nota" id="plan-reparto-nota"></p>
         </section>
-
-        <section class="card estrecha">
-          <h2>Qué es cada cosa</h2>
-          <p class="sub">Elige si cada categoría es necesidad o gusto.</p>
+        <section class="card plegable estrecha"><details data-escritorio><summary><h2>Necesidades y gustos</h2></summary>
+          
           <div id="plan-categorias"></div>
-        </section>
-      </div>
+        </details></section>
+
+              </div>
 
       <section class="card">
         <h2>Fondo de emergencia</h2>
         <div class="fila-ajuste">
           <div>
             <label class="fa-titulo" for="plan-meses">Meses de gastos esenciales</label>
-            <p class="fa-texto">Lo habitual son 3 a 6 meses; más si tus ingresos son irregulares.</p>
+            
           </div>
           <select id="plan-meses" class="fa-select">
             <option value="3">3 meses</option>
@@ -749,7 +704,7 @@
         <div class="fila-ajuste">
           <div>
             <label class="fa-titulo" for="plan-fondo">Meta donde lo guardas</label>
-            <p class="fa-texto">Los aportes se registran en la pestaña Ahorro.</p>
+            
           </div>
           <div class="fa-control plan-meta">
             <select id="plan-fondo" class="fa-select"></select>
@@ -766,19 +721,18 @@
       <div class="columnas lateral-der">
         <section class="card">
           <h2>Tus prioridades</h2>
-          <p class="sub">Un orden común: primero lo que más cuesta o más protege.</p>
+          
           <ol class="plan-pasos" id="plan-pasos"></ol>
         </section>
-        <section class="card estrecha">
-          <h2>Dónde guardarlo</h2>
+        <section class="card plegable estrecha"><details><summary><h2>Dónde guardarlo</h2></summary>
           <ul class="plan-notas">
             <li><strong>Fondo de emergencia.</strong> En un lugar seguro del que puedas sacarlo rápido.</li>
             <li><strong>Depósitos.</strong> El <a href="https://fsd.org.pe/" target="_blank" rel="noopener">Fondo de Seguro de Depósitos</a> los protege hasta un límite por persona y entidad, que cambia cada trimestre.</li>
             <li><strong>Invertir.</strong> Diversificar evita depender de una sola inversión, pero no elimina el riesgo: puedes perder dinero. Revisa la <a href="https://www.gob.pe/smv" target="_blank" rel="noopener">SMV</a> antes de elegir.</li>
           </ul>
-          <p class="nota">Guía general para organizarte, no asesoría financiera. Esta web no recomienda productos ni inversiones.</p>
-        </section>
-      </div>
+        </details></section>
+              </div>
+      <p class="nota">Guía general, no asesoría financiera.</p>
     </div>
 
     <!-- ===== Deudas ===== -->
@@ -786,7 +740,7 @@
       <section class="card vista-cabecera">
         <div>
           <h2>Deudas</h2>
-          <p>Tus tarjetas y lo que debes aparte</p>
+          
         </div>
       </section>
       <div class="resumen">
@@ -837,7 +791,7 @@
               <button type="button" class="btn-secondary hidden" id="deu-cancelar">Cancelar</button>
             </div>
           </form>
-          <p class="nota">¿Es de una tarjeta de crédito? Regístrala en Tarjetas → Deuda anterior.</p>
+          
         </section>
         <section class="card">
           <h2>Mis deudas</h2>
@@ -863,7 +817,7 @@
           <thead><tr><th>Fecha</th><th class="num">Abono</th><th></th></tr></thead>
           <tbody id="abo-lista"></tbody>
         </table>
-        <p class="nota">Un abono sale de tu dinero, pero no es gasto.</p>
+        
       </section>
     </div>
 
@@ -872,14 +826,14 @@
       <section class="card vista-cabecera">
         <div>
           <h2>Ahorro</h2>
-          <p>Lo que te queda y tus metas</p>
+          
         </div>
       </section>
       <div class="resumen">
         <div class="card">
           <div class="label">Este mes</div>
           <div class="valor" id="aho-mes">S/ 0.00</div>
-          <div class="sub">Ingresos menos gastos</div>
+          
         </div>
         <div class="card">
           <div class="label">En tus metas</div>
@@ -957,7 +911,7 @@
           <thead><tr><th>Fecha</th><th>Movimiento</th><th class="num">Importe</th><th></th></tr></thead>
           <tbody id="apo-lista"></tbody>
         </table>
-        <p class="nota">Las metas solo separan tu dinero: no cambian tu balance.</p>
+        
       </section>
     </div>
 
@@ -966,7 +920,7 @@
       <section class="card vista-cabecera">
         <div>
           <h2>Ajustes</h2>
-          <p>Personaliza tu web</p>
+          
         </div>
       </section>
       <div class="mensaje hidden" id="datos-msg" role="status"></div>
@@ -985,7 +939,7 @@
             <div class="fila-ajuste">
               <div>
                 <label class="fa-titulo" for="aj-nombre">Nombre</label>
-                <p class="fa-texto">Con Google se actualiza al entrar.</p>
+                
               </div>
               <div class="fa-control fa-nombre">
                 <input id="aj-nombre" required maxlength="60">
@@ -1001,7 +955,7 @@
             <div class="fila-ajuste">
               <div>
                 <span class="fa-titulo">Sesión</span>
-                <p class="fa-texto">Tus datos seguirán en tu cuenta.</p>
+                
               </div>
               <button type="button" class="btn-secondary" id="aj-salir">Cerrar sesión</button>
             </div>
@@ -1019,12 +973,12 @@
           <div class="fila-ajuste">
             <div>
               <span class="fa-titulo" id="aj-tema-titulo">Tema</span>
-              <p class="fa-texto">«Sistema» sigue la configuración de tu dispositivo.</p>
+              
             </div>
             <div class="segmentado" role="radiogroup" aria-labelledby="aj-tema-titulo">
-              <label><input type="radio" name="tema" value="light"><span>Claro</span></label>
-              <label><input type="radio" name="tema" value="dark"><span>Oscuro</span></label>
-              <label><input type="radio" name="tema" value="sistema"><span>Sistema</span></label>
+              <label><input type="radio" name="tema" value="light"><span data-ico="sol">Claro</span></label>
+              <label><input type="radio" name="tema" value="dark"><span data-ico="luna">Oscuro</span></label>
+              <label><input type="radio" name="tema" value="sistema"><span data-ico="sistema">Sistema</span></label>
             </div>
           </div>
           <fieldset class="paletas" id="paletas">
@@ -1036,19 +990,19 @@
           <div class="fila-ajuste">
             <div>
               <label class="fa-titulo" for="aj-inicio">Al abrir, ir a</label>
-              <p class="fa-texto">La sección que ves primero en este navegador.</p>
+              
             </div>
             <select id="aj-inicio" class="fa-select"></select>
           </div>
           <div class="fila-ajuste">
             <div>
               <label class="fa-titulo" for="aj-saldo">Dinero al empezar (S/)</label>
-              <p class="fa-texto">Lo que tenías antes de tu primer registro. Negativo si debías.</p>
+              <p class="fa-texto">Negativo si debías.</p>
             </div>
             <input id="aj-saldo" class="fa-select" type="number" step="0.01" placeholder="0.00">
           </div>
           <fieldset class="opciones-ajuste">
-            <legend class="fa-titulo">¿Cuándo restar de tu ahorro las compras con tarjeta de crédito?</legend>
+            <legend class="fa-titulo">Restar compras con tarjeta de crédito</legend>
             <label class="opcion-ajuste">
               <input type="radio" name="aj-compras" value="vence">
               <span><strong>Cuando vence su pago</strong><small id="aj-ej-vence"></small></span>
@@ -1057,7 +1011,7 @@
               <input type="radio" name="aj-compras" value="compra">
               <span><strong>El día de la compra</strong><small id="aj-ej-compra"></small></span>
             </label>
-            <p class="fa-texto">Lo que debes en tu tarjeta no cambia.</p>
+            
           </fieldset>
         </section>
         <div class="ajuste-panel columnas-categorias" id="aj-categorias">
@@ -1096,14 +1050,14 @@
           <div class="fila-ajuste">
             <div>
               <span class="fa-titulo">Excel</span>
-              <p class="fa-texto">Todo en un libro: resumen por mes, gastos, ingresos, tarjetas, deudas y metas.</p>
+              <p class="fa-texto">Todos tus datos.</p>
             </div>
             <button type="button" class="btn-primary" id="exp-xlsx">Descargar Excel</button>
           </div>
           <div class="fila-ajuste">
             <div>
               <span class="fa-titulo">CSV</span>
-              <p class="fa-texto">Solo los gastos, para otras apps.</p>
+              <p class="fa-texto">Solo gastos.</p>
             </div>
             <button type="button" class="btn-secondary" id="exp-csv">Descargar CSV</button>
           </div>
@@ -1111,14 +1065,14 @@
           <div class="fila-ajuste">
             <div>
               <span class="fa-titulo">Guardar una copia</span>
-              <p class="fa-texto">Un archivo JSON con todos tus datos.</p>
+              <p class="fa-texto">Archivo JSON.</p>
             </div>
             <button type="button" class="btn-secondary" id="exp-json">Descargar copia</button>
           </div>
           <div class="fila-ajuste">
             <div>
               <span class="fa-titulo">Restaurar una copia</span>
-              <p class="fa-texto">Añade lo que falte, sin duplicar registros.</p>
+              <p class="fa-texto">Sin duplicar registros.</p>
             </div>
             <input type="file" id="imp-archivo" accept=".json,application/json" class="hidden">
             <button type="button" class="btn-secondary" id="imp-json">Elegir archivo…</button>
@@ -1127,7 +1081,7 @@
           <div class="fila-ajuste">
             <div>
               <span class="fa-titulo">Borrar todos los movimientos</span>
-              <p class="fa-texto">Gastos, ingresos, pagos, abonos, aportes y deuda anterior de tarjetas. Conserva tarjetas, deudas, metas y categorías. No se puede deshacer.</p>
+              <p class="fa-texto">No se puede deshacer.</p>
             </div>
             <button type="button" class="btn-danger" id="borrar-todo">Borrar movimientos</button>
           </div>
@@ -1137,7 +1091,7 @@
     </div>
   </main>
 
-  <footer class="pie container">Mis Finanzas · Tipo de cambio de respaldo: BCRP</footer>
+  <footer class="pie container">Mis Finanzas</footer>
   </div>
 </div>
 
@@ -1149,14 +1103,14 @@
 <div class="tooltip hidden" id="tooltip" role="tooltip"></div>
 
 <!-- Solo en celular y tablet: botón de añadir, fondo de las hojas y pestañas de abajo -->
-<button type="button" class="fab" id="fab"></button>
+<button type="button" class="fab solo-ico" id="fab"></button>
 <div class="hoja-fondo" id="hoja-fondo"></div>
 <nav class="tabs" id="tabs" aria-label="Secciones principales">
   <a class="tab" href="#gastos" data-vista="gastos">Gastos</a>
   <a class="tab" href="#ingresos" data-vista="ingresos">Ingresos</a>
   <a class="tab" href="#tarjeta" data-vista="tarjeta">Tarjetas</a>
   <a class="tab" href="#ahorro" data-vista="ahorro">Ahorro</a>
-  <button type="button" class="tab" id="tab-mas" aria-controls="barra">Más</button>
+  <button type="button" class="tab" id="tab-mas" aria-controls="barra" data-ico="mas">Más</button>
 </nav>
 
 <!-- Menú del usuario (se abre desde la barra lateral) -->
@@ -1168,12 +1122,12 @@
   <div class="menu-fila">
     <span class="etiqueta" id="menu-tema-titulo">Tema</span>
     <div class="segmentado" role="radiogroup" aria-labelledby="menu-tema-titulo">
-      <label><input type="radio" name="tema-menu" value="light"><span>Claro</span></label>
-      <label><input type="radio" name="tema-menu" value="dark"><span>Oscuro</span></label>
-      <label><input type="radio" name="tema-menu" value="sistema"><span>Sistema</span></label>
+      <label><input type="radio" name="tema-menu" value="light"><span data-ico="sol">Claro</span></label>
+      <label><input type="radio" name="tema-menu" value="dark"><span data-ico="luna">Oscuro</span></label>
+      <label><input type="radio" name="tema-menu" value="sistema"><span data-ico="sistema">Sistema</span></label>
     </div>
   </div>
-  <button type="button" class="menu-opcion" id="btn-salir">Cerrar sesión</button>
+  <button type="button" class="menu-opcion" id="btn-salir" data-ico="salir">Cerrar sesión</button>
 </div>
 
 <!-- Ventana de confirmación -->

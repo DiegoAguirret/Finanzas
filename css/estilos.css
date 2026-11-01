@@ -676,6 +676,38 @@ tbody tr.editando { background: var(--accent-soft); }
 .sal-elegir { max-width: 320px; margin: 12px 0; }
 #sal-aviso { margin-bottom: 12px; }
 
+/* Íconos de la interfaz */
+.ico { width: 20px; height: 20px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.solo-ico { display: inline-grid; place-items: center; min-width: 40px; padding: 8px; }
+.nav-item { display: flex; align-items: center; gap: 10px; }
+.menu-opcion { display: flex; align-items: center; gap: 10px; }
+.segmentado span { display: inline-flex; align-items: center; gap: 6px; }
+.segmentado span .ico { width: 16px; height: 16px; }
+.menu-fila .segmentado span { justify-content: center; width: 100%; }
+.barra-mini.solo-ico { min-width: 36px; }
+.btn-menu.solo-ico { display: none; min-width: 44px; }
+:root[data-menu="oculto"] .btn-menu.solo-ico { display: inline-grid; }
+.buscar-fila { display: contents; }
+.filtrar { display: none; }
+.filtros-extra { display: contents; }
+
+/* Secciones secundarias plegadas */
+.plegable summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; min-height: 28px; }
+.plegable summary::-webkit-details-marker { display: none; }
+.plegable summary h2 { margin: 0; }
+.plegable summary::after { content: ''; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; margin-right: 4px; }
+.plegable details[open] > summary { margin-bottom: 14px; }
+.plegable details[open] > summary::after { transform: rotate(-135deg); }
+#plan-regla-texto:empty, #bal-gastos-sub:empty, #plan-reparto-nota:empty, #bal-res-sub:empty { display: none; }
+
+/* Lo que suma un ciclo de tarjeta */
+.ciclo-detalle > td { padding: 4px 12px 12px; background: var(--accent-soft); }
+tbody tr.ciclo-detalle:hover { background: none; }
+.ciclo-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 16px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.ciclo-item:last-child { border-bottom: 0; }
+.ciclo-item strong { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.ciclo-item .sub { display: block; }
+
 /* Plan */
 .progreso div.ok { background: var(--ok); }
 .progreso div.mal { background: var(--danger); }
@@ -739,18 +771,20 @@ tbody tr.editando { background: var(--accent-soft); }
     background: var(--surface); border-top: 1px solid var(--border);
   }
   .tab {
-    display: grid; place-items: center; min-height: 48px; padding: 4px 2px; border-radius: 12px;
-    background: transparent; color: var(--muted); font-size: .84rem; font-weight: 600; text-decoration: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 52px; padding: 4px 2px; border-radius: 12px;
+    background: transparent; color: var(--muted); font-size: .72rem; font-weight: 600; text-decoration: none;
     transition: background .15s, color .15s, transform .1s;
   }
   .tab:active { transform: scale(.95); }
   .tab[aria-current="page"], .tab.activa { background: var(--accent-soft); color: var(--accent); }
   .fab {
-    display: block; position: fixed; right: 16px; z-index: 9; min-height: 52px; padding: 12px 22px;
-    bottom: calc(76px + env(safe-area-inset-bottom)); border-radius: 26px;
+    display: inline-grid; place-items: center; position: fixed; right: 16px; z-index: 9; width: 56px; height: 56px; padding: 0;
+    bottom: calc(80px + env(safe-area-inset-bottom)); border-radius: 50%;
     background: var(--accent); color: var(--on-accent); box-shadow: 0 8px 24px rgba(15, 17, 23, .28);
   }
   .fab:hover { background: var(--accent-hover); }
+  .fab .ico { width: 26px; height: 26px; }
+  .fab.hidden { display: none; }
   .hoja-abierta .fab { display: none; }
   .hoja-abierta .hoja-fondo { display: block; position: fixed; inset: 0; z-index: 12; background: rgba(15, 17, 23, .5); }
   .hoja:not(.abierta) { display: none; }
@@ -761,7 +795,8 @@ tbody tr.editando { background: var(--accent-soft); }
     border: 0; border-radius: 20px 20px 0 0; box-shadow: 0 -12px 40px rgba(15, 17, 23, .25);
     animation: hoja-sube .25s cubic-bezier(.16, 1, .3, 1);
   }
-  .hoja-cerrar { display: block; float: right; min-height: 44px; margin: -10px -8px 0 0; padding: 8px 12px; background: transparent; color: var(--accent); }
+  .hoja-cerrar { display: inline-grid; place-items: center; float: right; width: 44px; height: 44px; margin: -10px -8px 0 0; padding: 0; background: transparent; color: var(--muted); }
+  .sidebar-pie { display: none; }
   input, select { font-size: 16px; min-height: 44px; } /* con menos, iOS acerca la página al escribir */
   input[type="range"], .opcion-ajuste input { min-height: 0; }
   button { min-height: 44px; }
@@ -797,6 +832,8 @@ tbody tr.editando { background: var(--accent-soft); }
   }
   .resumen::-webkit-scrollbar { display: none; }
   .resumen .card { flex: 0 0 min(74%, 280px); scroll-snap-align: start; }
+  .resumen .card:only-child { flex: 1; }
+  .resumen .card-acum { order: -1; }
   .resumen .valor { font-size: 1.35rem; }
   form { grid-template-columns: 1fr 1fr; }
   form .campo-desc, form > div:has(> .importe-moneda) { grid-column: 1 / -1; }
@@ -823,21 +860,47 @@ tbody tr.editando { background: var(--accent-soft); }
   td.acciones::before { display: none; }
   td.acciones:empty { display: none; }
   tbody tr:hover { background: none; }
+  .ciclo-detalle > td { display: block; text-align: left; border-radius: 10px; }
+  .ciclo-detalle > td::before { display: none; }
+  .ciclo-item { grid-template-columns: minmax(0, 1fr) auto; }
+  .ciclo-item .acciones { grid-column: 1 / -1; }
 
-  /* Gastos y movimientos como filas de una app: qué y cuánto arriba, los detalles debajo */
-  .lista-header .filtros { display: grid; grid-template-columns: 1fr 1fr; }
-  .lista-header .filtros input, .lista-header .filtros select:last-child { grid-column: 1 / -1; }
-  .resumen .card-acum { order: -1; }
-  :is(#tabla-gastos, #tabla-movs) tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 12px; }
+  /* Listas como en una app: qué y cuánto arriba; fecha y acciones debajo */
+  .lista-header .filtros { display: flex; flex-direction: column; width: 100%; }
+  .buscar-fila { display: flex; gap: 8px; }
+  .buscar-fila input { flex: 1; min-width: 0; width: auto; }
+  .filtrar { display: inline-grid; flex-shrink: 0; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 10px; }
+  .filtrar[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent); }
+  .filtros-extra { display: none; }
+  .filtros-extra.abierto { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .filtros-extra select:last-child { grid-column: 1 / -1; }
+  :is(#tabla-gastos, #tabla-movs) tbody tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0 12px; align-items: center; padding: 12px 0; margin: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
+  :is(#tabla-gastos, #tabla-movs) tbody tr:last-child { border-bottom: 0; }
   :is(#tabla-gastos, #tabla-movs) td { display: block; width: auto; padding: 0; text-align: left; }
   :is(#tabla-gastos, #tabla-movs) td::before { display: none; }
-  :is(#tabla-gastos, #tabla-movs) td[data-label="Descripción"] { order: 1; font-weight: 600; overflow-wrap: anywhere; }
-  :is(#tabla-gastos, #tabla-movs) td[data-label="Importe"] { order: 2; font-size: 1.02rem; text-align: right; }
-  :is(#tabla-gastos, #tabla-movs) td[data-label="Categoría"], :is(#tabla-gastos, #tabla-movs) td[data-label="Tipo"] { order: 3; }
-  :is(#tabla-gastos, #tabla-movs) td[data-label="Fecha"] { order: 4; font-size: .85rem; text-align: right; }
-  :is(#tabla-gastos, #tabla-movs) td[data-label="Pago"] { order: 5; grid-column: 1 / -1; }
-  :is(#tabla-gastos, #tabla-movs) td[data-label="En tu dinero"] { order: 5; grid-column: 1 / -1; display: flex; justify-content: space-between; }
-  :is(#tabla-gastos, #tabla-movs) td[data-label="En tu dinero"]::before { display: inline; }
-  :is(#tabla-gastos, #tabla-movs) td.acciones { order: 6; grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+  #tabla-gastos td[data-label="Categoría"] { grid-area: 1 / 1 / 3 / 2; }
+  #tabla-gastos .cat-chip span:last-child { display: none; }
+  :is(#tabla-gastos, #tabla-movs) td[data-label="Descripción"] { grid-area: 1 / 2; font-weight: 600; overflow-wrap: anywhere; }
+  :is(#tabla-gastos, #tabla-movs) td[data-label="Importe"] { grid-area: 1 / 3; text-align: right; }
+  :is(#tabla-gastos, #tabla-movs) td[data-label="Fecha"] { grid-area: 2 / 2; font-size: .82rem; }
+  :is(#tabla-gastos, #tabla-movs) td.acciones { grid-area: 2 / 3; display: flex; justify-content: flex-end; }
   :is(#tabla-gastos, #tabla-movs) td.acciones:empty { display: none; }
+  #tabla-gastos td[data-label="Pago"], #tabla-movs td[data-label="Tipo"], #tabla-movs td[data-label="En tu dinero"] { display: none; }
+  #tabla-movs tbody tr { grid-template-columns: minmax(0, 1fr) auto; }
+  #tabla-movs td[data-label="Descripción"] { grid-area: 1 / 1; }
+  #tabla-movs td[data-label="Importe"] { grid-area: 1 / 2; }
+  #tabla-movs td[data-label="Fecha"] { grid-area: 2 / 1; }
+  #tabla-movs td.acciones { grid-area: 2 / 2; }
+  #tabla-tarjetas tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 12px 0; margin: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
+  #tabla-tarjetas tbody tr:last-child { border-bottom: 0; }
+  #tabla-tarjetas td { display: block; width: auto; padding: 0; text-align: left; white-space: normal; }
+  #tabla-tarjetas td::before { display: none; }
+  #tabla-tarjetas .estado { white-space: normal; }
+  #tabla-tarjetas td[data-label="Tarjeta"] { grid-area: 1 / 1; }
+  #tabla-tarjetas td[data-label="Deuda"] { grid-area: 1 / 2; text-align: right; font-size: 1.02rem; }
+  #tabla-tarjetas td[data-label="Próximo vencimiento"] { grid-area: 2 / 1; font-size: .82rem; }
+  #tabla-tarjetas td.acciones { grid-area: 2 / 2; display: flex; justify-content: flex-end; }
+  #tabla-tarjetas td[data-label="Corte / pago"], #tabla-tarjetas td[data-label="A pagar"], #tabla-tarjetas td[data-label="Disponible"],
+  #tabla-ciclos td[data-label="Periodo"], #tabla-ciclos td[data-label="Consumos"], #tabla-ciclos td[data-label="Total"] { display: none; }
+}
 }

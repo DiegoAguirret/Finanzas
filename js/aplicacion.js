@@ -47,6 +47,33 @@ const ICONOS = {
   persona: circulo(12, 8, 4) + 'M5 20c1-4 4-6 7-6s6 2 7 6',
   otros: circulo(5, 12, 1.5) + circulo(12, 12, 1.5) + circulo(19, 12, 1.5),
 };
+// Íconos de la interfaz (navegación y acciones); los de categorías, metas y deudas están en ICONOS
+const ICONOS_UI = {
+  gastos: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6',
+  ingresos: 'M12 3v12M7 10l5 5 5-5M4 20h16',
+  dashboard: 'M5 20V11M12 20V4M19 20v-6M2 20h20',
+  tarjeta: ICONOS.tarjeta,
+  deudas: ICONOS.banco,
+  ahorro: 'M4 7c0-2.5 16-2.5 16 0s-16 2.5-16 0zM4 7v5c0 2.5 16 2.5 16 0V7M4 12v5c0 2.5 16 2.5 16 0v-5',
+  plan: circulo(12, 12, 9) + circulo(12, 12, 5) + circulo(12, 12, 1),
+  simulador: 'M4 7h10M18 7h2M4 17h2M10 17h10M14 5h4v4h-4zM6 15h4v4H6z',
+  datos: circulo(12, 12, 3) + 'M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1',
+  mas: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+  anadir: 'M12 5v14M5 12h14',
+  cerrar: 'M6 6l12 12M18 6L6 18',
+  menu: 'M4 7h16M4 12h16M4 17h16',
+  editar: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
+  eliminar: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5',
+  ver: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z' + circulo(12, 12, 3),
+  ocultar: 'M6 15l6-6 6 6',
+  filtro: 'M4 5h16l-6 8v6l-4-2v-4z',
+  salir: 'M10 5H5v14h5M14 8l4 4-4 4M18 12H9',
+  sol: circulo(12, 12, 4) + 'M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5',
+  luna: 'M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z',
+  sistema: 'M4 5h16v11H4zM9 20h6M12 16v4',
+};
+// Acciones de las listas que se entienden con un símbolo
+const ACCIONES_ICONO = { Editar: 'editar', Eliminar: 'eliminar', Ver: 'ver', Ocultar: 'ocultar', Ciclos: 'ver', 'Ver tarjeta': 'ver' };
 const COLORES = ['ambar', 'naranja', 'rojo', 'rosa', 'violeta', 'indigo', 'azul', 'cian', 'verde', 'gris'];
 const CATEGORIAS_BASE = [
   { nombre: 'Comida', icono: 'comida', color: 'ambar' },
@@ -1280,11 +1307,32 @@ function celda(fila, etiqueta, contenido, clase) {
   return td;
 }
 
+function icono(nombre) {
+  const s = svgEl('svg', { viewBox: '0 0 24 24', class: 'ico', 'aria-hidden': 'true' });
+  s.append(svgEl('path', { d: ICONOS_UI[nombre] }));
+  return s;
+}
+
+// Coloca los íconos fijos de la página
+function pintarIconos() {
+  for (const a of document.querySelectorAll('.nav-item, .tab[data-vista]')) a.prepend(icono(a.dataset.vista));
+  for (const el of document.querySelectorAll('[data-ico]')) el.prepend(icono(el.dataset.ico));
+  $('fab').append(icono('anadir'));
+  $('btn-menu').append(icono('menu'));
+  $('btn-ocultar').append(icono('cerrar'));
+  $('btn-filtros').append(icono('filtro'));
+  // Lo secundario se abre solo en pantallas grandes; en el celular, al pulsarlo
+  if (!pantallaMovil.matches) for (const d of document.querySelectorAll('details[data-escritorio]')) d.open = true;
+}
+
 function boton(texto, titulo, onClick, clase = '') {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'icon-btn ' + clase;
-  b.textContent = texto;
+  if (ACCIONES_ICONO[texto]) {
+    b.classList.add('solo-ico');
+    b.append(icono(ACCIONES_ICONO[texto]));
+  } else b.textContent = texto;
   b.title = titulo;
   b.setAttribute('aria-label', titulo);
   b.addEventListener('click', onClick);
@@ -1333,12 +1381,9 @@ function render() {
   pintarNotaMedio();
   // Resumen
   const mesActual = hoyISO().slice(0, 7);
-  const total = sumar(gastos);
   const delMes = sumar(gastos.filter((g) => g.fecha.startsWith(mesActual)));
-  $('total').textContent = soles.format(total);
   $('mes').textContent = soles.format(delMes);
   $('side-mes').textContent = soles.format(delMes);
-  $('registros').textContent = gastos.length;
 
   // Balance del mes en la barra lateral (solo si el usuario registra ingresos)
   const [anioHoy, mesHoy] = mesActual.split('-').map(Number);
@@ -1813,17 +1858,9 @@ function renderBalance() {
 
   // Tarjetas de resumen
   $('bal-ingresos').textContent = soles.format(c.ingresos);
-  $('bal-ingresos-sub').textContent = ingPeriodo.length
-    ? `${ingPeriodo.length} ${ingPeriodo.length === 1 ? 'registro' : 'registros'}`
-    : 'Sin ingresos registrados';
 
   $('bal-gastos').textContent = soles.format(c.gastos);
-  const subGastos = [];
-  if (c.ingresos && c.gastos) subGastos.push(`${pct(c.gastos)} de tus ingresos`);
-  if (c.conTarjeta) subGastos.push(`${soles.format(c.conTarjeta)} con tarjeta`);
-  if (c.porVencer) subGastos.push(`${soles.format(c.porVencer)} se pagan después`);
-  $('bal-gastos-sub').textContent = subGastos.join(' · ') ||
-    (gasPeriodo.length ? `${gasPeriodo.length} registros` : 'Sin gastos');
+  $('bal-gastos-sub').textContent = c.porVencer ? `${soles.format(c.porVencer)} se pagan después` : '';
 
   // Días que quedan del periodo contando hoy (0 si el periodo ya terminó o no ha empezado)
   const quedan = hoy >= desde && hoy <= hasta ? diasHasta(hasta) + 1 : 0;
@@ -1833,7 +1870,7 @@ function renderBalance() {
   resSub.className = 'sub';
   if (!c.ingresos) {
     $('bal-res-label').textContent = 'Ahorro';
-    resSub.textContent = c.gastos ? 'Registra tus ingresos para ver si estás en pérdida' : 'Sin movimientos';
+    resSub.textContent = '';
   } else if (c.ahorro >= 0) {
     $('bal-res-label').textContent = quedan ? 'Te queda' : 'Ahorraste';
     resSub.textContent = quedan > 1
@@ -1842,30 +1879,20 @@ function renderBalance() {
   } else {
     $('bal-res-label').textContent = quedan ? 'Vas en pérdida' : 'Pérdida';
     resSub.className = 'sub mal';
-    resSub.textContent = `Gastas ${soles.format(-c.ahorro)} más de lo que ingresas`;
+    resSub.textContent = '';
   }
 
-  const caja = $('bal-caja');
-  const hayMovimientos = ingPeriodo.length || gasPeriodo.length || pagPeriodo.length;
-  caja.textContent = conSigno(c.dinero);
-  caja.className = 'valor' + (hayMovimientos && c.dinero ? (c.dinero > 0 ? ' ok' : ' mal') : '');
-  $('bal-caja-sub').textContent = c.hayDolares
-    ? `En soles ${conSigno(c.dineroPor.PEN)} · en dólares ${conSigno(c.dineroPor.USD, 'USD')}`
-    : c.pagos ? `Incluye ${soles.format(c.pagos)} en pagos de tarjeta` : 'Lo que entró menos lo que salió de tus cuentas';
 
   // Lo que viene de antes: un mes nuevo no empieza de cero
   const antes = redondear(ajustes.saldoInicial + cifrasPeriodo('0000-01-01', sumarDias(desde, -1)).ahorro);
   const acumulado = redondear(antes + c.ahorro);
   $('bal-acum').textContent = soles.format(acumulado);
   $('bal-acum').className = 'valor' + (acumulado ? (acumulado > 0 ? ' ok' : ' mal') : '');
-  $('bal-acum-sub').textContent = `${soles.format(antes)} de antes ${conSigno(c.ahorro)} de este periodo`;
+  $('bal-acum-sub').textContent = `Antes: ${soles.format(antes)}`;
 
   // Cuadre: del cambio en tu dinero al ahorro, pasando por la deuda de tarjetas
   $('bal-rango').textContent = `Del ${formatearFecha(desde)} al ${formatearFecha(hasta)}` +
     (c.hayDolares ? ' · dólares convertidos a soles' : '');
-  $('bal-nota').textContent = ajustes.compras === 'vence'
-    ? 'Las compras con tarjeta cuentan cuando vence su pago; tu dinero sale al pagarlas.'
-    : 'Las compras con tarjeta son gasto al comprar; tu dinero sale al pagar la tarjeta.';
   const cuadre = $('bal-cuadre'), cuadre2 = $('bal-cuadre-2');
   cuadre.replaceChildren();
   cuadre2.replaceChildren();
@@ -2538,6 +2565,7 @@ function ciclosTarjeta(t) {
     c.total = montos();
     for (const g of lista) c.total[g.moneda] = redondear(c.total[g.moneda] + g.importe);
     c.consumos = lista.filter((g) => !g.esSaldo).length;
+    c.lista = lista;
     c.actual = n === actual;
     c.cerrado = c.hasta < hoy;
     ciclos.push(c);
@@ -2683,6 +2711,7 @@ function prepararPago(sugerido) {
   $('pago-tc').value = '';
   $('pago-fecha').value = hoyISO();
   actualizarFormPago(true);
+  $('pago-form').closest('details').open = true;
   $('pago-form').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
   $('pago-importe').focus();
 }
@@ -2805,7 +2834,7 @@ function renderTarjeta() {
   sel.value = t.id;
   sel.classList.toggle('hidden', tarjetas.length < 2);
   actualizarFormPago();
-  $('tar-det-titulo').textContent = `Ciclos y pagos de ${t.nombre}`;
+  $('tar-det-titulo').textContent = t.nombre;
   $('tar-det-sub').textContent = textoCortePago(t) + (t.linea ? ` · línea de ${soles.format(t.linea)}` : '');
 
   // Pagos (también en tarjetas sin configurar)
@@ -2840,31 +2869,8 @@ function renderTarjeta() {
   const r = resumenTarjeta(t);
   renderProximosPagos(r);
   $('tar-aviso').classList.toggle('hidden', !!r.ciclos);
-  $('tar-resumen').classList.toggle('hidden', !r.ciclos);
   $('tar-ciclos-card').classList.toggle('hidden', !r.ciclos);
   if (!r.ciclos) return;
-
-  $('tar-apagar').textContent = textoMontos(r.aPagar);
-  const [venceTexto, venceClase] = textoVencimiento(r.proximo);
-  $('tar-apagar-sub').className = 'sub ' + venceClase;
-  $('tar-apagar-sub').textContent = venceTexto;
-
-  $('tar-curso').textContent = textoMontos(r.actual.total);
-  $('tar-curso-sub').textContent = `Cierra el ${formatearFecha(r.actual.hasta)} · se paga hasta el ${formatearFecha(r.actual.vence)}`;
-
-  $('tar-deuda').textContent = textoMontos({ PEN: Math.max(r.deuda.PEN, 0), USD: Math.max(r.deuda.USD, 0) });
-  const subDeuda = $('tar-deuda-sub');
-  subDeuda.className = 'sub';
-  const favor = { PEN: Math.max(-r.deuda.PEN, 0), USD: Math.max(-r.deuda.USD, 0) };
-  if (!sinMonto(favor)) {
-    subDeuda.className = 'sub ok';
-    subDeuda.textContent = `Tienes ${textoMontos(favor)} a favor`;
-  } else if (r.disponible !== null) {
-    subDeuda.className = 'sub' + (r.disponible < 0 ? ' mal' : '');
-    subDeuda.textContent = `Disponible ${soles.format(r.disponible)} de ${soles.format(t.linea)}`;
-  } else {
-    subDeuda.textContent = 'Compras con la tarjeta menos tus pagos';
-  }
 
   const ciclos = $('tar-ciclos');
   ciclos.replaceChildren();
@@ -2886,11 +2892,76 @@ function renderTarjeta() {
       const titulo = `Registrar un pago de ${textoMontos(c.paraSaldar)}` + (anteriores ? ' (este ciclo y los anteriores pendientes)' : '');
       acciones.appendChild(boton('Pagar', titulo, () => prepararPago(c.paraSaldar)));
     }
+    const clave = `${t.id}|${c.hasta}`;
+    const abierto = ciclosAbiertos.has(clave);
+    if (c.lista.length) {
+      acciones.prepend(boton(abierto ? 'Ocultar' : 'Ver', `Ver lo que suma el ciclo que vence el ${formatearFecha(c.vence)}`, () => {
+        if (abierto) ciclosAbiertos.delete(clave);
+        else ciclosAbiertos.add(clave);
+        renderTarjeta();
+      }));
+    }
     ciclos.appendChild(tr);
+    if (abierto && c.lista.length) ciclos.appendChild(filaDetalleCiclo(c, t));
   }
 }
 
 // Deuda anterior: se elige la fecha de pago entre los ciclos cercanos de la tarjeta
+// ---- Detalle de un ciclo: todo lo que suma, con su forma de corregirlo ----
+const ciclosAbiertos = new Set();
+
+function filaDetalleCiclo(c, t) {
+  const tr = document.createElement('tr');
+  tr.className = 'ciclo-detalle';
+  const td = document.createElement('td');
+  td.colSpan = 7;
+  const orden = [...c.lista].sort((a, b) => (a.esSaldo === b.esSaldo ? (a.fecha < b.fecha ? 1 : -1) : a.esSaldo ? -1 : 1));
+  td.append(...orden.map((x) => {
+    const fila = document.createElement('div');
+    fila.className = 'ciclo-item';
+    const texto = document.createElement('div');
+    const titulo = document.createElement('strong');
+    titulo.textContent = x.esSaldo ? 'Deuda anterior' : x.descripcion;
+    const sub = document.createElement('span');
+    sub.className = 'sub';
+    sub.textContent = x.esSaldo ? '' : `${formatearFecha(x.fecha)} · ${x.categoria}`;
+    texto.append(titulo, sub);
+    const monto = document.createElement('span');
+    monto.className = 'num';
+    monto.textContent = dinero(x.importe, x.moneda);
+    const acciones = document.createElement('div');
+    acciones.className = 'acciones';
+    acciones.append(
+      boton('Editar', x.esSaldo ? 'Editar deuda anterior' : `Editar ${x.descripcion}`, () => {
+        if (!x.esSaldo) return editarCompraDeCiclo(x.id);
+        const grupo = gruposSaldos(t).find((g) => g.some((s) => s.id === x.id));
+        if (grupo) editarSaldo(grupo);
+      }),
+      botonEliminar(x.esSaldo ? 'Eliminar deuda anterior' : `Eliminar ${x.descripcion}`, () => {
+        if (x.esSaldo) {
+          saldos = saldos.filter((s) => s.id !== x.id);
+          if (salEditandoIds.includes(x.id)) salirEdicionSaldo();
+          saldosCambiados();
+        } else {
+          eliminar(x.id);
+          renderTarjeta();
+        }
+      }),
+    );
+    fila.append(texto, monto, acciones);
+    return fila;
+  }));
+  tr.append(td);
+  return tr;
+}
+
+// Las compras se editan en Gastos: se va allí (avisando si hay algo sin guardar) y se abre el formulario
+async function editarCompraDeCiclo(id) {
+  if (!(await confirmarSalida($('vista-tarjeta'), 'Si vas a Gastos, se perderá lo que escribiste.'))) return;
+  addEventListener('hashchange', () => editar(id), { once: true });
+  location.hash = 'gastos';
+}
+
 let salEditandoIds = [];
 
 // Pagos iguales en ciclos seguidos (las cuotas) se muestran y corrigen como un solo registro
@@ -2915,6 +2986,7 @@ function editarSaldo(grupo) {
   $('sal-guardar').textContent = 'Guardar cambios';
   $('sal-cancelar').classList.remove('hidden');
   renderSaldos(tarjetaDe(grupo[0].tarjeta));
+  $('sal-form').closest('details').open = true;
   $('sal-form').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
   $('sal-importe').focus();
 }
@@ -2939,6 +3011,7 @@ function renderSaldos(t) {
   if (!configurada(t)) {
     $('sal-lista').replaceChildren();
     $('tabla-saldos').classList.add('hidden');
+    $('sal-vacio').classList.add('hidden');
     return;
   }
   const actual = indiceCiclo(hoyISO(), t.corte);
@@ -2971,6 +3044,9 @@ function renderSaldos(t) {
     tbody.appendChild(tr);
   }
   $('tabla-saldos').classList.toggle('hidden', !lista.length);
+  const compras = gastos.filter((g) => g.medio === t.id).length;
+  $('sal-vacio').classList.toggle('hidden', lista.length > 0);
+  $('sal-vacio').textContent = compras ? 'Sin deuda anterior. Sus compras se corrigen en Ciclos.' : 'Sin deuda anterior.';
 }
 
 // Todo lo pendiente de la tarjeta por fecha de pago, de la más cercana a la más lejana
@@ -2979,7 +3055,7 @@ function renderProximosPagos(r) {
   $('tar-proximos').classList.toggle('hidden', !pendientes.length);
   const lista = $('tar-proximos-lista');
   lista.replaceChildren();
-  for (const c of pendientes) filaCuadre(lista, `Hasta el ${formatearFecha(c.vence)}`, estadoCiclo(c)[0], textoMontos(c.pendiente));
+  for (const c of pendientes) filaCuadre(lista, formatearFecha(c.vence), estadoCiclo(c)[0], textoMontos(c.pendiente));
   if (pendientes.length > 1) filaCuadre(lista, 'Deuda total', '', textoMontos(totalPendiente(pendientes)), true);
 }
 
@@ -3399,7 +3475,8 @@ function mostrarVista() {
   cerrarHoja(false);
   // Barra superior y botón de añadir según la vista; «Más» se marca si la vista no tiene pestaña propia
   document.querySelector('.sup-marca').textContent = NOMBRES_VISTAS[vistaActual];
-  $('fab').textContent = HOJAS[vistaActual]?.[1] ?? '';
+  $('fab').setAttribute('aria-label', HOJAS[vistaActual]?.[1] ?? '');
+  $('fab').title = HOJAS[vistaActual]?.[1] ?? '';
   $('fab').classList.toggle('hidden', !HOJAS[vistaActual]);
   $('tab-mas').classList.toggle('activa', !document.querySelector(`.tab[data-vista="${vistaActual}"]`));
   if (pantallaMovil.matches) scrollTo(0, 0);
@@ -3775,16 +3852,14 @@ function renderPlanCifras() {
   const plan = ajustes.plan;
   const c = cifrasPlan();
   const pct = pctPlan();
-  $('plan-regla-texto').textContent = `${pct[0]} % necesidades, ${pct[1]} % gustos, ${pct[2]} % ahorro y deudas.`;
+  $('plan-regla-texto').textContent = '';
   $('plan-propia').classList.toggle('hidden', plan.regla !== 'propia');
   $('plan-filas').replaceChildren(
     filaPlan('Necesidades', c.necesidades, pct[0], c, false),
     filaPlan('Gustos', c.gustos, pct[1], c, false),
     filaPlan('Ahorro y deudas', Math.max(c.ahorro, 0), pct[2], c, true),
   );
-  $('plan-reparto-nota').textContent = c.ingresos
-    ? `Sobre ${soles.format(c.ingresos)} de ingresos al mes. Las compras con tarjeta cuentan el día de la compra.`
-    : 'Registra tus ingresos de este periodo para comparar.';
+  $('plan-reparto-nota').textContent = c.ingresos ? '' : 'Registra tus ingresos para comparar.';
 
   // Fondo de emergencia
   const hoy = hoyISO();
@@ -3798,8 +3873,8 @@ function renderPlanCifras() {
   $('plan-fondo-valor').textContent = objetivo > 0 ? `${soles.format(guardado)} de ${soles.format(objetivo)}` : 'Aún sin calcular';
   $('plan-fondo-barra').style.width = `${objetivo > 0 ? Math.min(100, guardado / objetivo * 100) : 0}%`;
   $('plan-fondo-sub').textContent = objetivo > 0
-    ? `Cubre ${decimales.format(guardado / c.necesidades)} de ${plan.meses} meses, con ${soles.format(c.necesidades)} de gastos esenciales al mes.`
-    : 'Registra gastos en categorías de necesidades para calcular tu objetivo.';
+    ? `Cubre ${decimales.format(guardado / c.necesidades)} de ${plan.meses} meses`
+    : 'Registra tus gastos para calcularlo.';
 
   // Prioridades: «Ahora» marca el primer paso pendiente
   const porPagar = montos();
@@ -3810,11 +3885,11 @@ function renderPlanCifras() {
   const otras = deudas.filter((d) => pendienteDeuda(d) > 0);
   const metasOtras = metas.filter((m) => m.id !== plan.fondo);
   const pasos = [
-    ['Paga tus tarjetas a tiempo', sinMonto(porPagar) ? 'Sin pagos de ciclos cerrados pendientes.' : `Por pagar: ${textoMontos(porPagar)}. Pagar solo el mínimo genera intereses.`, sinMonto(porPagar)],
-    ['Junta un mes de gastos esenciales', c.necesidades > 0 ? `Un colchón inicial de ${soles.format(c.necesidades)}.` : 'Registra tus gastos para calcularlo.', c.necesidades > 0 ? guardado >= c.necesidades : null],
-    ['Baja tus otras deudas', otras.length ? `${otras.length} pendiente${otras.length === 1 ? '' : 's'}. Pagar primero la de mayor interés reduce el costo total.` : 'Sin otras deudas pendientes.', !otras.length],
-    ['Completa tu fondo de emergencia', objetivo > 0 ? `${plan.meses} meses de gastos esenciales: ${soles.format(objetivo)}.` : 'Elige cuántos meses quieres cubrir.', objetivo > 0 ? guardado >= objetivo : null],
-    ['Ahorra para tus metas', metasOtras.length ? `${metasOtras.length} meta${metasOtras.length === 1 ? '' : 's'} en la pestaña Ahorro.` : 'Crea metas en la pestaña Ahorro.', null],
+    ['Paga tus tarjetas a tiempo', sinMonto(porPagar) ? 'Al día' : `Por pagar: ${textoMontos(porPagar)}`, sinMonto(porPagar)],
+    ['Junta un mes de gastos esenciales', c.necesidades > 0 ? soles.format(c.necesidades) : '', c.necesidades > 0 ? guardado >= c.necesidades : null],
+    ['Baja tus otras deudas', otras.length ? `${otras.length} pendiente${otras.length === 1 ? '' : 's'}: primero la de mayor interés` : 'Sin deudas', !otras.length],
+    ['Completa tu fondo de emergencia', objetivo > 0 ? soles.format(objetivo) : '', objetivo > 0 ? guardado >= objetivo : null],
+    ['Ahorra para tus metas', metasOtras.length ? `${metasOtras.length} meta${metasOtras.length === 1 ? '' : 's'}` : '', null],
   ];
   const primero = pasos.findIndex((x) => x[2] !== true);
   $('plan-pasos').replaceChildren(...pasos.map(([titulo, texto, listo], i) => {
@@ -4023,10 +4098,12 @@ function botonEliminar(titulo, alConfirmar) {
   const b = boton('Eliminar', titulo, () => {
     if (b.classList.contains('confirmar')) return alConfirmar();
     b.classList.add('confirmar');
+    b.classList.remove('solo-ico');
     b.textContent = '¿Eliminar?';
     setTimeout(() => {
       b.classList.remove('confirmar');
-      b.textContent = 'Eliminar';
+      b.classList.add('solo-ico');
+      b.replaceChildren(icono('eliminar'));
     }, 3000);
   });
   return b;
@@ -4594,6 +4671,10 @@ addEventListener('online', () => {
 
 $('btn-menu').addEventListener('click', () => alternarMenu(true));
 $('tab-mas').addEventListener('click', () => alternarMenu(true));
+$('btn-filtros').addEventListener('click', () => {
+  const abierto = $('filtros-extra').classList.toggle('abierto');
+  $('btn-filtros').setAttribute('aria-expanded', String(abierto));
+});
 $('fab').addEventListener('click', () => abrirHoja());
 $('hoja-fondo').addEventListener('click', pedirCerrarHoja);
 for (const [vista, [idForm]] of Object.entries(HOJAS)) {
@@ -4601,13 +4682,19 @@ for (const [vista, [idForm]] of Object.entries(HOJAS)) {
   const cerrar = document.createElement('button');
   cerrar.type = 'button';
   cerrar.className = 'hoja-cerrar';
-  cerrar.textContent = 'Cerrar';
+  cerrar.setAttribute('aria-label', 'Cerrar');
+  cerrar.title = 'Cerrar';
+  cerrar.append(icono('cerrar'));
   cerrar.addEventListener('click', pedirCerrarHoja);
   hoja.prepend(cerrar);
   hoja.querySelector('.acciones-form .btn-secondary').addEventListener('click', () => cerrarHoja());
   $(idForm).addEventListener('submit', () => { if (vista === vistaActual) setTimeout(cerrarHoja); });
 }
-const pintarBotonOcultar = () => { $('btn-ocultar').textContent = pantallaMovil.matches ? 'Cerrar' : 'Ocultar'; };
+const pintarBotonOcultar = () => {
+  const texto = pantallaMovil.matches ? 'Cerrar' : 'Ocultar';
+  $('btn-ocultar').setAttribute('aria-label', texto);
+  $('btn-ocultar').title = texto;
+};
 pintarBotonOcultar();
 $('btn-ocultar').addEventListener('click', () => alternarMenu(false));
 $('menu-fondo').addEventListener('click', cerrarMenuMovil);
@@ -4880,6 +4967,7 @@ salirEdicionDeuda();
 salirEdicionMeta();
 salirEdicionCategoria();
 iniciarFormularios();
+pintarIconos();
 render();
 mostrarVista();
 
