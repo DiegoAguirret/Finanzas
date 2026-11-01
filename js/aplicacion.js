@@ -60,8 +60,8 @@ const CATEGORIAS_BASE = [
 const CATEGORIA_FIJA = 'Otros'; // recibe los gastos de las categorías eliminadas: no se borra ni se renombra
 // Medios de pago fijos; además, cada tarjeta es un medio cuya clave es el id de la tarjeta
 const MEDIOS_FIJOS = { efectivo: 'Efectivo', debito: 'Débito / transferencia', credito: 'Otra tarjeta de crédito' };
-const VISTAS = ['gastos', 'ingresos', 'dashboard', 'tarjeta', 'deudas', 'ahorro', 'simulador', 'datos'];
-const NOMBRES_VISTAS = { gastos: 'Gastos', ingresos: 'Ingresos', dashboard: 'Dashboard', tarjeta: 'Tarjetas', deudas: 'Deudas', ahorro: 'Ahorro', simulador: 'Simulaciones', datos: 'Ajustes' };
+const VISTAS = ['gastos', 'ingresos', 'dashboard', 'tarjeta', 'deudas', 'ahorro', 'plan', 'simulador', 'datos'];
+const NOMBRES_VISTAS = { gastos: 'Gastos', ingresos: 'Ingresos', dashboard: 'Dashboard', tarjeta: 'Tarjetas', deudas: 'Deudas', ahorro: 'Ahorro', plan: 'Plan', simulador: 'Simulaciones', datos: 'Ajustes' };
 // Vistas con un formulario que en celular se abre como hoja: [formulario, texto del botón, primer campo]
 const HOJAS = {
   gastos: ['form', 'Añadir gasto', 'descripcion'],
@@ -2820,6 +2820,7 @@ function renderTarjeta() {
 
   renderSaldos(t);
   const r = resumenTarjeta(t);
+  renderProximosPagos(r);
   $('tar-aviso').classList.toggle('hidden', !!r.ciclos);
   $('tar-resumen').classList.toggle('hidden', !r.ciclos);
   $('tar-ciclos-card').classList.toggle('hidden', !r.ciclos);
@@ -2897,6 +2898,22 @@ function renderSaldos(t) {
     tbody.appendChild(tr);
   }
   $('tabla-saldos').classList.toggle('hidden', !lista.length);
+}
+
+// Todo lo pendiente de la tarjeta por fecha de pago, de la más cercana a la más lejana
+function renderProximosPagos(r) {
+  const pendientes = (r.ciclos || []).filter((c) => !sinMonto(c.pendiente)).reverse();
+  $('tar-proximos').classList.toggle('hidden', !pendientes.length);
+  const lista = $('tar-proximos-lista');
+  lista.replaceChildren();
+  for (const c of pendientes) filaCuadre(lista, `Hasta el ${formatearFecha(c.vence)}`, estadoCiclo(c)[0], textoMontos(c.pendiente));
+  if (pendientes.length > 1) filaCuadre(lista, 'Deuda total', '', textoMontos(totalPendiente(pendientes)), true);
+}
+
+function totalPendiente(pendientes) {
+  const total = montos();
+  for (const c of pendientes) for (const m of MONEDAS) total[m] = redondear(total[m] + c.pendiente[m]);
+  return total;
 }
 
 function saldosCambiados() {
@@ -3200,6 +3217,7 @@ function renderVista() {
   if (vistaActual === 'simulador') renderSimulador();
   if (vistaActual === 'deudas') renderDeudas();
   if (vistaActual === 'ahorro') renderAhorro();
+  if (vistaActual === 'plan') renderPlan();
   if (vistaActual === 'datos') renderAjustes();
 }
 
@@ -3441,6 +3459,7 @@ function guardarCategoriaForm(e) {
     if (nueva.nombre !== catEditando) {
       for (const g of gastos) if (g.categoria === catEditando) g.categoria = nueva.nombre;
       moverCategoriaEnSim(catEditando, nueva.nombre);
+      moverCategoriaEnPlan(catEditando, nueva.nombre);
       guardar();
     }
     mensajeDatos('Categoría actualizada.');
@@ -3457,6 +3476,7 @@ function eliminarCategoria(c) {
   let n = 0;
   for (const g of gastos) if (g.categoria === c.nombre) { g.categoria = CATEGORIA_FIJA; n++; }
   moverCategoriaEnSim(c.nombre, null);
+  moverCategoriaEnPlan(c.nombre, null);
   if (n) guardar();
   if (catEditando === c.nombre) salirEdicionCategoria();
   mensajeDatos(`Categoría ${c.nombre} eliminada.` + (n ? ` Sus gastos pasaron a ${CATEGORIA_FIJA}.` : ''));
@@ -3479,7 +3499,195 @@ function renderCategorias() {
 // ---- Preferencias de cálculo ----
 function ajustesValidos(x) {
   const saldo = redondear(Number(x?.saldoInicial));
-  return { compras: x?.compras === 'compra' ? 'compra' : 'vence', saldoInicial: Number.isFinite(saldo) ? saldo : 0 };
+  return { compras: x?.compras === 'compra' ? 'compra' : 'vence', saldoInicial: Number.isFinite(saldo) ? saldo : 0, plan: planValido(x?.plan) };
+}
+
+// ---- Plan: reglas generales para organizar el dinero. No recomienda productos ni inversiones ----
+const REGLAS_PLAN = { '50-30-20': [50, 30, 20], '60-20-20': [60, 20, 20], '70-20-10': [70, 20, 10] };
+const ESENCIALES_PLAN = ['Comida', 'Transporte', 'Vivienda', 'Salud'];
+
+function planValido(p) {
+  const pct = [0, 1, 2].map((i) => Math.max(0, Math.min(100, Math.round(Number(p?.pct?.[i]))) || 0));
+  const tipos = {};
+  for (const [c, t] of Object.entries(p?.tipos && typeof p.tipos === 'object' ? p.tipos : {})) if (t === 'n' || t === 'g') tipos[c] = t;
+  return {
+    regla: p?.regla in REGLAS_PLAN || p?.regla === 'propia' ? p.regla : '50-30-20',
+    pct: pct[0] + pct[1] + pct[2] === 100 ? pct : [...REGLAS_PLAN['50-30-20']],
+    tipos,
+    meses: [3, 6, 9, 12].includes(Number(p?.meses)) ? Number(p.meses) : 6,
+    fondo: esUUID(p?.fondo) ? p.fondo : null,
+    base: ['mes', 'mes-ant', '3m'].includes(p?.base) ? p.base : 'mes',
+  };
+}
+
+function cambiarPlan(cambios) {
+  ajustes = ajustesValidos({ ...ajustes, plan: { ...ajustes.plan, ...cambios } });
+  guardarAjustes();
+  renderPlanCifras();
+}
+
+// Un gasto es necesidad o gusto según su categoría (`tipos`, o el valor por defecto)
+function tipoPlan(nombre) {
+  return ajustes.plan.tipos[nombre] || (ESENCIALES_PLAN.includes(nombre) ? 'n' : 'g');
+}
+
+function moverCategoriaEnPlan(vieja, nueva) {
+  const tipos = { ...ajustes.plan.tipos };
+  if (nueva && vieja in tipos) tipos[nueva] = tipos[vieja];
+  delete tipos[vieja];
+  ajustes = ajustesValidos({ ...ajustes, plan: { ...ajustes.plan, tipos } });
+  guardarAjustes();
+}
+
+// Cifras mensuales del periodo elegido, en soles y por el día de la compra.
+// El promedio de 3 meses usa los meses cerrados con registros, igual que el simulador.
+function cifrasPlan() {
+  const hoy = hoyISO();
+  const [a, m] = hoy.split('-').map(Number);
+  const base = ajustes.plan.base;
+  const desde = base === 'mes' ? hoy.slice(0, 8) + '01' : isoDia(new Date(a, m - (base === '3m' ? 4 : 2), 1));
+  const hasta = base === 'mes' ? hoy : isoDia(new Date(a, m - 1, 0));
+  const gas = entre(gastos, desde, hasta), ing = entre(ingresos, desde, hasta);
+  const meses = base === '3m' ? Math.max(1, new Set([...gas, ...ing].map((x) => x.fecha.slice(0, 7))).size) : 1;
+  const porMes = (lista) => redondear(sumar(lista) / meses);
+  const necesidades = porMes(gas.filter((g) => tipoPlan(g.categoria) === 'n'));
+  const gustos = porMes(gas.filter((g) => tipoPlan(g.categoria) === 'g'));
+  const ingresosMes = porMes(ing);
+  return { ingresos: ingresosMes, necesidades, gustos, ahorro: redondear(ingresosMes - necesidades - gustos) };
+}
+
+function pctPlan() {
+  return REGLAS_PLAN[ajustes.plan.regla] || ajustes.plan.pct;
+}
+
+function filaPlan(nombre, real, porcentaje, c, esAhorro) {
+  const objetivo = redondear(c.ingresos * porcentaje / 100);
+  const fila = document.createElement('div');
+  fila.className = 'plan-fila';
+  const cabeza = document.createElement('div');
+  cabeza.className = 'plan-fila-cabeza';
+  const titulo = document.createElement('strong');
+  titulo.textContent = nombre;
+  const monto = document.createElement('span');
+  monto.textContent = c.ingresos ? `${soles.format(real)} de ${soles.format(objetivo)}` : `${porcentaje} %`;
+  cabeza.append(titulo, monto);
+  fila.append(cabeza);
+  if (!c.ingresos) return fila;
+  const dif = redondear(objetivo - real);
+  const bien = esAhorro ? dif <= 0 : dif >= 0;
+  const barra = document.createElement('div');
+  barra.className = 'progreso';
+  barra.setAttribute('aria-hidden', 'true');
+  const relleno = document.createElement('div');
+  relleno.className = bien ? 'ok' : 'mal';
+  if (esAhorro) relleno.className = bien ? 'ok' : '';
+  relleno.style.width = `${objetivo > 0 ? Math.max(0, Math.min(100, real / objetivo * 100)) : 0}%`;
+  barra.append(relleno);
+  const nota = document.createElement('p');
+  nota.className = 'sub' + (bien ? ' ok' : esAhorro ? '' : ' mal');
+  nota.textContent = esAhorro
+    ? (bien ? 'Objetivo cumplido' : `Faltan ${soles.format(dif)}`)
+    : (dif === 0 ? 'Justo en tu objetivo' : bien ? `Te quedan ${soles.format(dif)}` : `Te pasas ${soles.format(-dif)}`);
+  fila.append(barra, nota);
+  return fila;
+}
+
+// Lo que se pinta de nuevo al cambiar algo; no toca la lista de categorías, para no perder el foco
+function renderPlanCifras() {
+  const plan = ajustes.plan;
+  const c = cifrasPlan();
+  const pct = pctPlan();
+  $('plan-regla-texto').textContent = `${pct[0]} % necesidades, ${pct[1]} % gustos, ${pct[2]} % ahorro y deudas.`;
+  $('plan-propia').classList.toggle('hidden', plan.regla !== 'propia');
+  $('plan-filas').replaceChildren(
+    filaPlan('Necesidades', c.necesidades, pct[0], c, false),
+    filaPlan('Gustos', c.gustos, pct[1], c, false),
+    filaPlan('Ahorro y deudas', Math.max(c.ahorro, 0), pct[2], c, true),
+  );
+  $('plan-reparto-nota').textContent = c.ingresos
+    ? `Sobre ${soles.format(c.ingresos)} de ingresos al mes. Las compras con tarjeta cuentan el día de la compra.`
+    : 'Registra tus ingresos de este periodo para comparar.';
+
+  // Fondo de emergencia
+  const hoy = hoyISO();
+  const objetivo = redondear(c.necesidades * plan.meses);
+  const meta = metaDe(plan.fondo);
+  const guardado = meta ? redondear(aSoles(guardadoEnMeta(meta), meta.moneda, hoy, 'compra')) : 0;
+  $('plan-fondo').replaceChildren(new Option('Sin elegir', ''), ...metas.map((m) => new Option(m.nombre, m.id)));
+  $('plan-fondo').value = meta ? meta.id : '';
+  $('plan-crear-fondo').classList.toggle('hidden', !!meta);
+  $('plan-crear-fondo').disabled = !(objetivo > 0);
+  $('plan-fondo-valor').textContent = objetivo > 0 ? `${soles.format(guardado)} de ${soles.format(objetivo)}` : 'Aún sin calcular';
+  $('plan-fondo-barra').style.width = `${objetivo > 0 ? Math.min(100, guardado / objetivo * 100) : 0}%`;
+  $('plan-fondo-sub').textContent = objetivo > 0
+    ? `Cubre ${decimales.format(guardado / c.necesidades)} de ${plan.meses} meses, con ${soles.format(c.necesidades)} de gastos esenciales al mes.`
+    : 'Registra gastos en categorías de necesidades para calcular tu objetivo.';
+
+  // Prioridades: «Ahora» marca el primer paso pendiente
+  const porPagar = montos();
+  for (const t of tarjetas) {
+    const r = resumenTarjeta(t);
+    if (r.aPagar) for (const m of MONEDAS) porPagar[m] = redondear(porPagar[m] + r.aPagar[m]);
+  }
+  const otras = deudas.filter((d) => pendienteDeuda(d) > 0);
+  const metasOtras = metas.filter((m) => m.id !== plan.fondo);
+  const pasos = [
+    ['Paga tus tarjetas a tiempo', sinMonto(porPagar) ? 'Sin pagos de ciclos cerrados pendientes.' : `Por pagar: ${textoMontos(porPagar)}. Pagar solo el mínimo genera intereses.`, sinMonto(porPagar)],
+    ['Junta un mes de gastos esenciales', c.necesidades > 0 ? `Un colchón inicial de ${soles.format(c.necesidades)}.` : 'Registra tus gastos para calcularlo.', c.necesidades > 0 ? guardado >= c.necesidades : null],
+    ['Baja tus otras deudas', otras.length ? `${otras.length} pendiente${otras.length === 1 ? '' : 's'}. Pagar primero la de mayor interés reduce el costo total.` : 'Sin otras deudas pendientes.', !otras.length],
+    ['Completa tu fondo de emergencia', objetivo > 0 ? `${plan.meses} meses de gastos esenciales: ${soles.format(objetivo)}.` : 'Elige cuántos meses quieres cubrir.', objetivo > 0 ? guardado >= objetivo : null],
+    ['Ahorra para tus metas', metasOtras.length ? `${metasOtras.length} meta${metasOtras.length === 1 ? '' : 's'} en la pestaña Ahorro.` : 'Crea metas en la pestaña Ahorro.', null],
+  ];
+  const primero = pasos.findIndex((x) => x[2] !== true);
+  $('plan-pasos').replaceChildren(...pasos.map(([titulo, texto, listo], i) => {
+    const li = document.createElement('li');
+    li.className = i === primero ? 'actual' : '';
+    const cuerpo = document.createElement('div');
+    const t = document.createElement('strong');
+    t.textContent = titulo;
+    const d = document.createElement('p');
+    d.className = 'sub';
+    d.textContent = texto;
+    cuerpo.append(t, d);
+    const estado = document.createElement('span');
+    estado.className = 'estado' + (listo === true ? ' ok' : i === primero ? ' pendiente' : '');
+    estado.textContent = listo === true ? 'Listo' : i === primero ? 'Ahora' : 'Después';
+    li.append(cuerpo, estado);
+    return li;
+  }));
+}
+
+function renderPlan() {
+  const plan = ajustes.plan;
+  $('plan-base').value = plan.base;
+  $('plan-regla').value = plan.regla;
+  $('plan-meses').value = String(plan.meses);
+  ['plan-n', 'plan-g', 'plan-a'].forEach((id, i) => { if (document.activeElement !== $(id)) $(id).value = plan.pct[i]; });
+  $('plan-suma').textContent = '';
+  $('plan-categorias').replaceChildren(...nombresCategorias().map((nombre, i) => {
+    const fila = document.createElement('div');
+    fila.className = 'fila-categoria';
+    const grupo = document.createElement('div');
+    grupo.className = 'segmentado';
+    grupo.setAttribute('role', 'radiogroup');
+    grupo.setAttribute('aria-label', `Tipo de ${nombre}`);
+    for (const [valor, texto] of [['n', 'Necesidad'], ['g', 'Gusto']]) {
+      const label = document.createElement('label');
+      const r = document.createElement('input');
+      r.type = 'radio';
+      r.name = `plan-tipo-${i}`;
+      r.value = valor;
+      r.checked = tipoPlan(nombre) === valor;
+      r.addEventListener('change', () => cambiarPlan({ tipos: { ...ajustes.plan.tipos, [nombre]: valor } }));
+      const s = document.createElement('span');
+      s.textContent = texto;
+      label.append(r, s);
+      grupo.append(label);
+    }
+    fila.append(etiquetaCategoria(nombre), grupo);
+    return fila;
+  }));
+  renderPlanCifras();
 }
 
 function guardarAjustes() {
@@ -3528,6 +3736,14 @@ function renderAjustes() {
   }
   for (const r of document.querySelectorAll('input[name="aj-compras"]')) r.checked = r.value === ajustes.compras;
   if (document.activeElement !== $('aj-saldo')) $('aj-saldo').value = ajustes.saldoInicial || '';
+  // El ejemplo sale de la primera tarjeta del usuario, con sus propias fechas
+  const ejemplo = tarjetas.find(configurada);
+  $('aj-ej-vence').textContent = ejemplo
+    ? `Una compra de hoy con ${ejemplo.nombre} se resta el ${fechaCorta(vencimientoCompra(hoyISO(), ejemplo))}.`
+    : 'La compra se resta en la fecha en que debes pagarla.';
+  $('aj-ej-compra').textContent = ejemplo
+    ? `Una compra de hoy con ${ejemplo.nombre} se resta hoy.`
+    : 'La compra se resta en la fecha en que la haces.';
   for (const nombre of ['cuenta', 'apariencia', 'preferencias', 'categorias', 'datos']) $('aj-' + nombre).classList.toggle('activo', nombre === ajusteActual);
   if (ajusteActual === 'categorias') renderCategorias();
 }
@@ -4296,10 +4512,18 @@ $('tar-form').addEventListener('submit', (e) => {
 $('tar-cancelar').addEventListener('click', () => { salirEdicionTarjeta(); renderTarjeta(); });
 $('sal-form').addEventListener('submit', (e) => {
   e.preventDefault();
-  const s = saldoValido({ id: nuevoId(), tarjeta: tarSeleccion, fecha: $('sal-vence').value, moneda: $('sal-moneda').value, importe: $('sal-importe').value });
-  if (!s) return;
-  saldos.push(s);
+  const t = tarjetaDe(tarSeleccion);
+  const cuotas = Math.min(60, Math.max(1, Math.trunc(numero($('sal-cuotas').value))));
+  if (!t || !configurada(t)) return;
+  // Con varias cuotas, un pago en cada ciclo a partir del elegido
+  const primero = indiceCiclo($('sal-vence').value, t.corte);
+  const nuevos = Array.from({ length: cuotas }, (_, i) => saldoValido({
+    id: nuevoId(), tarjeta: t.id, fecha: cicloDe(primero + i, t).hasta, moneda: $('sal-moneda').value, importe: $('sal-importe').value,
+  }));
+  if (nuevos.some((s) => !s)) return;
+  saldos.push(...nuevos);
   $('sal-importe').value = '';
+  $('sal-cuotas').value = '1';
   saldosCambiados();
 });
 $('tar-modo-pago').addEventListener('change', () => {
@@ -4315,6 +4539,26 @@ for (const r of document.querySelectorAll('input[name="aj-compras"]')) {
     render();
   });
 }
+$('plan-base').addEventListener('change', () => cambiarPlan({ base: $('plan-base').value }));
+$('plan-regla').addEventListener('change', () => cambiarPlan({ regla: $('plan-regla').value }));
+$('plan-meses').addEventListener('change', () => cambiarPlan({ meses: $('plan-meses').value }));
+$('plan-fondo').addEventListener('change', () => cambiarPlan({ fondo: $('plan-fondo').value || null }));
+for (const id of ['plan-n', 'plan-g', 'plan-a']) {
+  $(id).addEventListener('input', () => {
+    const pct = ['plan-n', 'plan-g', 'plan-a'].map((x) => Math.round(numero($(x).value)));
+    const suma = pct[0] + pct[1] + pct[2];
+    $('plan-suma').textContent = suma === 100 ? '' : `Suman ${suma} %: deben sumar 100 %.`;
+    if (suma === 100 && pct.every((n) => n >= 0)) cambiarPlan({ pct });
+  });
+}
+$('plan-crear-fondo').addEventListener('click', () => {
+  const objetivo = redondear(cifrasPlan().necesidades * ajustes.plan.meses);
+  const meta = metaValida({ id: nuevoId(), nombre: 'Fondo de emergencia', icono: 'escudo', color: 'verde', moneda: 'PEN', objetivo });
+  if (!meta) return;
+  metas.push(meta);
+  guardarMetas();
+  cambiarPlan({ fondo: meta.id });
+});
 $('aj-saldo').addEventListener('change', () => {
   ajustes = ajustesValidos({ ...ajustes, saldoInicial: $('aj-saldo').value });
   guardarAjustes();

@@ -28,6 +28,7 @@
       <a class="nav-item" href="#tarjeta" data-vista="tarjeta">Tarjetas</a>
       <a class="nav-item" href="#deudas" data-vista="deudas">Deudas</a>
       <a class="nav-item" href="#ahorro" data-vista="ahorro">Ahorro</a>
+      <a class="nav-item" href="#plan" data-vista="plan">Plan</a>
       <a class="nav-item" href="#simulador" data-vista="simulador">Simulaciones</a>
       <a class="nav-item" href="#datos" data-vista="datos">Ajustes</a>
     </nav>
@@ -493,6 +494,11 @@
           </div>
         </div>
 
+        <section class="card" id="tar-proximos">
+          <h2>Qué pagar y cuándo</h2>
+          <div class="cuadre" id="tar-proximos-lista"></div>
+        </section>
+
         <div class="columnas lateral-der">
           <section class="card" id="tar-ciclos-card">
             <h2>Ciclos de facturación</h2>
@@ -565,18 +571,22 @@
 
         <section class="card" id="sal-card">
           <h2>Deuda anterior</h2>
-          <p class="sub">Lo que ya debías al empezar a registrar. Añade un monto por cada fecha de pago.</p>
+          <p class="sub">Lo que ya debías al empezar a registrar, por fecha de pago. Si son cuotas, indica cuántas faltan.</p>
           <form id="sal-form" class="form-movimiento" autocomplete="off">
             <div>
-              <label for="sal-vence">Se paga hasta</label>
+              <label for="sal-vence">Primer pago hasta</label>
               <select id="sal-vence"></select>
             </div>
             <div>
-              <label for="sal-importe">Monto</label>
+              <label for="sal-importe">Monto de cada pago</label>
               <div class="importe-moneda">
                 <input id="sal-importe" type="number" step="0.01" min="0.01" required placeholder="0.00">
                 <select id="sal-moneda" aria-label="Moneda de la deuda anterior"><option value="PEN">S/</option><option value="USD">US$</option></select>
               </div>
+            </div>
+            <div>
+              <label for="sal-cuotas">Número de pagos</label>
+              <input id="sal-cuotas" type="number" min="1" max="60" step="1" value="1" required>
             </div>
             <div class="acciones-form">
               <button type="submit" class="btn-primary">Añadir deuda anterior</button>
@@ -668,6 +678,101 @@
         </div>
         <div class="grafico" id="sim-grafico"></div>
       </section>
+    </div>
+
+    <!-- ===== Plan ===== -->
+    <div class="vista hidden" id="vista-plan">
+      <section class="card vista-cabecera">
+        <div>
+          <h2>Plan</h2>
+          <p>Organiza tu dinero con reglas simples</p>
+        </div>
+        <select id="plan-base" aria-label="Periodo que se compara">
+          <option value="mes">Este mes</option>
+          <option value="mes-ant">Mes anterior</option>
+          <option value="3m">Promedio de 3 meses</option>
+        </select>
+      </section>
+
+      <div class="columnas lateral-der">
+        <section class="card">
+          <h2>Reparto de tus ingresos</h2>
+          <div class="fila-ajuste">
+            <div>
+              <label class="fa-titulo" for="plan-regla">Regla</label>
+              <p class="fa-texto" id="plan-regla-texto"></p>
+            </div>
+            <select id="plan-regla" class="fa-select">
+              <option value="50-30-20">50 / 30 / 20</option>
+              <option value="60-20-20">60 / 20 / 20</option>
+              <option value="70-20-10">70 / 20 / 10</option>
+              <option value="propia">Mi propio reparto</option>
+            </select>
+          </div>
+          <div class="plan-propia hidden" id="plan-propia">
+            <div><label for="plan-n">Necesidades (%)</label><input id="plan-n" type="number" min="0" max="100" step="1"></div>
+            <div><label for="plan-g">Gustos (%)</label><input id="plan-g" type="number" min="0" max="100" step="1"></div>
+            <div><label for="plan-a">Ahorro y deudas (%)</label><input id="plan-a" type="number" min="0" max="100" step="1"></div>
+            <p class="nota-campo campo-ancho" id="plan-suma" role="status"></p>
+          </div>
+          <div id="plan-filas"></div>
+          <p class="nota" id="plan-reparto-nota"></p>
+        </section>
+
+        <section class="card estrecha">
+          <h2>Qué es cada cosa</h2>
+          <p class="sub">Elige si cada categoría es necesidad o gusto.</p>
+          <div id="plan-categorias"></div>
+        </section>
+      </div>
+
+      <section class="card">
+        <h2>Fondo de emergencia</h2>
+        <div class="fila-ajuste">
+          <div>
+            <label class="fa-titulo" for="plan-meses">Meses de gastos esenciales</label>
+            <p class="fa-texto">Lo habitual son 3 a 6 meses; más si tus ingresos son irregulares.</p>
+          </div>
+          <select id="plan-meses" class="fa-select">
+            <option value="3">3 meses</option>
+            <option value="6">6 meses</option>
+            <option value="9">9 meses</option>
+            <option value="12">12 meses</option>
+          </select>
+        </div>
+        <div class="fila-ajuste">
+          <div>
+            <label class="fa-titulo" for="plan-fondo">Meta donde lo guardas</label>
+            <p class="fa-texto">Los aportes se registran en la pestaña Ahorro.</p>
+          </div>
+          <div class="fa-control plan-meta">
+            <select id="plan-fondo" class="fa-select"></select>
+            <button type="button" class="btn-secondary" id="plan-crear-fondo">Crear meta</button>
+          </div>
+        </div>
+        <div class="plan-fondo-estado">
+          <strong id="plan-fondo-valor"></strong>
+          <div class="progreso" aria-hidden="true"><div id="plan-fondo-barra"></div></div>
+          <p class="sub" id="plan-fondo-sub"></p>
+        </div>
+      </section>
+
+      <div class="columnas lateral-der">
+        <section class="card">
+          <h2>Tus prioridades</h2>
+          <p class="sub">Un orden común: primero lo que más cuesta o más protege.</p>
+          <ol class="plan-pasos" id="plan-pasos"></ol>
+        </section>
+        <section class="card estrecha">
+          <h2>Dónde guardarlo</h2>
+          <ul class="plan-notas">
+            <li><strong>Fondo de emergencia.</strong> En un lugar seguro del que puedas sacarlo rápido.</li>
+            <li><strong>Depósitos.</strong> El <a href="https://fsd.org.pe/" target="_blank" rel="noopener">Fondo de Seguro de Depósitos</a> los protege hasta un límite por persona y entidad, que cambia cada trimestre.</li>
+            <li><strong>Invertir.</strong> Diversificar evita depender de una sola inversión, pero no elimina el riesgo: puedes perder dinero. Revisa la <a href="https://www.gob.pe/smv" target="_blank" rel="noopener">SMV</a> antes de elegir.</li>
+          </ul>
+          <p class="nota">Guía general para organizarte, no asesoría financiera. Esta web no recomienda productos ni inversiones.</p>
+        </section>
+      </div>
     </div>
 
     <!-- ===== Deudas ===== -->
@@ -940,11 +1045,11 @@
             <legend class="fa-titulo">¿Cuándo restar de tu ahorro las compras con tarjeta de crédito?</legend>
             <label class="opcion-ajuste">
               <input type="radio" name="aj-compras" value="vence">
-              <span><strong>Cuando vence su pago</strong><small>Si compras en octubre y pagas en noviembre, se resta en noviembre.</small></span>
+              <span><strong>Cuando vence su pago</strong><small id="aj-ej-vence"></small></span>
             </label>
             <label class="opcion-ajuste">
               <input type="radio" name="aj-compras" value="compra">
-              <span><strong>El día de la compra</strong><small>Si compras en octubre, se resta en octubre.</small></span>
+              <span><strong>El día de la compra</strong><small id="aj-ej-compra"></small></span>
             </label>
             <p class="fa-texto">Lo que debes en tu tarjeta no cambia.</p>
           </fieldset>

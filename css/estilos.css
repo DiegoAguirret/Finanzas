@@ -669,7 +669,31 @@ tbody tr.editando { background: var(--accent-soft); }
   .fila-ajuste { flex-direction: column; align-items: stretch; }
   .fa-select, .fa-nombre { width: 100%; }
   .fila-ajuste > .segmentado { align-self: flex-start; }
+  .plan-meta { justify-content: stretch; }
+  .plan-propia { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Plan */
+.progreso div.ok { background: var(--ok); }
+.progreso div.mal { background: var(--danger); }
+.plan-propia { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 12px 0 4px; }
+.plan-fila { padding: 14px 0 0; }
+.plan-fila-cabeza { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.plan-fila-cabeza span { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.plan-fila .sub { margin: 4px 0 0; }
+.plan-meta { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.plan-fondo-estado { padding-top: 16px; }
+.plan-fondo-estado strong { display: block; margin-bottom: 6px; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.plan-fondo-estado .sub { margin: 6px 0 0; }
+.plan-pasos { list-style-position: inside; margin: 12px 0 0; padding: 0; }
+.plan-pasos li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px; border-radius: 10px; }
+.plan-pasos li.actual { background: var(--accent-soft); }
+.plan-pasos .sub { margin: 2px 0 0; }
+.plan-notas { margin: 0; padding: 0; list-style: none; font-size: .9rem; }
+.plan-notas li { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.plan-notas li:last-child { border-bottom: 0; }
+.plan-notas a { color: var(--accent); text-underline-offset: 2px; }
+#plan-categorias { margin-top: 8px; }
 
 /* Elementos solo de celular y tablet */
 .tabs, .fab, .hoja-fondo, .hoja-cerrar { display: none; }
