@@ -671,6 +671,9 @@ tbody tr.editando { background: var(--accent-soft); }
   .fila-ajuste > .segmentado { align-self: flex-start; }
 }
 
+/* Elementos solo de celular y tablet */
+.tabs, .fab, .hoja-fondo, .hoja-cerrar { display: none; }
+
 /* Responsive */
 @media (min-width: 1400px) {
   .columnas.lateral-izq { grid-template-columns: 360px minmax(0, 1fr); }
@@ -690,33 +693,83 @@ tbody tr.editando { background: var(--accent-soft); }
   .sim-params { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 860px) {
-  /* En móvil la barra lateral es un panel que se abre con «Menú» */
+  /* Diseño de app: pestañas abajo; la barra lateral es la hoja «Más» y los formularios, hojas que suben */
   .app { grid-template-columns: minmax(0, 1fr); }
+  body { -webkit-tap-highlight-color: transparent; }
   .sidebar {
-    position: fixed; inset: 0 auto 0 0; z-index: 12; width: min(280px, 85vw); height: 100dvh;
-    transform: translateX(-100%); visibility: hidden;
-    transition: transform .2s ease-out, visibility .2s;
+    position: fixed; inset: auto 0 0; z-index: 12; width: 100%; max-width: 560px; margin-inline: auto;
+    height: auto; max-height: 88dvh; padding-bottom: calc(14px + env(safe-area-inset-bottom));
+    border-radius: 20px 20px 0 0;
+    transform: translateY(100%); visibility: hidden;
+    transition: transform .25s cubic-bezier(.16, 1, .3, 1), visibility .25s;
   }
+  .barra-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .nav-item { min-height: 44px; display: flex; align-items: center; }
+  .barra-usuario, .barra-mini, .barra-accion { min-height: 44px; }
+  .tabs {
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); position: fixed; inset: auto 0 0; z-index: 10;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    background: var(--surface); border-top: 1px solid var(--border);
+  }
+  .tab {
+    display: grid; place-items: center; min-height: 48px; padding: 4px 2px; border-radius: 12px;
+    background: transparent; color: var(--muted); font-size: .84rem; font-weight: 600; text-decoration: none;
+    transition: background .15s, color .15s, transform .1s;
+  }
+  .tab:active { transform: scale(.95); }
+  .tab[aria-current="page"], .tab.activa { background: var(--accent-soft); color: var(--accent); }
+  .fab {
+    display: block; position: fixed; right: 16px; z-index: 9; min-height: 52px; padding: 12px 22px;
+    bottom: calc(76px + env(safe-area-inset-bottom)); border-radius: 26px;
+    background: var(--accent); color: var(--on-accent); box-shadow: 0 8px 24px rgba(15, 17, 23, .28);
+  }
+  .fab:hover { background: var(--accent-hover); }
+  .hoja-abierta .fab { display: none; }
+  .hoja-abierta .hoja-fondo { display: block; position: fixed; inset: 0; z-index: 12; background: rgba(15, 17, 23, .5); }
+  .hoja:not(.abierta) { display: none; }
+  .hoja.abierta {
+    position: fixed; inset: auto 0 0; z-index: 13; width: 100%; max-width: 560px; margin-inline: auto;
+    max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+    border: 0; border-radius: 20px 20px 0 0; box-shadow: 0 -12px 40px rgba(15, 17, 23, .25);
+    animation: hoja-sube .25s cubic-bezier(.16, 1, .3, 1);
+  }
+  .hoja-cerrar { display: block; float: right; min-height: 44px; margin: -10px -8px 0 0; padding: 8px 12px; background: transparent; color: var(--accent); }
+  input, select { font-size: 16px; min-height: 44px; } /* con menos, iOS acerca la página al escribir */
+  input[type="range"], .opcion-ajuste input { min-height: 0; }
+  button { min-height: 44px; }
+  .icon-btn { min-height: 40px; }
+  .ver-clave { min-height: 32px; }
+  .pie { display: none; }
+  .vista > .vista-cabecera { padding: 0; background: none; border: 0; }
+  .vista > .vista-cabecera h2 { display: none; }
   /* Al abrir, visible desde el primer instante: si no, no puede recibir el foco */
   .menu-abierto .sidebar { transform: none; visibility: visible; transition: transform .2s ease-out; }
   .menu-abierto .menu-fondo { display: block; position: fixed; inset: 0; z-index: 11; background: rgba(15, 17, 23, .5); }
   .barra-superior {
-    position: sticky; top: 0; z-index: 5; padding-top: 10px;
+    position: sticky; top: 0; z-index: 5; padding-top: calc(10px + env(safe-area-inset-top));
     background: var(--bg); border-bottom: 1px solid var(--border);
   }
-  .btn-menu { display: block; }
-  .sup-marca { display: inline; }
+  .sup-marca { display: inline; font-size: 1.15rem; font-weight: 700; letter-spacing: -.01em; }
   .sup-saludo { display: none; }
   .sup-fecha .larga { display: none; }
   .sup-fecha .corta { display: inline; }
-  .contenido > main { padding-top: 16px; }
-  .aviso-guardado { right: 12px; left: 12px; bottom: 12px; justify-content: space-between; }
+  .contenido > main { padding-top: 16px; padding-bottom: calc(152px + env(safe-area-inset-bottom)); }
+  .aviso-guardado { right: 12px; left: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 15; justify-content: space-between; }
 }
+@keyframes hoja-sube { from { transform: translateY(100%); } }
 @media (max-width: 860px) and (prefers-reduced-motion: reduce) {
   .sidebar { transition: none; }
+  .hoja.abierta { animation: none; }
 }
 @media (max-width: 640px) {
-  .resumen { grid-template-columns: 1fr; gap: 10px; }
+  /* Cifras en tarjetas que se deslizan de lado */
+  .resumen {
+    display: flex; gap: 10px; margin-inline: -16px; padding-inline: 16px; overflow-x: auto;
+    scroll-snap-type: x mandatory; scroll-padding-inline: 16px; scrollbar-width: none;
+  }
+  .resumen::-webkit-scrollbar { display: none; }
+  .resumen .card { flex: 0 0 min(74%, 280px); scroll-snap-align: start; }
   .resumen .valor { font-size: 1.35rem; }
   form { grid-template-columns: 1fr 1fr; }
   form .campo-desc, form > div:has(> .importe-moneda) { grid-column: 1 / -1; }
@@ -741,4 +794,23 @@ tbody tr.editando { background: var(--accent-soft); }
   td::before { content: attr(data-label); color: var(--muted); font-size: .8rem; text-align: left; }
   td.acciones { justify-content: flex-end; }
   td.acciones::before { display: none; }
+  td.acciones:empty { display: none; }
+  tbody tr:hover { background: none; }
+
+  /* Gastos y movimientos como filas de una app: qué y cuánto arriba, los detalles debajo */
+  .lista-header .filtros { display: grid; grid-template-columns: 1fr 1fr; }
+  .lista-header .filtros input, .lista-header .filtros select:last-child { grid-column: 1 / -1; }
+  .resumen .card-acum { order: -1; }
+  :is(#tabla-gastos, #tabla-movs) tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 12px; }
+  :is(#tabla-gastos, #tabla-movs) td { display: block; width: auto; padding: 0; text-align: left; }
+  :is(#tabla-gastos, #tabla-movs) td::before { display: none; }
+  :is(#tabla-gastos, #tabla-movs) td[data-label="Descripción"] { order: 1; font-weight: 600; overflow-wrap: anywhere; }
+  :is(#tabla-gastos, #tabla-movs) td[data-label="Importe"] { order: 2; font-size: 1.02rem; text-align: right; }
+  :is(#tabla-gastos, #tabla-movs) td[data-label="Categoría"], :is(#tabla-gastos, #tabla-movs) td[data-label="Tipo"] { order: 3; }
+  :is(#tabla-gastos, #tabla-movs) td[data-label="Fecha"] { order: 4; font-size: .85rem; text-align: right; }
+  :is(#tabla-gastos, #tabla-movs) td[data-label="Pago"] { order: 5; grid-column: 1 / -1; }
+  :is(#tabla-gastos, #tabla-movs) td[data-label="En tu dinero"] { order: 5; grid-column: 1 / -1; display: flex; justify-content: space-between; }
+  :is(#tabla-gastos, #tabla-movs) td[data-label="En tu dinero"]::before { display: inline; }
+  :is(#tabla-gastos, #tabla-movs) td.acciones { order: 6; grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+  :is(#tabla-gastos, #tabla-movs) td.acciones:empty { display: none; }
 }

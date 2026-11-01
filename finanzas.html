@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Mis Finanzas</title>
 <link rel="stylesheet" href="css/estilos.css">
 <script src="js/tema.js"></script>
@@ -84,7 +84,7 @@
       </div>
 
       <div class="columnas lateral-izq">
-        <section class="card estrecha">
+        <section class="card estrecha hoja">
           <h2 id="form-titulo">Nuevo gasto</h2>
           <form id="form" autocomplete="off">
             <div class="campo-desc">
@@ -201,6 +201,11 @@
           <div class="valor" id="bal-caja">S/ 0.00</div>
           <div class="sub" id="bal-caja-sub"></div>
         </div>
+        <div class="card card-acum">
+          <div class="label">Saldo acumulado</div>
+          <div class="valor" id="bal-acum">S/ 0.00</div>
+          <div class="sub" id="bal-acum-sub"></div>
+        </div>
       </div>
 
       <div class="columnas lateral-der">
@@ -214,7 +219,7 @@
           <p class="nota" id="bal-nota"></p>
         </section>
 
-        <section class="card estrecha">
+        <section class="card estrecha hoja">
           <h2 id="ing-form-titulo">Nuevo ingreso</h2>
           <form id="ing-form" autocomplete="off">
             <div class="campo-desc">
@@ -274,6 +279,7 @@
               <th class="num">Pagos de tarjetas</th>
               <th class="num">Ahorro</th>
               <th class="num">Cambio en tu dinero</th>
+              <th class="num">Acumulado</th>
             </tr>
           </thead>
           <tbody id="bal-historial"></tbody>
@@ -370,7 +376,7 @@
       </section>
 
       <div class="columnas lateral-izq">
-        <section class="card estrecha">
+        <section class="card estrecha hoja">
           <h2 id="tar-form-titulo">Nueva tarjeta</h2>
           <form id="tar-form" autocomplete="off">
             <div class="campo-desc">
@@ -556,6 +562,32 @@
             <p class="nota">Si pagas en soles una deuda en dólares, usa el tipo de cambio de tu comprobante.</p>
           </section>
         </div>
+
+        <section class="card" id="sal-card">
+          <h2>Deuda anterior</h2>
+          <p class="sub">Lo que ya debías al empezar a registrar. Añade un monto por cada fecha de pago.</p>
+          <form id="sal-form" class="form-movimiento" autocomplete="off">
+            <div>
+              <label for="sal-vence">Se paga hasta</label>
+              <select id="sal-vence"></select>
+            </div>
+            <div>
+              <label for="sal-importe">Monto</label>
+              <div class="importe-moneda">
+                <input id="sal-importe" type="number" step="0.01" min="0.01" required placeholder="0.00">
+                <select id="sal-moneda" aria-label="Moneda de la deuda anterior"><option value="PEN">S/</option><option value="USD">US$</option></select>
+              </div>
+            </div>
+            <div class="acciones-form">
+              <button type="submit" class="btn-primary">Añadir deuda anterior</button>
+            </div>
+          </form>
+          <table id="tabla-saldos">
+            <thead><tr><th>Se paga hasta</th><th class="num">Monto</th><th></th></tr></thead>
+            <tbody id="sal-lista"></tbody>
+          </table>
+          <p class="nota">Paga esta deuda con «Pagos a la tarjeta». No aparece en tus gastos ni en el Dashboard.</p>
+        </section>
       </div>
     </div>
 
@@ -663,7 +695,7 @@
       </div>
       <div class="mensaje hidden" id="deu-msg" role="status"></div>
       <div class="columnas lateral-izq">
-        <section class="card estrecha">
+        <section class="card estrecha hoja">
           <h2 id="deu-form-titulo">Nueva deuda</h2>
           <form id="deu-form" autocomplete="off">
             <div class="campo-desc">
@@ -694,6 +726,7 @@
               <button type="button" class="btn-secondary hidden" id="deu-cancelar">Cancelar</button>
             </div>
           </form>
+          <p class="nota">¿Es de una tarjeta de crédito? Regístrala en Tarjetas → Deuda anterior.</p>
         </section>
         <section class="card">
           <h2>Mis deudas</h2>
@@ -750,7 +783,7 @@
       </div>
       <div class="mensaje hidden" id="aho-msg" role="status"></div>
       <div class="columnas lateral-izq">
-        <section class="card estrecha">
+        <section class="card estrecha hoja">
           <h2 id="met-form-titulo">Nueva meta</h2>
           <form id="met-form" autocomplete="off">
             <div class="campo-desc">
@@ -896,6 +929,13 @@
             </div>
             <select id="aj-inicio" class="fa-select"></select>
           </div>
+          <div class="fila-ajuste">
+            <div>
+              <label class="fa-titulo" for="aj-saldo">Dinero al empezar (S/)</label>
+              <p class="fa-texto">Lo que tenías antes de tu primer registro. Negativo si debías.</p>
+            </div>
+            <input id="aj-saldo" class="fa-select" type="number" step="0.01" placeholder="0.00">
+          </div>
           <fieldset class="opciones-ajuste">
             <legend class="fa-titulo">¿Cuándo restar de tu ahorro las compras con tarjeta de crédito?</legend>
             <label class="opcion-ajuste">
@@ -976,7 +1016,7 @@
           <div class="fila-ajuste">
             <div>
               <span class="fa-titulo">Borrar todos los movimientos</span>
-              <p class="fa-texto">Gastos, ingresos, pagos, abonos y aportes. Conserva tarjetas, deudas, metas y categorías. No se puede deshacer.</p>
+              <p class="fa-texto">Gastos, ingresos, pagos, abonos, aportes y deuda anterior de tarjetas. Conserva tarjetas, deudas, metas y categorías. No se puede deshacer.</p>
             </div>
             <button type="button" class="btn-danger" id="borrar-todo">Borrar movimientos</button>
           </div>
@@ -996,6 +1036,17 @@
 </div>
 
 <div class="tooltip hidden" id="tooltip" role="tooltip"></div>
+
+<!-- Solo en celular y tablet: botón de añadir, fondo de las hojas y pestañas de abajo -->
+<button type="button" class="fab" id="fab"></button>
+<div class="hoja-fondo" id="hoja-fondo"></div>
+<nav class="tabs" id="tabs" aria-label="Secciones principales">
+  <a class="tab" href="#gastos" data-vista="gastos">Gastos</a>
+  <a class="tab" href="#ingresos" data-vista="ingresos">Ingresos</a>
+  <a class="tab" href="#tarjeta" data-vista="tarjeta">Tarjetas</a>
+  <a class="tab" href="#ahorro" data-vista="ahorro">Ahorro</a>
+  <button type="button" class="tab" id="tab-mas" aria-controls="barra">Más</button>
+</nav>
 
 <!-- Menú del usuario (se abre desde la barra lateral) -->
 <div class="menu-usuario" id="menu-usuario" popover>

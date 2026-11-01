@@ -68,6 +68,18 @@ create table if not exists public.pagos (
   check (moneda = pagado_moneda or tipo_cambio is not null)
 );
 
+-- Deuda anterior de una tarjeta: lo que ya se debía al empezar a registrar.
+-- `fecha` es el corte del ciclo en que se paga.
+create table if not exists public.saldos (
+  id uuid primary key default gen_random_uuid(),
+  usuario uuid not null default auth.uid() references auth.users on delete cascade,
+  tarjeta uuid not null references public.tarjetas on delete cascade,
+  fecha date not null,
+  moneda text not null default 'PEN' check (moneda in ('PEN', 'USD')),
+  importe numeric(12, 2) not null check (importe > 0),
+  creado timestamptz not null default now()
+);
+
 -- Tipo de cambio de cada banco que registra el usuario (S/ por US$)
 create table if not exists public.tipos_cambio (
   usuario uuid not null default auth.uid() references auth.users on delete cascade,
@@ -89,7 +101,7 @@ create table if not exists public.preferencias (
 -- Días para pagar tras el corte, en tarjetas sin un día fijo de pago (entonces `pago` queda vacío)
 alter table public.tarjetas add column if not exists plazo smallint check (plazo between 1 and 90);
 
--- Preferencias de cálculo: { compras: 'vence' | 'compra' }
+-- Preferencias de cálculo: { compras: 'vence' | 'compra', saldoInicial: número }
 alter table public.preferencias add column if not exists ajustes jsonb;
 
 -- Categorías propias: [{ nombre, icono, color }]. Null = las de siempre. gastos.categoria guarda el nombre.
@@ -151,6 +163,8 @@ create index if not exists gastos_usuario_fecha on public.gastos (usuario, fecha
 create index if not exists ingresos_usuario_fecha on public.ingresos (usuario, fecha);
 create index if not exists pagos_usuario_fecha on public.pagos (usuario, fecha);
 create index if not exists pagos_tarjeta on public.pagos (tarjeta);
+create index if not exists saldos_usuario on public.saldos (usuario);
+create index if not exists saldos_tarjeta on public.saldos (tarjeta);
 create index if not exists gastos_tarjeta on public.gastos (tarjeta);
 create index if not exists deudas_usuario on public.deudas (usuario);
 create index if not exists abonos_usuario_fecha on public.abonos (usuario, fecha);
@@ -167,6 +181,7 @@ alter table public.tarjetas enable row level security;
 alter table public.gastos enable row level security;
 alter table public.ingresos enable row level security;
 alter table public.pagos enable row level security;
+alter table public.saldos enable row level security;
 alter table public.tipos_cambio enable row level security;
 alter table public.preferencias enable row level security;
 alter table public.tipos_cambio_bcrp enable row level security;
@@ -234,6 +249,11 @@ create policy "propios" on public.pagos for all to authenticated
   using (usuario = (select auth.uid()))
   with check (usuario = (select auth.uid()) and public.tarjeta_propia(tarjeta));
 
+drop policy if exists "propios" on public.saldos;
+create policy "propios" on public.saldos for all to authenticated
+  using (usuario = (select auth.uid()))
+  with check (usuario = (select auth.uid()) and tarjeta is not null and public.tarjeta_propia(tarjeta));
+
 drop policy if exists "propios" on public.tipos_cambio;
 create policy "propios" on public.tipos_cambio for all to authenticated
   using (usuario = (select auth.uid())) with check (usuario = (select auth.uid()));
@@ -264,11 +284,11 @@ drop policy if exists "lectura publica" on public.tipos_cambio_bcrp;
 create policy "lectura publica" on public.tipos_cambio_bcrp for select to anon, authenticated
   using (true);
 
-revoke all on public.tarjetas, public.gastos, public.ingresos, public.pagos,
+revoke all on public.tarjetas, public.gastos, public.ingresos, public.pagos, public.saldos,
   public.deudas, public.abonos, public.metas, public.aportes,
   public.tipos_cambio, public.preferencias, public.tipos_cambio_bcrp from anon;
 grant select, insert, update, delete on public.tarjetas, public.gastos, public.ingresos,
-  public.pagos, public.deudas, public.abonos, public.metas, public.aportes,
+  public.pagos, public.saldos, public.deudas, public.abonos, public.metas, public.aportes,
   public.tipos_cambio, public.preferencias to authenticated;
 grant select on public.tipos_cambio_bcrp to anon, authenticated;
 

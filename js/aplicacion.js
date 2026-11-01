@@ -12,6 +12,7 @@ const CLAVE_DEUDAS = 'finanzas.deudas';
 const CLAVE_ABONOS = 'finanzas.abonos';
 const CLAVE_METAS = 'finanzas.metas';
 const CLAVE_APORTES = 'finanzas.aportes';
+const CLAVE_SALDOS = 'finanzas.saldos';
 const CLAVE_INICIO = 'finanzas.inicio';
 const CLAVE_AJUSTES = 'finanzas.ajustes';
 // Trazos propios en una cuadrícula de 24 × 24 (ver .icono-cat en el CSS)
@@ -61,6 +62,14 @@ const CATEGORIA_FIJA = 'Otros'; // recibe los gastos de las categorías eliminad
 const MEDIOS_FIJOS = { efectivo: 'Efectivo', debito: 'Débito / transferencia', credito: 'Otra tarjeta de crédito' };
 const VISTAS = ['gastos', 'ingresos', 'dashboard', 'tarjeta', 'deudas', 'ahorro', 'simulador', 'datos'];
 const NOMBRES_VISTAS = { gastos: 'Gastos', ingresos: 'Ingresos', dashboard: 'Dashboard', tarjeta: 'Tarjetas', deudas: 'Deudas', ahorro: 'Ahorro', simulador: 'Simulaciones', datos: 'Ajustes' };
+// Vistas con un formulario que en celular se abre como hoja: [formulario, texto del botón, primer campo]
+const HOJAS = {
+  gastos: ['form', 'Añadir gasto', 'descripcion'],
+  ingresos: ['ing-form', 'Añadir ingreso', 'ing-descripcion'],
+  tarjeta: ['tar-form', 'Añadir tarjeta', 'tar-nombre'],
+  deudas: ['deu-form', 'Añadir deuda', 'deu-nombre'],
+  ahorro: ['met-form', 'Añadir meta', 'met-nombre'],
+};
 const soles = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' });
 const decimales = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const MONEDAS = ['PEN', 'USD'];
@@ -78,6 +87,7 @@ let deudas = [];
 let abonos = [];
 let metas = [];
 let aportes = [];
+let saldos = []; // Deuda anterior de tarjetas: { id, tarjeta, fecha (corte del ciclo en que se paga), moneda, importe }
 let ajustes = { compras: 'vence' }; // compras con tarjeta: se restan al vencer su pago o el día de la compra
 let editandoId = null;
 let confirmandoId = null;
@@ -342,6 +352,12 @@ const TABLAS = {
     deFila: (f) => pagoValido({ ...f, pagadoMoneda: f.pagado_moneda, tipoCambio: f.tipo_cambio }),
     poner: (l) => { pagos = l; },
   },
+  saldos: {
+    lista: () => saldos,
+    aFila: (s) => ({ id: s.id, tarjeta: s.tarjeta, fecha: s.fecha, moneda: s.moneda, importe: s.importe }),
+    deFila: (f) => saldoValido(f),
+    poner: (l) => { saldos = l; },
+  },
   deudas: {
     lista: () => deudas,
     aFila: (d) => ({ id: d.id, nombre: d.nombre, tipo: d.tipo, moneda: d.moneda, monto: d.monto, fecha: d.fecha }),
@@ -368,7 +384,7 @@ const TABLAS = {
   },
 };
 // Las tablas padre antes que lo que las usa
-const ORDEN_TABLAS = ['tarjetas', 'gastos', 'ingresos', 'pagos', 'deudas', 'abonos', 'metas', 'aportes'];
+const ORDEN_TABLAS = ['tarjetas', 'gastos', 'ingresos', 'pagos', 'saldos', 'deudas', 'abonos', 'metas', 'aportes'];
 
 const ERRORES_ACCESO = {
   invalid_credentials: 'Correo o contraseña incorrectos.',
@@ -692,13 +708,14 @@ function borrarCopiaLocal() {
   ajustes = ajustesValidos(null);
   deudas = [];
   abonos = [];
+  saldos = [];
   metas = [];
   aportes = [];
   sincronizado = {};
   tarSeleccion = null;
   deuSeleccion = null;
   metSeleccion = null;
-  for (const clave of [CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_CATEGORIAS, CLAVE_AJUSTES, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO, CLAVE_DUENO]) {
+  for (const clave of [CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_CATEGORIAS, CLAVE_AJUSTES, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_SALDOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO, CLAVE_DUENO]) {
     try { localStorage.removeItem(clave); } catch {}
   }
   escribirJSON(CLAVE_TC, tiposCambio);
@@ -928,6 +945,7 @@ function guardarCopiaLocal() {
   guardarCategorias();
   guardarAjustes();
   guardarDeudas();
+  guardarSaldos();
   guardarMetas();
 }
 
@@ -1217,6 +1235,7 @@ function editar(id) {
   $('form-titulo').textContent = 'Editar gasto';
   $('btn-guardar').textContent = 'Guardar cambios';
   $('btn-cancelar').classList.remove('hidden');
+  abrirHoja('gastos');
   form.scrollIntoView({ behavior: desplazamiento(), block: 'center' });
   $('descripcion').focus();
   render();
@@ -1620,6 +1639,7 @@ function mesesBalance() {
   const meses = new Set([hoyISO().slice(0, 7)]);
   for (const lista of [gastos, ingresos, pagos]) for (const x of lista) meses.add(x.fecha.slice(0, 7));
   for (const g of gastos) meses.add(fechaDeCuenta(g).slice(0, 7));
+  for (const x of saldosDeCuenta('0000-01-01', '9999-12-31')) meses.add(x.fecha.slice(0, 7));
   return [...meses].sort().reverse();
 }
 
@@ -1649,7 +1669,7 @@ function gastosDeCuenta(desde, hasta) {
 }
 
 function cifrasPeriodo(desde, hasta) {
-  const gas = gastosDeCuenta(desde, hasta);
+  const gas = gastosDeCuenta(desde, hasta).concat(saldosDeCuenta(desde, hasta));
   // La deuda sube el día de la compra, sea cual sea el criterio del ahorro
   const comprasTarjeta = entre(gastos, desde, hasta).filter((g) => tarjetaDe(g.medio));
   const ing = entre(ingresos, desde, hasta);
@@ -1687,6 +1707,7 @@ function cifrasPeriodo(desde, hasta) {
 function deudaAl(fecha) {
   const d = montos();
   for (const g of gastos) if (g.fecha <= fecha && tarjetaDe(g.medio)) d[g.moneda] += g.importe;
+  for (const s of saldos) d[s.moneda] += s.importe;
   for (const x of pagos) if (x.fecha <= fecha) d[x.moneda] -= x.importe;
   return { PEN: redondear(d.PEN), USD: redondear(d.USD) };
 }
@@ -1702,6 +1723,7 @@ function editarIngreso(id) {
   $('ing-form-titulo').textContent = 'Editar ingreso';
   $('ing-guardar').textContent = 'Guardar cambios';
   $('ing-cancelar').classList.remove('hidden');
+  abrirHoja('ingresos');
   $('ing-form').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
   $('ing-descripcion').focus();
   renderBalance();
@@ -1813,6 +1835,13 @@ function renderBalance() {
     ? `En soles ${conSigno(c.dineroPor.PEN)} · en dólares ${conSigno(c.dineroPor.USD, 'USD')}`
     : c.pagos ? `Incluye ${soles.format(c.pagos)} en pagos de tarjeta` : 'Lo que entró menos lo que salió de tus cuentas';
 
+  // Lo que viene de antes: un mes nuevo no empieza de cero
+  const antes = redondear(ajustes.saldoInicial + cifrasPeriodo('0000-01-01', sumarDias(desde, -1)).ahorro);
+  const acumulado = redondear(antes + c.ahorro);
+  $('bal-acum').textContent = soles.format(acumulado);
+  $('bal-acum').className = 'valor' + (acumulado ? (acumulado > 0 ? ' ok' : ' mal') : '');
+  $('bal-acum-sub').textContent = `${soles.format(antes)} de antes ${conSigno(c.ahorro)} de este periodo`;
+
   // Cuadre: del cambio en tu dinero al ahorro, pasando por la deuda de tarjetas
   $('bal-rango').textContent = `Del ${formatearFecha(desde)} al ${formatearFecha(hasta)}` +
     (c.hayDolares ? ' · dólares convertidos a soles' : '');
@@ -1839,6 +1868,8 @@ function renderBalance() {
     filaCuadre(cuadre2, 'Gastos', '', conSigno(-c.gastos));
   }
   filaCuadre(cuadre2, 'Ahorro del periodo', '', montoConSigno(c.ahorro, true), true);
+  filaCuadre(cuadre2, 'Venía de antes', '', conSigno(antes));
+  filaCuadre(cuadre2, 'Saldo acumulado', '', montoConSigno(acumulado, true), true);
   if (hayTarjetas) {
     const cambios = MONEDAS.filter((m) => c.deudaPor[m])
       .map((m) => `${c.deudaPor[m] > 0 ? 'subió' : 'bajó'} ${dinero(Math.abs(c.deudaPor[m]), m)}`);
@@ -1858,6 +1889,10 @@ function renderBalance() {
       tipo: 'Gasto · ' + nombreMedio(g.medio), importe: g.importe, moneda: g.moneda,
       efecto: tarjetaDe(g.medio) ? null : -g.importe,
     })),
+    ...saldos.filter(() => ajustes.compras === 'vence').map((s) => ({ s, fecha: venceSaldo(s) }))
+      .filter(({ fecha }) => fecha >= desde && fecha <= hasta).map(({ s, fecha }) => ({
+        fecha, descripcion: 'Deuda anterior de ' + tarjetaDe(s.tarjeta).nombre, tipo: 'Deuda anterior', importe: s.importe, moneda: s.moneda, efecto: null,
+      })),
     ...pagPeriodo.map((x) => ({
       fecha: x.fecha,
       descripcion: 'Pago a ' + tarjetaDe(x.tarjeta).nombre + (x.moneda !== x.pagadoMoneda ? ` (abona ${dinero(x.importe, x.moneda)})` : ''),
@@ -1920,6 +1955,7 @@ function renderBalance() {
     celda(tr, 'Pagos de tarjetas', soles.format(h.pagos), 'num');
     celda(tr, 'Ahorro', montoConSigno(h.ahorro, h.ingresos > 0), 'num');
     celda(tr, 'Cambio en tu dinero', montoConSigno(h.dinero, true), 'num');
+    celda(tr, 'Acumulado', montoConSigno(acumuladoAl(isoDia(new Date(a, m, 0))), true), 'num');
     hist.appendChild(tr);
   }
 }
@@ -2407,6 +2443,40 @@ function fechaDeCuenta(g) {
   return ajustes.compras === 'vence' && t && configurada(t) ? vencimientoCompra(g.fecha, t) : g.fecha;
 }
 
+// Deuda anterior de una tarjeta: sube la deuda desde que se registra y se reparte en el ciclo en que se paga.
+// No es una compra (no sale en gastos ni en el Dashboard). Cuenta para el ahorro solo al vencer su pago;
+// con «el día de la compra» no cuenta, porque se gastó antes de empezar a registrar.
+function saldoValido(s) {
+  const importe = redondear(Number(s?.importe));
+  if (!tarjetaDe(s?.tarjeta) || !(importe > 0) || !fechaValida(s.fecha)) return null;
+  return { id: idValido(s), tarjeta: s.tarjeta, fecha: s.fecha, moneda: s.moneda === 'USD' ? 'USD' : 'PEN', importe };
+}
+
+function guardarSaldos() {
+  escribirJSON(CLAVE_SALDOS, saldos);
+  programarSync();
+}
+
+const saldosDe = (t) => saldos.filter((s) => s.tarjeta === t.id);
+
+function venceSaldo(s) {
+  const t = tarjetaDe(s.tarjeta);
+  return t && configurada(t) ? vencimientoCompra(s.fecha, t) : s.fecha;
+}
+
+// Deuda anterior que cuenta para el ahorro en el periodo, con la forma de un gasto para poder sumarla
+function saldosDeCuenta(desde, hasta) {
+  if (ajustes.compras !== 'vence') return [];
+  return saldos
+    .map((s) => ({ importe: s.importe, moneda: s.moneda, categoria: '', medio: s.tarjeta, fecha: venceSaldo(s) }))
+    .filter((x) => x.fecha >= desde && x.fecha <= hasta);
+}
+
+// Saldo acumulado al cierre de la fecha: el dinero al empezar más el ahorro de todos los periodos
+function acumuladoAl(fecha) {
+  return redondear(ajustes.saldoInicial + cifrasPeriodo('0000-01-01', fecha).ahorro);
+}
+
 // Índice (año * 12 + mes) del corte que cierra el ciclo en que cae la fecha
 function indiceCiclo(iso, corte) {
   const [a, m, d] = iso.split('-').map(Number);
@@ -2440,6 +2510,7 @@ function ciclosTarjeta(t) {
     const n = indiceCiclo(g.fecha, t.corte);
     (porCiclo[n] ||= []).push(g);
   }
+  for (const s of saldosDe(t)) (porCiclo[indiceCiclo(s.fecha, t.corte)] ||= []).push({ ...s, esSaldo: true });
   const indices = Object.keys(porCiclo).map(Number).concat(actual);
   const ciclos = [];
   for (let n = Math.max(...indices); n >= Math.min(...indices); n--) {
@@ -2448,7 +2519,7 @@ function ciclosTarjeta(t) {
     const c = cicloDe(n, t);
     c.total = montos();
     for (const g of lista) c.total[g.moneda] = redondear(c.total[g.moneda] + g.importe);
-    c.consumos = lista.length;
+    c.consumos = lista.filter((g) => !g.esSaldo).length;
     c.actual = n === actual;
     c.cerrado = c.hasta < hoy;
     ciclos.push(c);
@@ -2478,6 +2549,7 @@ function ciclosTarjeta(t) {
 function resumenTarjeta(t) {
   const deuda = montos();
   for (const g of gastos) if (g.medio === t.id) deuda[g.moneda] += g.importe;
+  for (const s of saldosDe(t)) deuda[s.moneda] += s.importe;
   for (const x of pagosDe(t)) deuda[x.moneda] -= x.importe;
   deuda.PEN = redondear(deuda.PEN);
   deuda.USD = redondear(deuda.USD);
@@ -2545,6 +2617,7 @@ function editarTarjeta(id) {
   $('tar-form-titulo').textContent = 'Editar tarjeta';
   $('tar-guardar').textContent = 'Guardar cambios';
   $('tar-cancelar').classList.remove('hidden');
+  abrirHoja('tarjeta');
   $('tar-form').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
   $('tar-nombre').focus();
   renderTarjeta();
@@ -2567,6 +2640,8 @@ function eliminarTarjeta(id) {
   let n = 0;
   for (const g of gastos) if (g.medio === id) { g.medio = 'credito'; n++; }
   pagos = pagos.filter((p) => p.tarjeta !== id);
+  saldos = saldos.filter((s) => s.tarjeta !== id);
+  guardarSaldos();
   tarjetas = tarjetas.filter((x) => x.id !== id);
   if (tarEditandoId === id) salirEdicionTarjeta();
   if (tarSeleccion === id) tarSeleccion = null;
@@ -2743,6 +2818,7 @@ function renderTarjeta() {
   $('tabla-pagos').classList.toggle('hidden', !lista.length);
   $('pagos-vacio').classList.toggle('hidden', lista.length > 0);
 
+  renderSaldos(t);
   const r = resumenTarjeta(t);
   $('tar-aviso').classList.toggle('hidden', !!r.ciclos);
   $('tar-resumen').classList.toggle('hidden', !r.ciclos);
@@ -2793,6 +2869,40 @@ function renderTarjeta() {
     }
     ciclos.appendChild(tr);
   }
+}
+
+// Deuda anterior: se elige la fecha de pago entre los ciclos cercanos de la tarjeta
+function renderSaldos(t) {
+  const lista = configurada(t) ? saldosDe(t) : [];
+  $('sal-card').classList.toggle('hidden', !configurada(t));
+  if (!configurada(t)) return;
+  const actual = indiceCiclo(hoyISO(), t.corte);
+  const ciclos = [];
+  for (let n = actual - 2; n <= actual + 11; n++) ciclos.push(cicloDe(n, t));
+  const sel = $('sal-vence');
+  const previo = sel.dataset.tarjeta === t.id ? sel.value : '';
+  sel.replaceChildren(...ciclos.map((c) => new Option(formatearFecha(c.vence), c.hasta)));
+  sel.dataset.tarjeta = t.id;
+  sel.value = previo || (ciclos.find((c) => c.vence >= hoyISO()) || ciclos[0]).hasta;
+  const tbody = $('sal-lista');
+  tbody.replaceChildren();
+  for (const s of [...lista].sort((a, b) => (a.fecha < b.fecha ? -1 : 1))) {
+    const tr = document.createElement('tr');
+    celda(tr, 'Se paga hasta', formatearFecha(venceSaldo(s)), 'fecha');
+    celda(tr, 'Monto', dinero(s.importe, s.moneda), 'num');
+    celda(tr, '', botonEliminar('Eliminar deuda anterior', () => {
+      saldos = saldos.filter((x) => x !== s);
+      saldosCambiados();
+    }), 'acciones');
+    tbody.appendChild(tr);
+  }
+  $('tabla-saldos').classList.toggle('hidden', !lista.length);
+}
+
+function saldosCambiados() {
+  guardarSaldos();
+  render();
+  renderVista();
 }
 
 // ---- Datos: exportar / importar / borrar ----
@@ -2857,6 +2967,8 @@ function normalizarIds() {
     renombrar(x);
   }
   ingresos.forEach(renombrar);
+  for (const s of saldos) if (nuevos[s.tarjeta]) s.tarjeta = nuevos[s.tarjeta];
+  if (cambio && saldos.length) guardarSaldos();
   if (cambio) {
     guardar();
     guardarIngresos();
@@ -2866,7 +2978,7 @@ function normalizarIds() {
 }
 
 $('exp-json').addEventListener('click', () => {
-  descargar(`finanzas-${hoyISO()}.json`, JSON.stringify({ gastos, ingresos, tarjetas, pagos, categorias, ajustes, deudas, abonos, metas, aportes, tiposCambio: { bcp: tiposCambio.bcp, interbank: tiposCambio.interbank } }, null, 2), 'application/json');
+  descargar(`finanzas-${hoyISO()}.json`, JSON.stringify({ gastos, ingresos, tarjetas, pagos, categorias, ajustes, saldos, deudas, abonos, metas, aportes, tiposCambio: { bcp: tiposCambio.bcp, interbank: tiposCambio.interbank } }, null, 2), 'application/json');
   mensajeDatos(`Exportados ${gastos.length} gastos, ${ingresos.length} ingresos, ${tarjetas.length} tarjetas y ${pagos.length} pagos de tarjeta en JSON.`);
 });
 
@@ -2882,10 +2994,10 @@ function hojasExcel() {
   return [
     {
       nombre: 'Resumen por mes',
-      columnas: [col('Mes', 'texto', 24), col('Ingresos (S/)', 'importe', 15), col('Gastos (S/)', 'importe', 15), col('Pagos de tarjetas (S/)', 'importe', 22), col('Ahorro (S/)', 'importe', 15), col('Cambio en tu dinero (S/)', 'importe', 24)],
+      columnas: [col('Mes', 'texto', 24), col('Ingresos (S/)', 'importe', 15), col('Gastos (S/)', 'importe', 15), col('Pagos de tarjetas (S/)', 'importe', 22), col('Ahorro (S/)', 'importe', 15), col('Cambio en tu dinero (S/)', 'importe', 24), col('Acumulado (S/)', 'importe', 16)],
       filas: mesesBalance().map((mes) => {
         const c = cifrasPeriodo(mes + '-01', finDeMes(mes));
-        return [nombreMes(mes), c.ingresos, c.gastos, c.pagos, c.ahorro, c.dinero];
+        return [nombreMes(mes), c.ingresos, c.gastos, c.pagos, c.ahorro, c.dinero, acumuladoAl(finDeMes(mes))];
       }),
     },
     {
@@ -2902,6 +3014,11 @@ function hojasExcel() {
       nombre: 'Pagos de tarjeta',
       columnas: [col('Fecha', 'fecha', 12), col('Tarjeta', 'texto', 26), col('Moneda de la deuda', 'texto', 18), col('Abono a la deuda', 'importe', 16), col('Moneda pagada', 'texto', 15), col('Pagado', 'importe', 13), col('Tipo de cambio', 'tc', 14)],
       filas: orden(pagos).map((x) => [x.fecha, tarjetaDe(x.tarjeta)?.nombre ?? '', x.moneda, x.importe, x.pagadoMoneda, x.pagado, x.tipoCambio ?? null]),
+    },
+    {
+      nombre: 'Deuda anterior',
+      columnas: [col('Tarjeta', 'texto', 26), col('Se paga hasta', 'fecha', 14), col('Moneda', 'texto', 9), col('Monto', 'importe', 13)],
+      filas: saldos.map((s) => [tarjetaDe(s.tarjeta)?.nombre ?? '', venceSaldo(s), s.moneda, s.importe]),
     },
     {
       nombre: 'Tarjetas',
@@ -3001,7 +3118,7 @@ $('imp-archivo').addEventListener('change', async (e) => {
     }
     // En orden: las deudas y metas antes que sus movimientos
     let nuevosObjetivos = 0;
-    for (const t of ['deudas', 'abonos', 'metas', 'aportes']) {
+    for (const t of ['saldos', 'deudas', 'abonos', 'metas', 'aportes']) {
       const ids = new Set(TABLAS[t].lista().map((x) => x.id));
       for (const item of Array.isArray(datos?.[t]) ? datos[t] : []) {
         const x = TABLAS[t].deFila(item);
@@ -3012,6 +3129,7 @@ $('imp-archivo').addEventListener('change', async (e) => {
       }
     }
     if (nuevosObjetivos) {
+      guardarSaldos();
       guardarDeudas();
       guardarMetas();
     }
@@ -3060,12 +3178,14 @@ $('borrar-todo').addEventListener('click', () => {
   ingresos = [];
   pagos = [];
   abonos = [];
+  saldos = [];
   aportes = [];
   salirEdicion();
   salirEdicionIngreso();
   guardar();
   guardarIngresos();
   guardarPagos();
+  guardarSaldos();
   guardarDeudas();
   guardarMetas();
   render();
@@ -3089,7 +3209,14 @@ function mostrarVista() {
   try { inicio = localStorage.getItem(CLAVE_INICIO); } catch {}
   vistaActual = VISTAS.includes(nombre) ? nombre : VISTAS.includes(inicio) ? inicio : 'gastos';
   for (const v of VISTAS) $('vista-' + v).classList.toggle('hidden', v !== vistaActual);
-  document.querySelectorAll('.nav-item').forEach((a) => {
+  cerrarHoja(false);
+  // Barra superior y botón de añadir según la vista; «Más» se marca si la vista no tiene pestaña propia
+  document.querySelector('.sup-marca').textContent = NOMBRES_VISTAS[vistaActual];
+  $('fab').textContent = HOJAS[vistaActual]?.[1] ?? '';
+  $('fab').classList.toggle('hidden', !HOJAS[vistaActual]);
+  $('tab-mas').classList.toggle('activa', !document.querySelector(`.tab[data-vista="${vistaActual}"]`));
+  if (pantallaMovil.matches) scrollTo(0, 0);
+  document.querySelectorAll('.nav-item, .tab[data-vista]').forEach((a) => {
     if (a.dataset.vista === vistaActual) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
@@ -3121,7 +3248,34 @@ function alternarMenu(abrir) {
     renderVista(); // los gráficos miden el ancho nuevo
   }
   $('btn-menu').setAttribute('aria-expanded', String(abrir));
-  (abrir ? $('btn-ocultar') : $('btn-menu')).focus();
+  (abrir ? $('btn-ocultar') : pantallaMovil.matches ? $('tab-mas') : $('btn-menu')).focus();
+}
+
+// ---- Celular y tablet: formularios en hoja inferior ----
+let hojaAbierta = null, hojaInertes = [];
+
+function abrirHoja(vista = vistaActual) {
+  if (!pantallaMovil.matches || !HOJAS[vista]) return;
+  cerrarHoja(false);
+  const [idForm, , idCampo] = HOJAS[vista];
+  hojaAbierta = $(idForm).closest('.hoja');
+  hojaAbierta.classList.add('abierta');
+  document.body.classList.add('hoja-abierta');
+  // Mientras está abierta, lo de atrás no recibe foco ni clics
+  const atras = [...$('vista-' + vista).querySelectorAll(':scope > *, .columnas > *')].filter((el) => !el.contains(hojaAbierta));
+  hojaInertes = [...atras, $('tabs'), document.querySelector('.barra-superior')];
+  for (const el of hojaInertes) el.inert = true;
+  $(idCampo).focus();
+}
+
+function cerrarHoja(devolverFoco = true) {
+  if (!hojaAbierta) return;
+  hojaAbierta.classList.remove('abierta');
+  document.body.classList.remove('hoja-abierta');
+  for (const el of hojaInertes) el.inert = false;
+  hojaAbierta = null;
+  hojaInertes = [];
+  if (devolverFoco) $('fab').focus();
 }
 
 function cerrarMenuMovil() {
@@ -3324,7 +3478,8 @@ function renderCategorias() {
 
 // ---- Preferencias de cálculo ----
 function ajustesValidos(x) {
-  return { compras: x?.compras === 'compra' ? 'compra' : 'vence' };
+  const saldo = redondear(Number(x?.saldoInicial));
+  return { compras: x?.compras === 'compra' ? 'compra' : 'vence', saldoInicial: Number.isFinite(saldo) ? saldo : 0 };
 }
 
 function guardarAjustes() {
@@ -3372,6 +3527,7 @@ function renderAjustes() {
     else b.removeAttribute('aria-current');
   }
   for (const r of document.querySelectorAll('input[name="aj-compras"]')) r.checked = r.value === ajustes.compras;
+  if (document.activeElement !== $('aj-saldo')) $('aj-saldo').value = ajustes.saldoInicial || '';
   for (const nombre of ['cuenta', 'apariencia', 'preferencias', 'categorias', 'datos']) $('aj-' + nombre).classList.toggle('activo', nombre === ajusteActual);
   if (ajusteActual === 'categorias') renderCategorias();
 }
@@ -3444,6 +3600,7 @@ function cargarObjetivos() {
   ajustes = ajustesValidos(leerJSON(CLAVE_AJUSTES, null));
   deudas = lista(CLAVE_DEUDAS, deudaValida);
   abonos = lista(CLAVE_ABONOS, abonoValido);
+  saldos = lista(CLAVE_SALDOS, saldoValido);
   metas = lista(CLAVE_METAS, metaValida);
   aportes = lista(CLAVE_APORTES, aporteValido);
 }
@@ -3545,6 +3702,7 @@ function pendienteDeuda(d) {
 function deudaDeTarjeta(t) {
   const d = montos();
   for (const g of gastos) if (g.medio === t.id) d[g.moneda] += g.importe;
+  for (const s of saldosDe(t)) d[s.moneda] += s.importe;
   for (const p of pagosDe(t)) d[p.moneda] -= p.importe;
   return { PEN: redondear(d.PEN), USD: redondear(d.USD) };
 }
@@ -3568,6 +3726,7 @@ function editarDeuda(d) {
   $('deu-form-titulo').textContent = 'Editar deuda';
   $('deu-guardar').textContent = 'Guardar cambios';
   $('deu-cancelar').classList.remove('hidden');
+  abrirHoja('deudas');
   $('deu-form').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
 }
 
@@ -3678,6 +3837,7 @@ function editarMeta(m) {
   $('met-form-titulo').textContent = 'Editar meta';
   $('met-guardar').textContent = 'Guardar cambios';
   $('met-cancelar').classList.remove('hidden');
+  abrirHoja('ahorro');
   $('met-form').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
 }
 
@@ -3686,7 +3846,7 @@ function renderAhorro() {
   const [anioHoy, mesHoy] = hoy.split('-').map(Number);
   const finMes = isoDia(new Date(anioHoy, mesHoy, 0)); // incluye lo que vence más adelante en el mes
   const mes = cifrasPeriodo(hoy.slice(0, 8) + '01', finMes).ahorro;
-  const acumulado = cifrasPeriodo('0000-01-01', finMes).ahorro;
+  const acumulado = acumuladoAl(finMes);
   let enMetas = 0;
   const lista = $('met-lista');
   lista.replaceChildren();
@@ -3847,7 +4007,7 @@ crearSelectores('met');
 form.addEventListener('submit', (e) => {
   e.preventDefault();
   const datos = leerFormulario();
-  if (!datos.descripcion || !(datos.importe > 0) || !datos.fecha) return;
+  if (!datos.descripcion || !(datos.importe > 0) || !datos.fecha || datos.fecha > hoyISO()) return;
   if (editandoId) actualizar(editandoId, datos);
   else crear(datos);
   guardar();
@@ -3877,7 +4037,7 @@ $('ing-form').addEventListener('submit', (e) => {
     moneda: $('ing-moneda').value,
     fecha: $('ing-fecha').value,
   });
-  if (!datos) return;
+  if (!datos || datos.fecha > hoyISO()) return;
   const existente = ingresos.find((x) => x.id === ingEditandoId);
   if (existente) Object.assign(existente, datos);
   else ingresos.push(datos);
@@ -4035,14 +4195,39 @@ addEventListener('online', () => {
 });
 
 $('btn-menu').addEventListener('click', () => alternarMenu(true));
+$('tab-mas').addEventListener('click', () => alternarMenu(true));
+$('fab').addEventListener('click', () => abrirHoja());
+$('hoja-fondo').addEventListener('click', () => cerrarHoja());
+for (const [vista, [idForm]] of Object.entries(HOJAS)) {
+  const hoja = $(idForm).closest('.hoja');
+  const cerrar = document.createElement('button');
+  cerrar.type = 'button';
+  cerrar.className = 'hoja-cerrar';
+  cerrar.textContent = 'Cerrar';
+  // Si se estaba editando, cerrar equivale a cancelar
+  cerrar.addEventListener('click', () => {
+    const cancelar = hoja.querySelector('.acciones-form .btn-secondary:not(.hidden)');
+    if (cancelar) cancelar.click();
+    cerrarHoja();
+  });
+  hoja.prepend(cerrar);
+  hoja.querySelector('.acciones-form .btn-secondary').addEventListener('click', () => cerrarHoja());
+  $(idForm).addEventListener('submit', () => { if (vista === vistaActual) setTimeout(cerrarHoja); });
+}
+const pintarBotonOcultar = () => { $('btn-ocultar').textContent = pantallaMovil.matches ? 'Cerrar' : 'Ocultar'; };
+pintarBotonOcultar();
 $('btn-ocultar').addEventListener('click', () => alternarMenu(false));
 $('menu-fondo').addEventListener('click', cerrarMenuMovil);
 document.querySelector('.barra-nav').addEventListener('click', cerrarMenuMovil);
 addEventListener('keydown', (e) => {
   // Con el menú del usuario o una ventana abiertos, Escape solo cierra eso
-  if (e.key === 'Escape' && !$('dialogo').open && !$('menu-usuario').matches(':popover-open')) cerrarMenuMovil();
+  if (e.key !== 'Escape' || $('dialogo').open || $('menu-usuario').matches(':popover-open')) return;
+  cerrarHoja();
+  cerrarMenuMovil();
 });
 pantallaMovil.addEventListener('change', () => {
+  cerrarHoja(false);
+  pintarBotonOcultar();
   document.body.classList.remove('menu-abierto');
   $('contenido').inert = false;
   $('btn-menu').setAttribute('aria-expanded', 'false');
@@ -4073,7 +4258,7 @@ addEventListener('storage', (e) => {
     for (const r of document.querySelectorAll('input[name="paleta"]')) r.checked = r.value === (e.newValue || 'azul');
     renderVista();
   }
-  if (![CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_TC, CLAVE_SIM, CLAVE_CATEGORIAS, CLAVE_AJUSTES, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO].includes(e.key)) return;
+  if (![CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_TC, CLAVE_SIM, CLAVE_CATEGORIAS, CLAVE_AJUSTES, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_SALDOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO].includes(e.key)) return;
   // Un guardado puede tocar varias claves seguidas: se repinta una sola vez
   clearTimeout(esperaPestana);
   esperaPestana = setTimeout(() => {
@@ -4109,6 +4294,14 @@ $('tar-form').addEventListener('submit', (e) => {
   tarjetasCambiadas();
 });
 $('tar-cancelar').addEventListener('click', () => { salirEdicionTarjeta(); renderTarjeta(); });
+$('sal-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const s = saldoValido({ id: nuevoId(), tarjeta: tarSeleccion, fecha: $('sal-vence').value, moneda: $('sal-moneda').value, importe: $('sal-importe').value });
+  if (!s) return;
+  saldos.push(s);
+  $('sal-importe').value = '';
+  saldosCambiados();
+});
 $('tar-modo-pago').addEventListener('change', () => {
   $('tar-pago').value = '';
   pintarModoPago();
@@ -4117,11 +4310,16 @@ for (const id of ['tar-corte', 'tar-pago']) $(id).addEventListener('input', pint
 for (const id of ['medio', 'fecha']) $(id).addEventListener('change', pintarNotaMedio);
 for (const r of document.querySelectorAll('input[name="aj-compras"]')) {
   r.addEventListener('change', () => {
-    ajustes = ajustesValidos({ compras: r.value });
+    ajustes = ajustesValidos({ ...ajustes, compras: r.value });
     guardarAjustes();
     render();
   });
 }
+$('aj-saldo').addEventListener('change', () => {
+  ajustes = ajustesValidos({ ...ajustes, saldoInicial: $('aj-saldo').value });
+  guardarAjustes();
+  render();
+});
 $('tar-sel').addEventListener('change', () => {
   tarSeleccion = $('tar-sel').value;
   pagoSugerido = null;
@@ -4151,6 +4349,9 @@ function pintarFecha() {
   $('hoy-larga').textContent = texto({ weekday: 'long', day: 'numeric', month: 'long' });
   $('hoy-corta').textContent = texto({ weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '').replace(' de ', ' ');
   $('hoy').dateTime = hoyISO();
+  // Un gasto o un ingreso no puede tener fecha futura
+  $('fecha').max = hoyISO();
+  $('ing-fecha').max = hoyISO();
 }
 
 // ---- Tema claro / oscuro ----
