@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Finanzas personales</title>
+<title>Mis Finanzas</title>
 <link rel="stylesheet" href="css/estilos.css">
 <script src="js/tema.js"></script>
+<script src="js/excel.js" defer></script>
 <script src="js/aplicacion.js" defer></script>
 </head>
 <body>
@@ -14,10 +15,9 @@
   <aside class="sidebar" id="barra" aria-label="Menú">
     <div class="barra-marca">
       <div class="barra-titulo">
-        <h1>Finanzas personales</h1>
+        <h1>Mis Finanzas</h1>
         <button type="button" class="barra-mini" id="btn-ocultar">Ocultar</button>
       </div>
-      <p id="hoy"></p>
     </div>
     <nav class="barra-nav" aria-label="Secciones">
       <a class="nav-item" href="#gastos" data-vista="gastos">Gastos</a>
@@ -40,15 +40,14 @@
       </div>
     </div>
     <div class="barra-cuenta">
-      <div class="barra-usuario">
-        <div class="avatar hidden" id="avatar" aria-hidden="true"></div>
-        <div class="barra-usuario-texto">
+      <button type="button" class="barra-accion principal" id="btn-cuenta">Iniciar sesión</button>
+      <button type="button" class="barra-usuario" id="btn-usuario" popovertarget="menu-usuario" aria-haspopup="menu">
+        <span class="avatar hidden" id="avatar" aria-hidden="true"></span>
+        <span class="barra-usuario-texto">
           <strong id="cuenta-nombre"></strong>
           <span id="cuenta-correo"></span>
-        </div>
-      </div>
-      <button type="button" class="barra-accion" id="btn-tema"></button>
-      <button type="button" class="barra-accion" id="btn-cuenta"></button>
+        </span>
+      </button>
     </div>
   </aside>
   <div class="menu-fondo" id="menu-fondo"></div>
@@ -56,7 +55,9 @@
   <div class="contenido" id="contenido">
   <div class="barra-superior">
     <button type="button" class="btn-menu" id="btn-menu" aria-controls="barra" aria-expanded="false">Menú</button>
-    <span>Finanzas personales</span>
+    <span class="sup-marca">Mis Finanzas</span>
+    <span class="sup-saludo" id="saludo"></span>
+    <time class="sup-fecha" id="hoy"><span class="larga" id="hoy-larga"></span><span class="corta" id="hoy-corta"></span></time>
   </div>
 
   <main class="container">
@@ -826,7 +827,7 @@
         <nav class="ajustes-menu" aria-label="Secciones de ajustes">
           <button type="button" data-ajuste="cuenta">Cuenta</button>
           <button type="button" data-ajuste="apariencia">Apariencia</button>
-          <button type="button" data-ajuste="calculos">Cálculos</button>
+          <button type="button" data-ajuste="preferencias">Preferencias</button>
           <button type="button" data-ajuste="categorias">Categorías</button>
           <button type="button" data-ajuste="datos">Mis datos</button>
         </nav>
@@ -834,53 +835,74 @@
         <section class="card ajuste-panel" id="aj-cuenta">
           <h2>Cuenta</h2>
           <form id="cuenta-form" class="hidden" autocomplete="off">
-            <div class="campo-ancho">
-              <label for="aj-nombre">Nombre</label>
-              <input id="aj-nombre" required maxlength="60">
+            <div class="fila-ajuste">
+              <div>
+                <label class="fa-titulo" for="aj-nombre">Nombre</label>
+                <p class="fa-texto">Con Google se actualiza al entrar.</p>
+              </div>
+              <div class="fa-control fa-nombre">
+                <input id="aj-nombre" required maxlength="60">
+                <button type="submit" class="btn-secondary">Guardar</button>
+              </div>
             </div>
-            <div class="campo-ancho">
-              <span class="etiqueta">Correo</span>
-              <p class="dato-fijo" id="aj-correo"></p>
+            <div class="fila-ajuste">
+              <div>
+                <span class="fa-titulo">Correo</span>
+                <p class="fa-texto" id="aj-correo"></p>
+              </div>
             </div>
-            <div class="acciones-form">
-              <button type="submit" class="btn-primary">Guardar nombre</button>
+            <div class="fila-ajuste">
+              <div>
+                <span class="fa-titulo">Sesión</span>
+                <p class="fa-texto">Tus datos seguirán en tu cuenta.</p>
+              </div>
+              <button type="button" class="btn-secondary" id="aj-salir">Cerrar sesión</button>
             </div>
-            <p class="nota campo-ancho">Con Google, tu nombre se actualiza al entrar.</p>
           </form>
-          <div id="cuenta-sin">
-            <p class="dato-fijo">Tus datos solo están en este navegador.</p>
+          <div id="cuenta-sin" class="fila-ajuste">
+            <div>
+              <span class="fa-titulo">Sin cuenta</span>
+              <p class="fa-texto">Tus datos solo están en este navegador.</p>
+            </div>
             <button type="button" class="btn-primary" id="aj-entrar">Iniciar sesión</button>
           </div>
         </section>
         <section class="card ajuste-panel" id="aj-apariencia">
           <h2>Apariencia</h2>
+          <div class="fila-ajuste">
+            <div>
+              <span class="fa-titulo" id="aj-tema-titulo">Tema</span>
+              <p class="fa-texto">«Sistema» sigue la configuración de tu dispositivo.</p>
+            </div>
+            <div class="segmentado" role="radiogroup" aria-labelledby="aj-tema-titulo">
+              <label><input type="radio" name="tema" value="light"><span>Claro</span></label>
+              <label><input type="radio" name="tema" value="dark"><span>Oscuro</span></label>
+              <label><input type="radio" name="tema" value="sistema"><span>Sistema</span></label>
+            </div>
+          </div>
           <fieldset class="paletas" id="paletas">
-            <legend class="sub">Color</legend>
-            <label class="paleta"><input type="radio" name="paleta" value="azul"><span class="muestra muestra-azul"></span><span>Azul</span></label>
-            <label class="paleta"><input type="radio" name="paleta" value="indigo"><span class="muestra muestra-indigo"></span><span>Índigo</span></label>
-            <label class="paleta"><input type="radio" name="paleta" value="esmeralda"><span class="muestra muestra-esmeralda"></span><span>Esmeralda</span></label>
-            <label class="paleta"><input type="radio" name="paleta" value="terracota"><span class="muestra muestra-terracota"></span><span>Terracota</span></label>
-            <label class="paleta"><input type="radio" name="paleta" value="grafito"><span class="muestra muestra-grafito"></span><span>Grafito</span></label>
+            <legend class="fa-titulo">Color</legend>
           </fieldset>
-          <div class="segmentado" role="radiogroup" aria-label="Tema">
-            <label><input type="radio" name="tema" value="light"><span>Claro</span></label>
-            <label><input type="radio" name="tema" value="dark"><span>Oscuro</span></label>
-          </div>
-          <div class="campo-inicio">
-            <label for="aj-inicio">Al abrir, ir a</label>
-            <select id="aj-inicio"></select>
-          </div>
         </section>
-        <section class="card ajuste-panel" id="aj-calculos">
-          <h2>Cálculos</h2>
-          <div class="campo-inicio">
-            <label for="aj-compras">Restar las compras con tarjeta</label>
-            <select id="aj-compras">
+        <section class="card ajuste-panel" id="aj-preferencias">
+          <h2>Preferencias</h2>
+          <div class="fila-ajuste">
+            <div>
+              <label class="fa-titulo" for="aj-inicio">Al abrir, ir a</label>
+              <p class="fa-texto">La sección que ves primero en este navegador.</p>
+            </div>
+            <select id="aj-inicio" class="fa-select"></select>
+          </div>
+          <div class="fila-ajuste">
+            <div>
+              <label class="fa-titulo" for="aj-compras">Restar las compras con tarjeta</label>
+              <p class="fa-texto">Cambia tu ahorro e Ingresos. Tu deuda y tu dinero no cambian.</p>
+            </div>
+            <select id="aj-compras" class="fa-select">
               <option value="vence">Cuando vence su pago</option>
               <option value="compra">El día de la compra</option>
             </select>
           </div>
-          <p class="nota">Cambia tu ahorro e Ingresos. Tu deuda y tu dinero no cambian.</p>
         </section>
         <div class="ajuste-panel columnas-categorias" id="aj-categorias">
           <section class="card">
@@ -912,33 +934,54 @@
             <div class="lista-categorias" id="cat-lista"></div>
           </section>
         </div>
-        <div class="ajuste-panel datos-grid" id="aj-datos">
-        <section class="card">
-          <h2>Exportar</h2>
-          <p>JSON para restaurar aquí; CSV para Excel (solo gastos).</p>
-          <div class="botones">
-            <button type="button" class="btn-primary" id="exp-json">JSON</button>
-            <button type="button" class="btn-secondary" id="exp-csv">CSV</button>
+        <section class="card ajuste-panel" id="aj-datos">
+          <h2>Mis datos</h2>
+          <h3 class="fa-grupo">Descargar</h3>
+          <div class="fila-ajuste">
+            <div>
+              <span class="fa-titulo">Excel</span>
+              <p class="fa-texto">Todo en un libro: resumen por mes, gastos, ingresos, tarjetas, deudas y metas.</p>
+            </div>
+            <button type="button" class="btn-primary" id="exp-xlsx">Descargar Excel</button>
+          </div>
+          <div class="fila-ajuste">
+            <div>
+              <span class="fa-titulo">CSV</span>
+              <p class="fa-texto">Solo los gastos, para otras apps.</p>
+            </div>
+            <button type="button" class="btn-secondary" id="exp-csv">Descargar CSV</button>
+          </div>
+          <h3 class="fa-grupo">Copia de seguridad</h3>
+          <div class="fila-ajuste">
+            <div>
+              <span class="fa-titulo">Guardar una copia</span>
+              <p class="fa-texto">Un archivo JSON con todos tus datos.</p>
+            </div>
+            <button type="button" class="btn-secondary" id="exp-json">Descargar copia</button>
+          </div>
+          <div class="fila-ajuste">
+            <div>
+              <span class="fa-titulo">Restaurar una copia</span>
+              <p class="fa-texto">Añade lo que falte, sin duplicar registros.</p>
+            </div>
+            <input type="file" id="imp-archivo" accept=".json,application/json" class="hidden">
+            <button type="button" class="btn-secondary" id="imp-json">Elegir archivo…</button>
+          </div>
+          <h3 class="fa-grupo">Borrar</h3>
+          <div class="fila-ajuste">
+            <div>
+              <span class="fa-titulo">Borrar todos los movimientos</span>
+              <p class="fa-texto">Gastos, ingresos, pagos, abonos y aportes. Conserva tarjetas, deudas, metas y categorías. No se puede deshacer.</p>
+            </div>
+            <button type="button" class="btn-danger" id="borrar-todo">Borrar movimientos</button>
           </div>
         </section>
-        <section class="card">
-          <h2>Importar</h2>
-          <p>Desde un JSON exportado. No duplica registros.</p>
-          <input type="file" id="imp-archivo" accept=".json,application/json" class="hidden">
-          <button type="button" class="btn-secondary" id="imp-json">Elegir archivo…</button>
-        </section>
-        <section class="card">
-          <h2>Borrar todo</h2>
-          <p>Gastos, ingresos, pagos, abonos y aportes. Conserva tarjetas, deudas, metas y categorías. No se puede deshacer.</p>
-          <button type="button" class="btn-danger" id="borrar-todo">Borrar todos los movimientos</button>
-        </section>
-        </div>
         </div>
       </div>
     </div>
   </main>
 
-  <footer class="pie container">Finanzas personales · Tipo de cambio de respaldo: BCRP</footer>
+  <footer class="pie container">Mis Finanzas · Tipo de cambio de respaldo: BCRP</footer>
   </div>
 </div>
 
@@ -948,6 +991,36 @@
 </div>
 
 <div class="tooltip hidden" id="tooltip" role="tooltip"></div>
+
+<!-- Menú del usuario (se abre desde la barra lateral) -->
+<div class="menu-usuario" id="menu-usuario" popover>
+  <div class="menu-cabecera">
+    <strong id="menu-nombre"></strong>
+    <span id="menu-correo"></span>
+  </div>
+  <div class="menu-fila">
+    <span class="etiqueta" id="menu-tema-titulo">Tema</span>
+    <div class="segmentado" role="radiogroup" aria-labelledby="menu-tema-titulo">
+      <label><input type="radio" name="tema-menu" value="light"><span>Claro</span></label>
+      <label><input type="radio" name="tema-menu" value="dark"><span>Oscuro</span></label>
+      <label><input type="radio" name="tema-menu" value="sistema"><span>Sistema</span></label>
+    </div>
+  </div>
+  <a class="menu-opcion" href="#datos" id="menu-ajustes">Ajustes</a>
+  <button type="button" class="menu-opcion" id="btn-salir">Cerrar sesión</button>
+</div>
+
+<!-- Ventana de confirmación -->
+<dialog class="dialogo" id="dialogo" aria-labelledby="dialogo-titulo" aria-describedby="dialogo-texto">
+  <form method="dialog">
+    <h2 id="dialogo-titulo"></h2>
+    <p id="dialogo-texto"></p>
+    <div class="dialogo-acciones">
+      <button value="no" class="btn-secondary" autofocus>Cancelar</button>
+      <button value="si" id="dialogo-si"></button>
+    </div>
+  </form>
+</dialog>
 
 <!-- ===== Acceso (Supabase) ===== -->
 <div class="acceso hidden" id="acceso" role="dialog" aria-modal="true" aria-labelledby="acceso-titulo">

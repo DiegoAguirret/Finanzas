@@ -403,7 +403,6 @@ let nubeLista = false;        // no se sube nada hasta saber de quién es la cop
 let sincronizando = false, otraVez = false, errorSync = null, esperaSync = null, renovando = null;
 let accesoModo = 'entrar'; // entrar | registro | recuperar | nueva-clave
 let modoPintado = null;
-let confirmandoSalida = false;
 let esperaAvisoGuardado = null;
 let appIniciada = false;       // lo que se guarda al arrancar (migraciones) no es un cambio del usuario
 let escrituraFallida = false;  // localStorage no aceptó el último guardado: la memoria es lo más reciente
@@ -958,15 +957,30 @@ function refrescarTodo() {
   renderVista();
 }
 
+// Ventana de confirmación; resuelve true si se acepta (Escape o clic fuera = cancelar)
+function confirmar({ titulo, texto, accion, peligro = false }) {
+  const d = $('dialogo');
+  $('dialogo-titulo').textContent = titulo;
+  $('dialogo-texto').textContent = texto;
+  $('dialogo-si').textContent = accion;
+  $('dialogo-si').className = peligro ? 'btn-danger' : 'btn-primary';
+  d.returnValue = 'no';
+  d.showModal();
+  return new Promise((resolver) => d.addEventListener('close', () => resolver(d.returnValue === 'si'), { once: true }));
+}
+
+let saliendo = false;
 async function cerrarSesion() {
-  if (!confirmandoSalida) {
-    confirmandoSalida = true;
-    $('btn-cuenta').textContent = hayCambiosSinSubir() ? '¿Salir sin guardar? Pulsa otra vez' : '¿Cerrar sesión? Pulsa otra vez';
-    setTimeout(() => { confirmandoSalida = false; pintarCuenta(); }, 3000);
-    return;
-  }
-  confirmandoSalida = false;
+  if (saliendo || !sesion) return;
+  const sinGuardar = hayCambiosSinSubir();
+  const ok = await confirmar(sinGuardar
+    ? { titulo: 'Tienes cambios sin guardar', texto: 'Si sales ahora, se perderán.', accion: 'Salir sin guardar', peligro: true }
+    : { titulo: '¿Cerrar sesión?', texto: 'Tus datos seguirán en tu cuenta. Podrás volver a entrar cuando quieras.', accion: 'Cerrar sesión' });
+  if (!ok || !sesion) return;
+  saliendo = true;
   try { await api('/auth/v1/logout', { metodo: 'POST' }); } catch {}
+  saliendo = false;
+  cerrarMenuMovil();
   cerrarSesionLocal();
   borrarCopiaLocal();
   refrescarTodo();
@@ -1026,11 +1040,14 @@ function pintarCuenta() {
   // En la barra lateral, el nombre del usuario (o la parte de su correo antes de la @)
   const nombre = sesion ? sesion.usuario.nombre || sesion.usuario.correo.split('@')[0] : '';
   $('cuenta-nombre').textContent = nombre || 'Sin cuenta';
+  $('menu-nombre').textContent = nombre || 'Sin cuenta';
+  $('menu-correo').textContent = sesion ? sesion.usuario.correo : 'Tus datos solo están en este navegador.';
+  $('saludo').textContent = sesion?.usuario.nombre ? `Hola, ${sesion.usuario.nombre.trim().split(/\s+/)[0]}` : 'Hola';
   $('avatar').textContent = nombre ? iniciales(nombre) : '';
   $('avatar').classList.toggle('hidden', !nombre);
   $('cuenta-correo').textContent = sesion ? sesion.usuario.correo : '';
-  if (!confirmandoSalida) $('btn-cuenta').textContent = sesion ? 'Cerrar sesión' : 'Iniciar sesión';
-  $('btn-cuenta').classList.toggle('principal', !sesion);
+  $('btn-cuenta').classList.toggle('hidden', !!sesion);
+  $('btn-salir').classList.toggle('hidden', !sesion);
   pintarSync();
   $('cuenta-form').classList.toggle('hidden', !sesion);
   $('cuenta-sin').classList.toggle('hidden', !!sesion);
@@ -1042,6 +1059,7 @@ function pintarCuenta() {
 
 function mostrarAcceso(modo = 'entrar') {
   accesoModo = modo;
+  $('menu-usuario').hidePopover();
   pintarAcceso();
   $('sync-estado').classList.add('hidden');
   $('acceso').classList.remove('hidden');
@@ -2814,6 +2832,72 @@ $('exp-json').addEventListener('click', () => {
   mensajeDatos(`Exportados ${gastos.length} gastos, ${ingresos.length} ingresos, ${tarjetas.length} tarjetas y ${pagos.length} pagos de tarjeta en JSON.`);
 });
 
+// Libro de Excel con todos los datos: fechas y números de verdad, para poder ordenar y sumar
+function hojasExcel() {
+  const col = (titulo, tipo, ancho) => ({ titulo, tipo, ancho });
+  const soles = (x) => redondear(enSoles(x)) || null; // sin tipo de cambio queda vacío, no en 0
+  const finDeMes = (mes) => {
+    const [a, m] = mes.split('-').map(Number);
+    return isoDia(new Date(a, m, 0));
+  };
+  const orden = (lista) => [...lista].sort(porFechaDesc);
+  return [
+    {
+      nombre: 'Resumen por mes',
+      columnas: [col('Mes', 'texto', 24), col('Ingresos (S/)', 'importe', 15), col('Gastos (S/)', 'importe', 15), col('Pagos de tarjetas (S/)', 'importe', 22), col('Ahorro (S/)', 'importe', 15), col('Cambio en tu dinero (S/)', 'importe', 24)],
+      filas: mesesBalance().map((mes) => {
+        const c = cifrasPeriodo(mes + '-01', finDeMes(mes));
+        return [nombreMes(mes), c.ingresos, c.gastos, c.pagos, c.ahorro, c.dinero];
+      }),
+    },
+    {
+      nombre: 'Gastos',
+      columnas: [col('Fecha', 'fecha', 12), col('Descripción', 'texto', 34), col('Categoría', 'texto', 18), col('Medio de pago', 'texto', 24), col('Moneda', 'texto', 9), col('Importe', 'importe', 13), col('En soles', 'importe', 13), col('Cuenta en tu ahorro el', 'fecha', 21)],
+      filas: orden(gastos).map((g) => [g.fecha, g.descripcion, g.categoria, nombreMedio(g.medio), g.moneda, g.importe, soles(g), fechaDeCuenta(g)]),
+    },
+    {
+      nombre: 'Ingresos',
+      columnas: [col('Fecha', 'fecha', 12), col('Descripción', 'texto', 34), col('Moneda', 'texto', 9), col('Importe', 'importe', 13), col('En soles', 'importe', 13)],
+      filas: orden(ingresos).map((i) => [i.fecha, i.descripcion, i.moneda, i.importe, soles(i)]),
+    },
+    {
+      nombre: 'Pagos de tarjeta',
+      columnas: [col('Fecha', 'fecha', 12), col('Tarjeta', 'texto', 26), col('Moneda de la deuda', 'texto', 18), col('Abono a la deuda', 'importe', 16), col('Moneda pagada', 'texto', 15), col('Pagado', 'importe', 13), col('Tipo de cambio', 'tc', 14)],
+      filas: orden(pagos).map((x) => [x.fecha, tarjetaDe(x.tarjeta)?.nombre ?? '', x.moneda, x.importe, x.pagadoMoneda, x.pagado, x.tipoCambio ?? null]),
+    },
+    {
+      nombre: 'Tarjetas',
+      columnas: [col('Tarjeta', 'texto', 26), col('Banco', 'texto', 14), col('Día de corte', 'numero', 12), col('Día de pago', 'numero', 12), col('Días tras el corte', 'numero', 17), col('Línea de crédito (S/)', 'importe', 20)],
+      filas: tarjetas.map((t) => [t.nombre, BANCOS[t.banco] ?? 'Otro banco', t.corte, t.pago, t.plazo, t.linea || null]),
+    },
+    {
+      nombre: 'Deudas',
+      columnas: [col('Deuda', 'texto', 28), col('Tipo', 'texto', 16), col('Desde', 'fecha', 12), col('Moneda', 'texto', 9), col('Monto', 'importe', 13)],
+      filas: orden(deudas).map((d) => [d.nombre, TIPOS_DEUDA[d.tipo], d.fecha, d.moneda, d.monto]),
+    },
+    {
+      nombre: 'Abonos',
+      columnas: [col('Fecha', 'fecha', 12), col('Deuda', 'texto', 28), col('Moneda', 'texto', 9), col('Importe', 'importe', 13)],
+      filas: orden(abonos).map((a) => [a.fecha, deudaDe(a.deuda)?.nombre ?? '', deudaDe(a.deuda)?.moneda ?? '', a.importe]),
+    },
+    {
+      nombre: 'Metas',
+      columnas: [col('Meta', 'texto', 28), col('Moneda', 'texto', 9), col('Objetivo', 'importe', 13), col('Para cuándo', 'fecha', 12)],
+      filas: metas.map((m) => [m.nombre, m.moneda, m.objetivo, m.limite || null]),
+    },
+    {
+      nombre: 'Aportes',
+      columnas: [col('Fecha', 'fecha', 12), col('Meta', 'texto', 28), col('Moneda', 'texto', 9), col('Importe (negativo = retiro)', 'importe', 26)],
+      filas: orden(aportes).map((a) => [a.fecha, metaDe(a.meta)?.nombre ?? '', metaDe(a.meta)?.moneda ?? '', a.importe]),
+    },
+  ];
+}
+
+$('exp-xlsx').addEventListener('click', () => {
+  descargar(`mis-finanzas-${hoyISO()}.xlsx`, crearXlsx(hojasExcel()), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  mensajeDatos(`Excel descargado: ${gastos.length} gastos y ${ingresos.length} ingresos.`);
+});
+
 $('exp-csv').addEventListener('click', () => {
   const filas = [['fecha', 'descripcion', 'categoria', 'medio de pago', 'moneda', 'importe']]
     .concat(gastos.map((g) => [g.fecha, g.descripcion, g.categoria, nombreMedio(g.medio), g.moneda, g.importe.toFixed(2)]));
@@ -3250,7 +3334,7 @@ function renderAjustes() {
     else b.removeAttribute('aria-current');
   }
   $('aj-compras').value = ajustes.compras;
-  for (const nombre of ['cuenta', 'apariencia', 'calculos', 'categorias', 'datos']) $('aj-' + nombre).classList.toggle('activo', nombre === ajusteActual);
+  for (const nombre of ['cuenta', 'apariencia', 'preferencias', 'categorias', 'datos']) $('aj-' + nombre).classList.toggle('activo', nombre === ajusteActual);
   if (ajusteActual === 'categorias') renderCategorias();
 }
 
@@ -3709,6 +3793,7 @@ $('cat-form').addEventListener('submit', guardarCategoriaForm);
 $('cat-cancelar').addEventListener('click', salirEdicionCategoria);
 $('cuenta-form').addEventListener('submit', guardarNombreCuenta);
 $('aj-entrar').addEventListener('click', () => mostrarAcceso());
+$('aj-salir').addEventListener('click', cerrarSesion);
 $('aj-inicio').replaceChildren(...VISTAS.map((v) => new Option(NOMBRES_VISTAS[v], v)));
 try { $('aj-inicio').value = VISTAS.includes(localStorage.getItem(CLAVE_INICIO)) ? localStorage.getItem(CLAVE_INICIO) : 'gastos'; } catch {}
 $('aj-inicio').addEventListener('change', () => {
@@ -3821,7 +3906,26 @@ $('tc-form').addEventListener('submit', (e) => {
 });
 
 // Cuenta: iniciar / cerrar sesión, reintentar la sincronización
-$('btn-cuenta').addEventListener('click', () => (sesion ? cerrarSesion() : mostrarAcceso()));
+$('btn-cuenta').addEventListener('click', () => mostrarAcceso());
+// Menú del usuario: se abre sobre su fila de la barra lateral
+$('menu-usuario').addEventListener('beforetoggle', (e) => {
+  if (e.newState !== 'open') return;
+  const fila = $('btn-usuario').getBoundingClientRect();
+  $('menu-usuario').style.left = `${Math.max(8, fila.left)}px`;
+  $('menu-usuario').style.bottom = `${innerHeight - fila.top + 8}px`;
+});
+$('menu-ajustes').addEventListener('click', () => {
+  ajusteActual = 'cuenta';
+  $('menu-usuario').hidePopover();
+  cerrarMenuMovil();
+  if (location.hash === '#datos') renderAjustes();
+});
+$('btn-salir').addEventListener('click', () => {
+  $('menu-usuario').hidePopover();
+  $('btn-usuario').focus(); // al cancelar, el foco vuelve aquí
+  cerrarSesion();
+});
+$('dialogo').addEventListener('click', (e) => { if (e.target === $('dialogo')) $('dialogo').close(); });
 $('sync-reintentar').addEventListener('click', () => {
   if (!sesion) return mostrarAcceso();
   if (nubeLista) sincronizar();
@@ -3898,7 +4002,10 @@ $('btn-menu').addEventListener('click', () => alternarMenu(true));
 $('btn-ocultar').addEventListener('click', () => alternarMenu(false));
 $('menu-fondo').addEventListener('click', cerrarMenuMovil);
 document.querySelector('.barra-nav').addEventListener('click', cerrarMenuMovil);
-addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarMenuMovil(); });
+addEventListener('keydown', (e) => {
+  // Con el menú del usuario o una ventana abiertos, Escape solo cierra eso
+  if (e.key === 'Escape' && !$('dialogo').open && !$('menu-usuario').matches(':popover-open')) cerrarMenuMovil();
+});
 pantallaMovil.addEventListener('change', () => {
   document.body.classList.remove('menu-abierto');
   $('contenido').inert = false;
@@ -3920,9 +4027,8 @@ addEventListener('storage', (e) => {
     sesion = nueva;
     return;
   }
-  if (e.key === 'finanzas.tema' && (e.newValue === 'light' || e.newValue === 'dark')) {
-    document.documentElement.dataset.theme = e.newValue;
-    pintarBotonTema();
+  if (e.key === 'finanzas.tema') {
+    aplicarTema(temaGuardado());
     renderVista();
   }
   if (e.key === 'finanzas.paleta') {
@@ -4002,23 +4108,44 @@ addEventListener('resize', () => {
 });
 addEventListener('scroll', ocultarTip, { passive: true });
 
+// Fecha de hoy en la barra superior: «Domingo, 1 de noviembre» (en móvil, «Dom, 1 nov»)
+function pintarFecha() {
+  const texto = (opciones) => new Date().toLocaleDateString('es-PE', opciones).replace(/^./, (l) => l.toUpperCase());
+  $('hoy-larga').textContent = texto({ weekday: 'long', day: 'numeric', month: 'long' });
+  $('hoy-corta').textContent = texto({ weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '').replace(' de ', ' ');
+  $('hoy').dateTime = hoyISO();
+}
+
 // ---- Tema claro / oscuro ----
-function pintarBotonTema() {
-  const oscuro = document.documentElement.dataset.theme === 'dark';
-  const b = $('btn-tema');
-  b.textContent = oscuro ? 'Modo claro' : 'Modo oscuro';
-  b.title = oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
-  b.setAttribute('aria-label', b.title);
-  for (const r of document.querySelectorAll('input[name="tema"]')) r.checked = r.value === (oscuro ? 'dark' : 'light');
+const temaSistema = matchMedia('(prefers-color-scheme: dark)');
+
+// 'light', 'dark' o 'sistema' (sin nada guardado sigue al dispositivo, igual que js/tema.js)
+function temaGuardado() {
+  try {
+    const t = localStorage.getItem('finanzas.tema');
+    return t === 'light' || t === 'dark' ? t : 'sistema';
+  } catch { return 'sistema'; }
 }
 
 function aplicarTema(tema) {
-  document.documentElement.dataset.theme = tema;
-  try { localStorage.setItem('finanzas.tema', tema); } catch {}
-  pintarBotonTema();
+  document.documentElement.dataset.theme = tema === 'sistema' ? (temaSistema.matches ? 'dark' : 'light') : tema;
+  try {
+    if (tema === 'sistema') localStorage.removeItem('finanzas.tema');
+    else localStorage.setItem('finanzas.tema', tema);
+  } catch {}
+  for (const r of document.querySelectorAll('input[name="tema"], input[name="tema-menu"]')) r.checked = r.value === tema;
 }
 
+temaSistema.addEventListener('change', () => {
+  if (temaGuardado() !== 'sistema') return;
+  aplicarTema('sistema');
+  renderVista();
+});
+for (const r of document.querySelectorAll('input[name="tema"], input[name="tema-menu"]')) r.addEventListener('change', () => aplicarTema(r.value));
+
 // Paleta de color (se guarda en este navegador); «azul» es la de por defecto
+const PALETAS = { azul: 'Azul', indigo: 'Índigo', ciruela: 'Ciruela', petroleo: 'Petróleo', esmeralda: 'Esmeralda', oliva: 'Oliva', terracota: 'Terracota', grafito: 'Grafito' };
+
 function aplicarPaleta(paleta) {
   if (paleta === 'azul') delete document.documentElement.dataset.paleta;
   else document.documentElement.dataset.paleta = paleta;
@@ -4026,17 +4153,39 @@ function aplicarPaleta(paleta) {
   renderVista(); // los gráficos se repintan con los colores nuevos
 }
 
-$('btn-tema').addEventListener('click', () => aplicarTema(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
-for (const r of document.querySelectorAll('input[name="tema"]')) r.addEventListener('change', () => aplicarTema(r.value));
-for (const r of document.querySelectorAll('input[name="paleta"]')) r.addEventListener('change', () => aplicarPaleta(r.value));
+// Cada opción es una miniatura de la web con los colores de esa paleta
+function crearPaletas() {
+  const span = (clase, ...hijos) => {
+    const s = document.createElement('span');
+    s.className = clase;
+    s.append(...hijos);
+    return s;
+  };
+  const actual = document.documentElement.dataset.paleta || 'azul';
+  for (const [valor, nombre] of Object.entries(PALETAS)) {
+    const label = document.createElement('label');
+    label.className = 'paleta';
+    const r = document.createElement('input');
+    r.type = 'radio';
+    r.name = 'paleta';
+    r.value = valor;
+    r.checked = valor === actual;
+    r.addEventListener('change', () => aplicarPaleta(valor));
+    const muestra = span('muestra',
+      span('m-barra', span('m-marca'), span('m-menu activo'), span('m-menu'), span('m-menu')),
+      span('m-cuerpo', span('m-tarjeta', span('m-titulo'), span('m-graf', span('s1 a'), span('s2 b'), span('s1 c'), span('s2 d'))), span('m-boton')));
+    muestra.dataset.paleta = valor;
+    muestra.setAttribute('aria-hidden', 'true');
+    label.append(r, muestra, span('m-nombre', nombre));
+    $('paletas').append(label);
+  }
+}
 
 // ---- Inicio ----
-pintarBotonTema();
-for (const r of document.querySelectorAll('input[name="paleta"]')) {
-  r.checked = r.value === (document.documentElement.dataset.paleta || 'azul');
-}
-const fechaHoy = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-$('hoy').textContent = fechaHoy.charAt(0).toUpperCase() + fechaHoy.slice(1);
+aplicarTema(temaGuardado());
+crearPaletas();
+pintarFecha();
+document.addEventListener('visibilitychange', pintarFecha); // si la pestaña sigue abierta al día siguiente
 $('fecha').value = hoyISO();
 $('ing-fecha').value = hoyISO();
 $('pago-fecha').value = hoyISO();
