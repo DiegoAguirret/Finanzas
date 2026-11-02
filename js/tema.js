@@ -10,7 +10,7 @@
   // Paleta elegida en Ajustes (esmeralda, si no se eligió ninguna)
   let paleta = null;
   try { paleta = localStorage.getItem('finanzas.paleta'); } catch {}
-  const paletas = ['esmeralda', 'petroleo', 'azul', 'indigo', 'ciruela', 'rosado', 'amarillo', 'oliva', 'terracota', 'grafito'];
+  const paletas = ['esmeralda', 'petroleo', 'azul', 'indigo', 'ciruela', 'rosa', 'rosado', 'amarillo', 'oliva', 'terracota', 'grafito'];
   document.documentElement.dataset.paleta = paletas.includes(paleta) ? paleta : 'esmeralda';
   // Fondo elegido en Ajustes (liso, si no se eligió ninguno)
   let fondo = null;
