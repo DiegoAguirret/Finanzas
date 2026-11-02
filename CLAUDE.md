@@ -58,7 +58,7 @@ Repositorio git **privado** en GitHub (`DiegoAguirret/Finanzas`), publicado como
 - `finanzas.deudas` — `{ id, nombre, tipo, moneda, monto, fecha }` (tipo = prestamo | persona | otro) y `finanzas.abonos` — `{ id, deuda, fecha, importe }`.
 - `finanzas.metas` — `{ id, nombre, icono, color, moneda, objetivo, limite }` y `finanzas.aportes` — `{ id, meta, fecha, importe }` (negativo = retiro).
 - `finanzas.saldos` — `{ id, tarjeta, fecha, moneda, importe }`: deuda anterior de una tarjeta; `fecha` es el corte del ciclo en que se paga (`saldoValido()`, Tarjetas → Deuda anterior, con selector de tarjeta `#sal-tarjeta`: las fechas salen del corte y pago de la elegida; con varias cuotas, una fila por ciclo; `gruposSaldos()` muestra y corrige como uno los pagos iguales en ciclos seguidos). «Qué pagar y cuándo» (`renderProximosPagos()`) lista lo pendiente por fecha. En «Ciclos de facturación», «Ver» (`filaDetalleCiclo()`) muestra compras y deuda anterior de ese ciclo, con Editar y Eliminar, en cualquier tarjeta.
-- `finanzas.ajustes` — `{ compras: 'vence' | 'compra', saldoInicial }` (Ajustes → Preferencias; `saldoInicial` en soles, puede ser negativo; se sincroniza en `preferencias.ajustes`).
+- `finanzas.ajustes` — `{ compras: 'vence' | 'compra', saldoInicial }` (Ajustes → Preferencias; `compras` vale para todas las tarjetas y `pintarEjemplosCompras()` muestra la fecha de cada una; `saldoInicial` en soles, puede ser negativo; se sincroniza en `preferencias.ajustes`).
 - `finanzas.inicio` (vista al abrir, solo en ese navegador).
 - `finanzas.tipos_cambio` — `{ bcrp, bcp, interbank }`, listas `{ fecha, compra, venta }` ordenadas por fecha.
 - `finanzas.simulacion`, `finanzas.tema` (aplicado en `<head>` antes de pintar).

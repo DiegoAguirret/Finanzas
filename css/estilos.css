@@ -631,7 +631,7 @@ tbody tr.editando { background: var(--accent-soft); }
 /* Fila de ajuste: qué es, a la izquierda; el control, a la derecha */
 .fila-ajuste { display: flex; align-items: center; justify-content: space-between; gap: 12px 32px; padding: 16px 0; border-bottom: 1px solid var(--border); }
 .fila-ajuste:last-child { border-bottom: 0; padding-bottom: 0; }
-.fila-ajuste > div:first-child { min-width: 0; max-width: 60ch; }
+.fila-ajuste > div:first-child { flex: 1; min-width: 0; max-width: 60ch; }
 .fila-ajuste > button { flex-shrink: 0; }
 .fa-titulo { display: block; margin: 0; font-size: .95rem; font-weight: 600; color: var(--text); }
 .fa-texto { margin: 2px 0 0; font-size: .85rem; color: var(--muted); overflow-wrap: anywhere; }
@@ -655,7 +655,12 @@ tbody tr.editando { background: var(--accent-soft); }
 .opcion-ajuste strong { display: block; font-size: .92rem; font-weight: 600; color: var(--text); }
 .opcion-ajuste small { display: block; font-size: .85rem; font-weight: 400; color: var(--muted); }
 .opcion-ajuste:has(input:checked) small { color: var(--text); }
-.opciones-ajuste .fa-texto { margin-top: 10px; }
+.opciones-ajuste .fa-texto { margin: 2px 0 0; }
+.opcion-ajuste > span { flex: 1; min-width: 0; }
+.ej-tarjetas { display: block; margin-top: 4px; font-size: .85rem; }
+.ej-tarjetas > span { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 12px; padding: 3px 0; }
+.ej-tarjetas > span > span:first-child { font-weight: 600; overflow-wrap: anywhere; }
+.ej-tarjetas > span > span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
 #aj-datos > h2 { margin-bottom: 0; }
 .columnas-categorias { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
 .lista-categorias { display: flex; flex-direction: column; }

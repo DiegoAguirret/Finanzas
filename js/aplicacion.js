@@ -3982,6 +3982,22 @@ function abrirAjuste(nombre) {
   renderAjustes();
 }
 
+// Qué pasaría con una compra de hoy en cada tarjeta del usuario, con sus propias fechas
+function pintarEjemplosCompras() {
+  const hay = tarjetas.length > 0;
+  $('aj-ej-vence').textContent = hay ? 'Si compras hoy, se resta:' : 'Se resta en la fecha en que debes pagarla.';
+  $('aj-ej-compra').textContent = hay ? 'Si compras hoy, se resta hoy.' : 'Se resta en la fecha en que la haces.';
+  $('aj-ej-tarjetas').replaceChildren(...tarjetas.map((t) => {
+    const fila = document.createElement('span');
+    const nombre = document.createElement('span');
+    nombre.textContent = t.nombre;
+    const fecha = document.createElement('span');
+    fecha.textContent = configurada(t) ? fechaCorta(vencimientoCompra(hoyISO(), t)) : 'Falta corte o pago: se resta el día de la compra';
+    fila.append(nombre, fecha);
+    return fila;
+  }));
+}
+
 function renderAjustes() {
   for (const b of document.querySelectorAll('.ajustes-menu button')) {
     if (b.dataset.ajuste === ajusteActual) b.setAttribute('aria-current', 'true');
@@ -3989,14 +4005,7 @@ function renderAjustes() {
   }
   for (const r of document.querySelectorAll('input[name="aj-compras"]')) r.checked = r.value === ajustes.compras;
   if (document.activeElement !== $('aj-saldo')) $('aj-saldo').value = ajustes.saldoInicial || '';
-  // El ejemplo sale de la primera tarjeta del usuario, con sus propias fechas
-  const ejemplo = tarjetas.find(configurada);
-  $('aj-ej-vence').textContent = ejemplo
-    ? `Una compra de hoy con ${ejemplo.nombre} se resta el ${fechaCorta(vencimientoCompra(hoyISO(), ejemplo))}.`
-    : 'La compra se resta en la fecha en que debes pagarla.';
-  $('aj-ej-compra').textContent = ejemplo
-    ? `Una compra de hoy con ${ejemplo.nombre} se resta hoy.`
-    : 'La compra se resta en la fecha en que la haces.';
+  pintarEjemplosCompras();
   for (const nombre of ['cuenta', 'apariencia', 'preferencias', 'categorias', 'datos']) $('aj-' + nombre).classList.toggle('activo', nombre === ajusteActual);
   if (ajusteActual === 'categorias') renderCategorias();
 }
