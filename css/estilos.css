@@ -139,7 +139,10 @@ button[aria-busy="true"] { cursor: progress; opacity: .75; }
 .acceso {
   position: fixed; inset: 0; z-index: 20; overflow-y: auto;
   display: grid; place-items: center; padding: 16px;
-  background: var(--barra);
+  /* Desenfoque teñido con la paleta elegida (esmeralda por defecto) */
+  background: color-mix(in srgb, var(--barra) 45%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
 }
 form.acceso-caja { display: flex; flex-direction: column; align-items: stretch; gap: 14px; width: min(400px, 100%); padding: 28px; box-shadow: 0 12px 40px rgba(15, 17, 23, .25); }
 form.acceso-caja h2 { margin: 0; font-size: 1.35rem; }
@@ -693,8 +696,8 @@ button, summary, .tab, .nav-item { user-select: none; -webkit-user-select: none;
 :root[data-theme="dark"] .sidebar .marca path { fill: color-mix(in srgb, var(--barra) 55%, var(--bg)); }
 .barra-marca h1 { display: flex; align-items: center; gap: 10px; }
 .acceso-marca { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; color: var(--barra); font-weight: 700; font-size: 1.05rem; }
-.acceso-marca .marca path { fill: #fff; }
-:root[data-theme="dark"] .acceso { background: color-mix(in srgb, var(--barra) 55%, var(--bg)); }
+.acceso-marca .marca path { fill: var(--surface); }
+:root[data-theme="dark"] .acceso { background: color-mix(in srgb, color-mix(in srgb, var(--barra) 55%, var(--bg)) 55%, transparent); }
 :root[data-theme="dark"] .acceso-marca { color: var(--text); }
 
 /* Cifra principal: lo que has gastado en el mes */
