@@ -1157,21 +1157,19 @@
     </div>
     <div id="acceso-correo-campo">
       <label for="acceso-correo">Correo</label>
-      <input id="acceso-correo" type="email" autocomplete="email" maxlength="254" required>
+      <input id="acceso-correo" type="email" autocomplete="email" maxlength="60" required>
     </div>
     <div id="acceso-clave-campo">
-      <div class="fila-etiqueta">
-        <label for="acceso-clave" id="acceso-clave-label">Contraseña</label>
-        <button type="button" class="enlace enlace-mini" id="acceso-olvido">¿La olvidaste?</button>
-      </div>
+      <label for="acceso-clave" id="acceso-clave-label">Contraseña</label>
       <div class="clave-con-ojo">
-        <input id="acceso-clave" type="password" autocomplete="current-password" minlength="8" maxlength="72" required>
-        <button type="button" class="ver-clave" id="ver-clave" aria-controls="acceso-clave acceso-clave2" aria-pressed="false" aria-label="Mostrar contraseña">Ver</button>
+        <input id="acceso-clave" type="password" autocomplete="current-password" minlength="8" maxlength="60" required>
+        <button type="button" class="ver-clave solo-ico" id="ver-clave" aria-controls="acceso-clave acceso-clave2" aria-pressed="false" aria-label="Mostrar contraseña" title="Mostrar contraseña"></button>
       </div>
+      <button type="button" class="enlace enlace-mini olvido" id="acceso-olvido">¿Olvidaste tu contraseña?</button>
     </div>
     <div id="acceso-clave2-campo" class="hidden">
       <label for="acceso-clave2">Repite la contraseña</label>
-      <input id="acceso-clave2" type="password" autocomplete="new-password" minlength="8" maxlength="72">
+      <input id="acceso-clave2" type="password" autocomplete="new-password" minlength="8" maxlength="60">
     </div>
     <div class="mensaje error hidden" id="acceso-msg" role="alert"></div>
     <button type="submit" class="btn-primary" id="acceso-entrar">Entrar</button>

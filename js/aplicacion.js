@@ -66,6 +66,7 @@ const ICONOS_UI = {
   eliminar: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5',
   ver: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z' + circulo(12, 12, 3),
   ocultar: 'M6 15l6-6 6 6',
+  'no-ver': 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7zM4 4l16 16' + circulo(12, 12, 3),
   filtro: 'M4 5h16l-6 8v6l-4-2v-4z',
   salir: 'M10 5H5v14h5M14 8l4 4-4 4M18 12H9',
   sol: circulo(12, 12, 4) + 'M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5',
@@ -808,7 +809,7 @@ async function subirCambios() {
   }
   // Se borra en orden inverso: primero lo que usa las tarjetas
   for (const t of [...ORDEN_TABLAS].reverse()) {
-    const borrar = Object.keys(sincronizado[t] || {}).filter((id) => !(id in actuales[t]));
+    const borrar = Object.keys(sincronizado[t] || {}).filter((id) => esUUID(id) && !Object.hasOwn(actuales[t], id));
     if (borrar.length) await api(`/rest/v1/${t}?id=in.(${borrar.join(',')})`, { metodo: 'DELETE', prefer: 'return=minimal' });
   }
   const tcs = filasTiposCambio();
@@ -1223,8 +1224,10 @@ function pintarAcceso(mensaje = '', ok = false) {
 function verClave(mostrar) {
   for (const id of ['acceso-clave', 'acceso-clave2']) $(id).type = mostrar ? 'text' : 'password';
   const b = $('ver-clave');
-  b.textContent = mostrar ? 'Ocultar' : 'Ver';
-  b.setAttribute('aria-label', mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña');
+  const texto = mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña';
+  b.replaceChildren(icono(mostrar ? 'no-ver' : 'ver'));
+  b.setAttribute('aria-label', texto);
+  b.title = texto;
   b.setAttribute('aria-pressed', String(mostrar));
 }
 
@@ -1325,6 +1328,7 @@ function pintarIconos() {
   $('btn-menu').append(icono('menu'));
   $('btn-ocultar').append(icono('cerrar'));
   $('btn-filtros').append(icono('filtro'));
+  verClave($('acceso-clave').type !== 'password');
   // Lo secundario se abre solo en pantallas grandes; en el celular, al pulsarlo
   if (!pantallaMovil.matches) for (const d of document.querySelectorAll('details[data-escritorio]')) d.open = true;
 }

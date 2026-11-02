@@ -149,11 +149,13 @@ form.acceso-caja h2 { margin: 0; font-size: 1.35rem; }
 form.acceso-caja #acceso-texto { margin: -8px 0 4px; }
 .enlace { background: none; color: var(--accent); padding: 4px; font-weight: 500; }
 .clave-con-ojo { position: relative; }
-.clave-con-ojo input { padding-right: 84px; }
+.clave-con-ojo input { padding-right: 52px; }
+/* Edge añade su propio ojo a las contraseñas: se oculta para que no haya dos */
+.clave-con-ojo input::-ms-reveal, .clave-con-ojo input::-ms-clear { display: none; }
 .ver-clave {
   position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-  min-width: 70px; min-height: 32px; padding: 4px 10px;
-  background: none; color: var(--accent); font-size: .8rem; font-weight: 600; border-radius: 8px;
+  width: 40px; min-width: 40px; height: 36px; min-height: 36px; padding: 0;
+  background: none; color: var(--muted); border-radius: 8px;
 }
 .ver-clave:active { transform: translateY(-50%) scale(.97); }
 @media (hover: hover) and (pointer: fine) { .ver-clave:hover { background: var(--accent-soft); } }
@@ -161,6 +163,7 @@ form.acceso-caja #acceso-texto { margin: -8px 0 4px; }
 .fila-etiqueta { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; }
 .fila-etiqueta label { margin: 0; }
 .enlace-mini { font-size: .8rem; padding: 4px 2px; min-height: 24px; }
+.olvido { display: block; margin: 6px 0 0 auto; }
 .enlace-tenue { color: var(--muted); font-size: .85rem; align-self: center; }
 .acceso-pie { margin: 2px 0 0; text-align: center; font-size: .9rem; color: var(--muted); }
 .acceso-pie .enlace { padding: 0 2px; }
@@ -860,7 +863,6 @@ tbody tr.fila-dia:hover { background: none; }
   input[type="range"], .opcion-ajuste input { min-height: 0; }
   button { min-height: 44px; }
   .icon-btn { min-height: 40px; }
-  .ver-clave { min-height: 32px; }
   .pie { display: none; }
   .vista > .vista-cabecera { padding: 0; background: none; border: 0; }
   .vista > .vista-cabecera h2 { display: none; }
