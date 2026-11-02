@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Mis Finanzas</title>
+<meta name="description" content="Tus gastos, ingresos, tarjetas y metas en un solo lugar.">
+<meta name="theme-color" id="color-navegador" content="#f3f8f5">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23064e3b'/%3E%3Cpath fill='%23fff' d='M8.5 22v-5h3.5v5zM14.25 22V13h3.5v9zM20 22V9h3.5v13z'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/estilos.css">
 <script src="js/tema.js"></script>
 <script src="js/excel.js" defer></script>
@@ -17,7 +20,7 @@
   <aside class="sidebar" id="barra" aria-label="Menú">
     <div class="barra-marca">
       <div class="barra-titulo">
-        <h1>Mis Finanzas</h1>
+        <h1><svg class="marca" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16"/><path d="M8.5 22v-5h3.5v5zM14.25 22V13h3.5v9zM20 22V9h3.5v13z"/></svg>Mis Finanzas</h1>
         <button type="button" class="barra-mini solo-ico" id="btn-ocultar" aria-label="Ocultar" title="Ocultar"></button>
       </div>
     </div>
@@ -33,10 +36,6 @@
       <a class="nav-item" href="#datos" data-vista="datos">Ajustes</a>
     </nav>
     <div class="sidebar-pie">
-      <div>
-        Gastado este mes
-        <strong id="side-mes">S/ 0.00</strong>
-      </div>
       <div class="hidden" id="side-balance-caja">
         Ahorro del mes
         <strong id="side-balance">S/ 0.00</strong>
@@ -69,12 +68,14 @@
     <div class="mensaje hidden" id="aviso-nube" role="status"></div>
     <!-- ===== Gastos ===== -->
     <div class="vista" id="vista-gastos">
-      <div class="resumen">
-        <div class="card">
-          <div class="label">Este mes</div>
-          <div class="valor" id="mes">S/ 0.00</div>
+      <section class="hero-mes">
+        <div class="hero-etiqueta">Gastado este mes</div>
+        <div class="valor" id="mes">S/ 0.00</div>
+        <div class="hero-detalle hidden" id="mes-detalle">
+          <div class="hero-barra" aria-hidden="true"><div id="mes-barra"></div></div>
+          <div class="hero-pie"><span id="mes-de"></span><span id="mes-pct"></span></div>
         </div>
-      </div>
+      </section>
 
       <div class="columnas lateral-izq">
         <section class="card estrecha hoja">
@@ -87,7 +88,7 @@
             <div>
               <label for="importe">Importe</label>
               <div class="importe-moneda">
-                <input id="importe" type="number" step="0.01" min="0.01" required placeholder="0.00">
+                <input id="importe" type="number" step="0.01" inputmode="decimal" min="0.01" required placeholder="0.00">
                 <select id="moneda" aria-label="Moneda del gasto"><option value="PEN">S/</option><option value="USD">US$</option></select>
               </div>
             </div>
@@ -151,7 +152,8 @@
             </thead>
             <tbody id="tabla"></tbody>
           </table>
-          <div class="vacio hidden" id="vacio">
+          <button type="button" class="btn-secondary ver-mas hidden" id="ver-mas"></button>
+          <div class="vacio hidden" id="vacio" data-ico="gastos">
             <span id="vacio-texto">Aún no hay gastos. ¡Añade el primero!</span>
           </div>
         </section>
@@ -219,7 +221,7 @@
           </thead>
           <tbody id="bal-movs"></tbody>
         </table>
-        <div class="vacio hidden" id="movs-vacio">
+        <div class="vacio hidden" id="movs-vacio" data-ico="ingresos">
           No hay movimientos en este periodo.
         </div>
       </section>
@@ -233,7 +235,7 @@
             <div>
               <label for="ing-importe">Importe</label>
               <div class="importe-moneda">
-                <input id="ing-importe" type="number" step="0.01" min="0.01" required placeholder="0.00">
+                <input id="ing-importe" type="number" step="0.01" inputmode="decimal" min="0.01" required placeholder="0.00">
                 <select id="ing-moneda" aria-label="Moneda del ingreso"><option value="PEN">S/</option><option value="USD">US$</option></select>
               </div>
             </div>
@@ -376,7 +378,7 @@
             <p class="nota-campo campo-ancho hidden" id="tar-plazo-nota"></p>
             <div>
               <label for="tar-linea">Línea de crédito (S/)</label>
-              <input id="tar-linea" type="number" min="0" step="0.01" placeholder="Opcional">
+              <input id="tar-linea" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Opcional">
             </div>
             <div class="acciones-form">
               <button type="submit" class="btn-primary" id="tar-guardar">Añadir tarjeta</button>
@@ -400,7 +402,7 @@
           </thead>
           <tbody id="tar-lista"></tbody>
         </table>
-        <div class="vacio hidden" id="tar-vacio">
+        <div class="vacio hidden" id="tar-vacio" data-ico="tarjeta">
           Aún no tienes tarjetas. ¡Añade la primera!
         </div>
       </section>
@@ -458,7 +460,7 @@
               </div>
               <div>
                 <label for="pago-importe" id="pago-importe-label">Monto pagado (S/)</label>
-                <input id="pago-importe" type="number" step="0.01" min="0.01" required placeholder="0.00">
+                <input id="pago-importe" type="number" step="0.01" inputmode="decimal" min="0.01" required placeholder="0.00">
               </div>
               <div id="pago-tc-campo" class="hidden">
                 <label for="pago-tc">Tipo de cambio aplicado</label>
@@ -500,7 +502,7 @@
             <div>
               <label for="sal-importe" id="sal-etiqueta-monto">Monto de cada pago</label>
               <div class="importe-moneda">
-                <input id="sal-importe" type="number" step="0.01" min="0.01" required placeholder="0.00">
+                <input id="sal-importe" type="number" step="0.01" inputmode="decimal" min="0.01" required placeholder="0.00">
                 <select id="sal-moneda" aria-label="Moneda de la deuda anterior"><option value="PEN">S/</option><option value="USD">US$</option></select>
               </div>
             </div>
@@ -578,15 +580,15 @@
         <div class="sim-params">
           <div>
             <label for="sim-ingreso">Ingreso mensual (S/)</label>
-            <input id="sim-ingreso" type="number" min="0" step="0.01" placeholder="0.00">
+            <input id="sim-ingreso" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
           </div>
           <div>
             <label for="sim-extra">Nuevo gasto fijo mensual (S/)</label>
-            <input id="sim-extra" type="number" min="0" step="0.01" placeholder="0.00">
+            <input id="sim-extra" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
           </div>
           <div>
             <label for="sim-meta">Meta de ahorro (S/)</label>
-            <input id="sim-meta" type="number" min="0" step="0.01" placeholder="0.00">
+            <input id="sim-meta" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
           </div>
           <div>
             <label for="sim-horizonte">Horizonte</label>
@@ -778,7 +780,7 @@
             <div>
               <label for="deu-monto">Cuánto debes</label>
               <div class="importe-moneda">
-                <input id="deu-monto" type="number" step="0.01" min="0.01" required placeholder="0.00">
+                <input id="deu-monto" type="number" step="0.01" inputmode="decimal" min="0.01" required placeholder="0.00">
                 <select id="deu-moneda" aria-label="Moneda de la deuda"><option value="PEN">S/</option><option value="USD">US$</option></select>
               </div>
             </div>
@@ -807,7 +809,7 @@
           </div>
           <div>
             <label for="abo-importe" id="abo-etiqueta">Abono</label>
-            <input id="abo-importe" type="number" step="0.01" min="0.01" required placeholder="0.00">
+            <input id="abo-importe" type="number" step="0.01" inputmode="decimal" min="0.01" required placeholder="0.00">
           </div>
           <div class="acciones-form">
             <button type="submit" class="btn-primary">Registrar abono</button>
@@ -861,7 +863,7 @@
             <div>
               <label for="met-objetivo">Objetivo</label>
               <div class="importe-moneda">
-                <input id="met-objetivo" type="number" step="0.01" min="0.01" required placeholder="0.00">
+                <input id="met-objetivo" type="number" step="0.01" inputmode="decimal" min="0.01" required placeholder="0.00">
                 <select id="met-moneda" aria-label="Moneda de la meta"><option value="PEN">S/</option><option value="USD">US$</option></select>
               </div>
             </div>
@@ -901,7 +903,7 @@
           </div>
           <div>
             <label for="apo-importe" id="apo-etiqueta">Importe</label>
-            <input id="apo-importe" type="number" step="0.01" min="0.01" required placeholder="0.00">
+            <input id="apo-importe" type="number" step="0.01" inputmode="decimal" min="0.01" required placeholder="0.00">
           </div>
           <div class="acciones-form">
             <button type="submit" class="btn-primary">Registrar</button>
@@ -1145,6 +1147,7 @@
 <!-- ===== Acceso (Supabase) ===== -->
 <div class="acceso hidden" id="acceso" role="dialog" aria-modal="true" aria-labelledby="acceso-titulo">
   <form class="card acceso-caja" id="acceso-form">
+    <div class="acceso-marca"><svg class="marca" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16"/><path d="M8.5 22v-5h3.5v5zM14.25 22V13h3.5v9zM20 22V9h3.5v13z"/></svg><span>Mis Finanzas</span></div>
     <h2 id="acceso-titulo">Inicia sesión</h2>
     <p class="sub" id="acceso-texto">Tus finanzas, en cualquier dispositivo.</p>
     <div id="acceso-nombre-campo" class="hidden">

@@ -14,7 +14,7 @@ const CABECERAS_SALIDA = ['content-type', 'content-range', 'location', 'preferen
 function respuestaJSON(estado, datos) {
   return new Response(JSON.stringify(datos), {
     status: estado,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' },
   });
 }
 
@@ -52,7 +52,7 @@ export async function intermediario(request, env, ruta) {
     return respuestaJSON(502, { message: 'No se pudo contactar con la base de datos.' });
   }
 
-  const salida = new Headers({ 'Cache-Control': 'no-store' });
+  const salida = new Headers({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
   for (const nombre of CABECERAS_SALIDA) {
     const valor = respuesta.headers.get(nombre);
     if (valor) salida.set(nombre, valor);

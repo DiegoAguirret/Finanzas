@@ -86,7 +86,8 @@ const CATEGORIAS_BASE = [
 ];
 const CATEGORIA_FIJA = 'Otros'; // recibe los gastos de las categorías eliminadas: no se borra ni se renombra
 // Medios de pago fijos; además, cada tarjeta es un medio cuya clave es el id de la tarjeta
-const MEDIOS_FIJOS = { efectivo: 'Efectivo', debito: 'Débito / transferencia', credito: 'Otra tarjeta de crédito' };
+const MEDIOS_FIJOS = { efectivo: 'Efectivo', debito: 'Débito / transferencia', yape: 'Yape', plin: 'Plin', credito: 'Otro medio de pago' };
+const MEDIO_OTRO = 'credito'; // clave histórica: así está guardado en la base; siempre va al final de la lista
 const VISTAS = ['gastos', 'ingresos', 'dashboard', 'tarjeta', 'deudas', 'ahorro', 'plan', 'simulador', 'datos'];
 const NOMBRES_VISTAS = { gastos: 'Gastos', ingresos: 'Ingresos', dashboard: 'Dashboard', tarjeta: 'Tarjetas', deudas: 'Deudas', ahorro: 'Ahorro', plan: 'Plan', simulador: 'Simulaciones', datos: 'Ajustes' };
 // Vistas con un formulario que en celular se abre como hoja: [formulario, texto del botón, primer campo]
@@ -117,7 +118,6 @@ let aportes = [];
 let saldos = []; // Deuda anterior de tarjetas: { id, tarjeta, fecha (corte del ciclo en que se paga), moneda, importe }
 let ajustes = { compras: 'vence' }; // compras con tarjeta: se restan al vencer su pago o el día de la compra
 let editandoId = null;
-let confirmandoId = null;
 let vistaActual = 'gastos';
 
 // ---- Utilidades ----
@@ -212,15 +212,22 @@ function tarjetaDe(id) {
   return tarjetas.find((t) => t.id === id);
 }
 
-// Medio sin dato → efectivo; tarjeta desconocida (borrada o de otro navegador) → otra tarjeta
+// Medio sin dato → efectivo; desconocido (tarjeta borrada o de otro navegador) → otro medio
 function medioValido(m) {
   if (Object.hasOwn(MEDIOS_FIJOS, m) || tarjetaDe(m)) return m;
-  return typeof m === 'string' && m ? 'credito' : 'efectivo';
+  return typeof m === 'string' && m ? MEDIO_OTRO : 'efectivo';
+}
+
+function normalizarGastos() {
+  for (const g of gastos) {
+    g.medio = medioValido(g.medio);
+    g.moneda = g.moneda === 'USD' ? 'USD' : 'PEN';
+  }
 }
 
 // Claves de todos los medios en el orden de los desplegables
 function medios() {
-  return ['efectivo', 'debito', ...tarjetas.map((t) => t.id), 'credito'];
+  return [...Object.keys(MEDIOS_FIJOS).filter((m) => m !== MEDIO_OTRO), ...tarjetas.map((t) => t.id), MEDIO_OTRO];
 }
 
 function nombreMedio(m) {
@@ -279,12 +286,14 @@ function guardarTasaBanco(banco, t) {
 // Tipo de cambio vigente en la fecha: el último registrado hasta ese día (o el más antiguo si no hay)
 function tasa(fuente, fecha, lado) {
   const lista = tiposCambio[fuente] || [];
-  let elegido = null;
-  for (const t of lista) {
-    if (t.fecha > fecha) break;
-    elegido = t;
+  // Búsqueda binaria: se llama por cada importe en dólares y la lista está ordenada por fecha
+  let bajo = 0, alto = lista.length;
+  while (bajo < alto) {
+    const medio = (bajo + alto) >> 1;
+    if (lista[medio].fecha > fecha) alto = medio;
+    else bajo = medio + 1;
   }
-  elegido ||= lista[0];
+  const elegido = lista[Math.max(bajo - 1, 0)];
   return elegido ? elegido[lado] : null;
 }
 
@@ -314,8 +323,6 @@ function formatoTC(n) {
   return Number(n.toFixed(3)) === Number(n.toFixed(4)) ? n.toFixed(3) : n.toFixed(4);
 }
 
-// Pide a Supabase que actualice el BCRP (como mucho una vez por hora) y descarga la serie.
-// Es información pública: funciona también sin iniciar sesión.
 // Descarga el tipo de cambio del BCRP (lo actualiza pg_cron en Supabase cada hora en días hábiles).
 // Es información pública: funciona también sin iniciar sesión.
 async function cargarBCRP() {
@@ -337,7 +344,7 @@ async function cargarBCRP() {
 // sincronizar(), que compara con lo último confirmado por la nube (`sincronizado`) y sube solo lo
 // que cambió. Los datos los protege Row Level Security: cada usuario solo ve sus filas.
 // La web no conoce la URL ni la clave de Supabase: habla con /api de su mismo dominio, donde
-// un intermediario (functions/api en Cloudflare) añade la clave guardada como variable secreta.
+// un intermediario (el Worker de Cloudflare) añade la clave guardada como variable secreta.
 const API = '/api';
 const TAM_PAGINA = 1000; // Supabase devuelve como mucho 1000 filas por consulta
 const CLAVE_SESION = 'finanzas.sesion';
@@ -361,7 +368,7 @@ const TABLAS = {
         medio: t ? 'tarjeta' : g.medio, tarjeta: t ? t.id : null, fecha: g.fecha,
       };
     },
-    deFila: (f) => gastoValido({ ...f, medio: f.medio === 'tarjeta' ? f.tarjeta || 'credito' : f.medio }),
+    deFila: (f) => gastoValido({ ...f, medio: f.medio === 'tarjeta' ? f.tarjeta || MEDIO_OTRO : f.medio }),
     poner: (l) => { gastos = l; },
   },
   ingresos: {
@@ -1015,10 +1022,7 @@ function recargarDeLocal() {
   cargarIngresos();
   const guardadas = leerJSON(CLAVE_TARJETAS, []);
   tarjetas = Array.isArray(guardadas) ? guardadas.map(tarjetaValida).filter(Boolean) : [];
-  for (const g of gastos) {
-    g.medio = medioValido(g.medio);
-    g.moneda = g.moneda === 'USD' ? 'USD' : 'PEN';
-  }
+  normalizarGastos();
   cargarPagos();
   cargarSim();
   cargarObjetivos();
@@ -1026,7 +1030,7 @@ function recargarDeLocal() {
 }
 
 function refrescarTodo() {
-  for (const g of gastos) g.medio = medioValido(g.medio);
+  normalizarGastos();
   // Lo que se estaba editando pudo eliminarse en otra pestaña
   if (editandoId && !gastos.some((x) => x.id === editandoId)) salirEdicion();
   if (ingEditandoId && !ingresos.some((x) => x.id === ingEditandoId)) salirEdicionIngreso();
@@ -1377,13 +1381,22 @@ function etiquetaTarjeta(t) {
   return tag;
 }
 
+// Gastos del mes frente a los ingresos del mes
+function pintarResumenMes(delMes, mesActual) {
+  const ingMes = sumar(ingresos.filter((i) => i.fecha.startsWith(mesActual)));
+  $('mes').textContent = soles.format(delMes);
+  const pct = ingMes > 0 ? Math.round(delMes / ingMes * 100) : 0;
+  $('mes-detalle').classList.toggle('hidden', !(ingMes > 0));
+  $('mes-barra').style.width = `${Math.min(pct, 100)}%`;
+  $('mes-de').textContent = `De ${soles.format(ingMes)}`;
+  $('mes-pct').textContent = `${pct} %`;
+  $('mes-detalle').classList.toggle('excedido', pct > 100);
+}
+
 function render() {
   pintarNotaMedio();
-  // Resumen
   const mesActual = hoyISO().slice(0, 7);
-  const delMes = sumar(gastos.filter((g) => g.fecha.startsWith(mesActual)));
-  $('mes').textContent = soles.format(delMes);
-  $('side-mes').textContent = soles.format(delMes);
+  pintarResumenMes(sumar(gastos.filter((g) => g.fecha.startsWith(mesActual))), mesActual);
 
   // Balance del mes en la barra lateral (solo si el usuario registra ingresos)
   const [anioHoy, mesHoy] = mesActual.split('-').map(Number);
@@ -1398,13 +1411,24 @@ function render() {
   $('aviso-tc').classList.toggle('hidden', !(hayDolares && sinTC));
   $('aviso-tc').textContent = 'Hay importes en dólares sin tipo de cambio. Regístralo en Tarjetas.';
 
-  // Filtro y orden
+  renderListaGastos();
+}
+
+// Solo se pinta una parte de la lista: con años de registros, miles de filas harían lenta la web
+const TAM_LISTA = 100;
+let limiteLista = TAM_LISTA;
+
+function etiquetaDia(fecha) {
+  const hoy = hoyISO();
+  return fecha === hoy ? 'Hoy' : fecha === sumarDias(hoy, -1) ? 'Ayer' : formatearFecha(fecha);
+}
+
+function renderListaGastos() {
   const texto = $('buscar').value.trim().toLowerCase();
   const cat = $('filtro-categoria').value;
   const medio = $('filtro-medio').value;
   const [campo, dir] = $('orden').value.split('-');
   const signo = dir === 'asc' ? 1 : -1;
-
   const lista = gastos
     .filter((g) => (!cat || g.categoria === cat) && (!medio || g.medio === medio) && g.descripcion.toLowerCase().includes(texto))
     .sort((a, b) => {
@@ -1414,33 +1438,45 @@ function render() {
       return (va < vb ? -1 : va > vb ? 1 : 0) * signo;
     });
 
-  // Tabla
+  // Ordenados por fecha se agrupan por día, como en un estado de cuenta
+  const agrupar = campo === 'fecha';
+  $('tabla-gastos').classList.toggle('agrupada', agrupar);
+  const porDia = new Map();
+  if (agrupar) for (const g of lista) porDia.set(g.fecha, (porDia.get(g.fecha) || 0) + enSoles(g));
+
   const tbody = $('tabla');
   tbody.replaceChildren();
-  for (const g of lista) {
+  let dia = null;
+  for (const g of lista.slice(0, limiteLista)) {
+    if (agrupar && g.fecha !== dia) {
+      dia = g.fecha;
+      const fila = document.createElement('tr');
+      fila.className = 'fila-dia';
+      const td = document.createElement('td');
+      td.colSpan = 6;
+      const nombre = document.createElement('span');
+      nombre.textContent = etiquetaDia(dia);
+      const total = document.createElement('span');
+      total.textContent = soles.format(porDia.get(dia));
+      td.append(nombre, total);
+      fila.append(td);
+      tbody.appendChild(fila);
+    }
     const tr = document.createElement('tr');
     if (g.id === editandoId) tr.classList.add('editando');
-
     celda(tr, 'Fecha', formatearFecha(g.fecha), 'fecha');
     celda(tr, 'Descripción', g.descripcion);
     celda(tr, 'Categoría', etiquetaCategoria(g.categoria));
     celda(tr, 'Pago', etiquetaMedio(g.medio), 'pago');
     celda(tr, 'Importe', dinero(g.importe, g.moneda), 'num');
-
     const acciones = celda(tr, '', '', 'acciones');
     acciones.appendChild(boton('Editar', 'Editar gasto', () => editar(g.id)));
-    if (confirmandoId === g.id) {
-      acciones.appendChild(boton('¿Eliminar?', 'Confirmar eliminación', () => { confirmandoId = null; eliminar(g.id); }, 'confirmar'));
-    } else {
-      acciones.appendChild(boton('Eliminar', 'Eliminar gasto', () => {
-        confirmandoId = g.id;
-        render();
-        // Cancela la confirmación si no se pulsa en 3 segundos
-        setTimeout(() => { if (confirmandoId === g.id) { confirmandoId = null; render(); } }, 3000);
-      }));
-    }
+    acciones.appendChild(botonEliminar('Eliminar gasto', () => eliminar(g.id)));
     tbody.appendChild(tr);
   }
+  const restantes = lista.length - limiteLista;
+  $('ver-mas').classList.toggle('hidden', restantes <= 0);
+  $('ver-mas').textContent = `Ver más (${restantes})`;
 
   // Estado vacío
   const sinResultados = lista.length === 0;
@@ -1655,7 +1691,6 @@ function graficoLineas(cont, etiquetas, series, meta) {
 //   cambio de dinero  = ingresos − gastos que no son con tarjeta − pagos de tarjeta
 // La diferencia entre ambos es lo que subió o bajó la deuda de tarjetas en el periodo.
 let ingEditandoId = null;
-let ingConfirmandoId = null;
 
 function ingresoValido(i) {
   if (!i || typeof i !== 'object') return null;
@@ -1765,7 +1800,6 @@ function cifrasPeriodo(desde, hasta) {
   return c;
 }
 
-// Deuda de todas las tarjetas al cierre de la fecha: compras − pagos (negativa = saldo a favor)
 // Deuda de todas las tarjetas al cierre de la fecha, por moneda: compras − abonos (negativa = a favor)
 function deudaAl(fecha) {
   const d = montos();
@@ -1818,7 +1852,6 @@ function eliminarIngreso(id) {
   ingresosCambiados();
 }
 
-// Monto con signo, en verde si suma y en rojo si resta (solo en los totales)
 // Monto con signo, en verde si suma y en rojo si resta (solo cuando se pide color)
 function montoConSigno(n, colorear, moneda = 'PEN') {
   const s = document.createElement('span');
@@ -1971,16 +2004,7 @@ function renderBalance() {
     const i = mov.ingreso;
     if (i) {
       acciones.appendChild(boton('Editar', 'Editar ingreso', () => editarIngreso(i.id)));
-      if (ingConfirmandoId === i.id) {
-        acciones.appendChild(boton('¿Eliminar?', 'Confirmar eliminación', () => { ingConfirmandoId = null; eliminarIngreso(i.id); }, 'confirmar'));
-      } else {
-        acciones.appendChild(boton('Eliminar', 'Eliminar ingreso', () => {
-          ingConfirmandoId = i.id;
-          renderBalance();
-          // Cancela la confirmación si no se pulsa en 3 segundos
-          setTimeout(() => { if (ingConfirmandoId === i.id) { ingConfirmandoId = null; renderBalance(); } }, 3000);
-        }));
-      }
+      acciones.appendChild(botonEliminar('Eliminar ingreso', () => eliminarIngreso(i.id)));
     }
     tbody.appendChild(tr);
   }
@@ -1990,8 +2014,12 @@ function renderBalance() {
   // Historial: últimos 12 meses
   const hist = $('bal-historial');
   hist.replaceChildren();
-  for (const mes of mesesBalance().slice(0, 12)) {
+  const mesesHist = mesesBalance().slice(0, 12);
+  // Del mes más reciente hacia atrás: cada acumulado sale del siguiente, sin volver a sumar todo
+  let acumuladoHist = null;
+  for (const mes of mesesHist) {
     const [a, m] = mes.split('-').map(Number);
+    acumuladoHist ??= acumuladoAl(isoDia(new Date(a, m, 0)));
     const h = cifrasPeriodo(mes + '-01', isoDia(new Date(a, m, 0)));
     const tr = document.createElement('tr');
     celda(tr, 'Mes', nombreMes(mes));
@@ -2000,7 +2028,8 @@ function renderBalance() {
     celda(tr, 'Pagos de tarjetas', soles.format(h.pagos), 'num');
     celda(tr, 'Ahorro', montoConSigno(h.ahorro, h.ingresos > 0), 'num');
     celda(tr, 'Cambio en tu dinero', montoConSigno(h.dinero, true), 'num');
-    celda(tr, 'Acumulado', montoConSigno(acumuladoAl(isoDia(new Date(a, m, 0))), true), 'num');
+    celda(tr, 'Acumulado', montoConSigno(acumuladoHist, true), 'num');
+    acumuladoHist = redondear(acumuladoHist - h.ahorro);
     hist.appendChild(tr);
   }
 }
@@ -2193,7 +2222,7 @@ function basesDesdeRegistros() {
 }
 
 function baseDe(c) {
-  return c in sim.bases ? sim.bases[c] : basesCalculadas[c];
+  return Object.hasOwn(sim.bases, c) ? sim.bases[c] : basesCalculadas[c];
 }
 
 function textoPct(v) {
@@ -2343,8 +2372,6 @@ function calcularSim() {
 // los pagos se asignan a los ciclos del más antiguo al más reciente.
 let tarSeleccion = null;
 let tarEditandoId = null;
-let tarConfirmandoId = null;
-let pagoConfirmandoId = null;
 let pagoSugerido = null; // lo que propuso «Pagar», por moneda
 // Versión anterior: id de tarjeta → fechas de corte de los ciclos marcados como pagados
 let pagadosAntiguos = {};
@@ -2364,7 +2391,7 @@ function tarjetaValida(t) {
   if (!nombre) return null;
   const id = typeof t.id === 'string' && t.id && !Object.hasOwn(MEDIOS_FIJOS, t.id) ? t.id : nuevoId();
   // Tarjetas de versiones anteriores sin banco: se deduce del nombre
-  const banco = BANCOS[t.banco] ? t.banco : /bcp/i.test(nombre) ? 'bcp' : /interbank/i.test(nombre) ? 'interbank' : 'otro';
+  const banco = Object.hasOwn(BANCOS, t.banco) ? t.banco : /bcp/i.test(nombre) ? 'bcp' : /interbank/i.test(nombre) ? 'interbank' : 'otro';
   const plazo = Number.isInteger(Number(t.plazo)) && t.plazo >= 1 && t.plazo <= 90 ? Number(t.plazo) : null;
   return { id, nombre, banco, corte: diaDelMes(t.corte), pago: plazo ? null : diaDelMes(t.pago), plazo, linea: numero(t.linea) };
 }
@@ -2542,8 +2569,6 @@ function cicloDe(n, t) {
   return { desde: isoDia(inicio), hasta: isoDia(fechaEnMes(a, m0, corte)), vence: isoDia(vence) };
 }
 
-// Ciclos de la tarjeta con consumos más el actual, de más reciente a más antiguo,
-// con lo pagado y lo pendiente de cada uno
 // Ciclos de la tarjeta con consumos más el actual, de más reciente a más antiguo. Cada importe
 // va por moneda ({ PEN, USD }): total, pagado, pendiente y paraSaldar (pendiente acumulado)
 function ciclosTarjeta(t) {
@@ -2589,16 +2614,10 @@ function ciclosTarjeta(t) {
   return ciclos;
 }
 
-// Cifras de una tarjeta; sin corte ni pago solo se conoce la deuda (ciclos = null)
 // Cifras de una tarjeta por moneda; sin corte ni pago solo se conoce la deuda (ciclos = null).
 // La línea de crédito es en soles: la deuda en dólares la usa al tipo de cambio de venta del banco.
 function resumenTarjeta(t) {
-  const deuda = montos();
-  for (const g of gastos) if (g.medio === t.id) deuda[g.moneda] += g.importe;
-  for (const s of saldosDe(t)) deuda[s.moneda] += s.importe;
-  for (const x of pagosDe(t)) deuda[x.moneda] -= x.importe;
-  deuda.PEN = redondear(deuda.PEN);
-  deuda.USD = redondear(deuda.USD);
+  const deuda = deudaDeTarjeta(t);
   const usada = Math.max(deuda.PEN, 0) + Math.max(deuda.USD, 0) * (tasaPara(t.banco, hoyISO(), 'venta') || 0);
   const base = { deuda, disponible: t.linea ? redondear(t.linea - usada) : null, ciclos: null };
   if (!configurada(t)) return base;
@@ -2684,7 +2703,7 @@ function eliminarTarjeta(id) {
   const t = tarjetaDe(id);
   if (!t) return;
   let n = 0;
-  for (const g of gastos) if (g.medio === id) { g.medio = 'credito'; n++; }
+  for (const g of gastos) if (g.medio === id) { g.medio = MEDIO_OTRO; n++; }
   pagos = pagos.filter((p) => p.tarjeta !== id);
   saldos = saldos.filter((s) => s.tarjeta !== id);
   guardarSaldos();
@@ -2694,7 +2713,7 @@ function eliminarTarjeta(id) {
   guardar();
   guardarPagos();
   tarjetasCambiadas();
-  mensajeTarjeta(`Tarjeta ${t.nombre} eliminada.` + (n ? ` Sus gastos pasaron a «${MEDIOS_FIJOS.credito}».` : ''));
+  mensajeTarjeta(`Tarjeta ${t.nombre} eliminada.` + (n ? ` Sus gastos pasaron a «${MEDIOS_FIJOS[MEDIO_OTRO]}».` : ''));
 }
 
 function pagosCambiados() {
@@ -2806,19 +2825,7 @@ function renderTarjeta() {
       $('tar-detalle').scrollIntoView({ behavior: desplazamiento(), block: 'start' });
     }));
     acciones.appendChild(boton('Editar', `Editar ${t.nombre}`, () => editarTarjeta(t.id)));
-    if (tarConfirmandoId === t.id) {
-      acciones.appendChild(boton('¿Eliminar?', `Confirmar: eliminar ${t.nombre}`, () => {
-        tarConfirmandoId = null;
-        eliminarTarjeta(t.id);
-      }, 'confirmar'));
-    } else {
-      acciones.appendChild(boton('Eliminar', `Eliminar ${t.nombre}`, () => {
-        tarConfirmandoId = t.id;
-        renderTarjeta();
-        // Cancela la confirmación si no se pulsa en 3 segundos
-        setTimeout(() => { if (tarConfirmandoId === t.id) { tarConfirmandoId = null; renderTarjeta(); } }, 3000);
-      }));
-    }
+    acciones.appendChild(botonEliminar(`Eliminar ${t.nombre}`, () => eliminarTarjeta(t.id)));
     tbody.appendChild(tr);
   }
   $('tabla-tarjetas').classList.toggle('hidden', !tarjetas.length);
@@ -2847,19 +2854,10 @@ function renderTarjeta() {
     celda(tr, 'Pagaste', dinero(p.pagado, p.pagadoMoneda), 'num');
     celda(tr, 'Abono a la deuda', dinero(p.importe, p.moneda) + (p.tipoCambio ? ` · TC ${formatoTC(p.tipoCambio)}` : ''), 'num');
     const acciones = celda(tr, '', '', 'acciones');
-    if (pagoConfirmandoId === p.id) {
-      acciones.appendChild(boton('¿Eliminar?', 'Confirmar eliminación del pago', () => {
-        pagoConfirmandoId = null;
-        pagos = pagos.filter((x) => x.id !== p.id);
-        pagosCambiados();
-      }, 'confirmar'));
-    } else {
-      acciones.appendChild(boton('Eliminar', 'Eliminar pago', () => {
-        pagoConfirmandoId = p.id;
-        renderTarjeta();
-        setTimeout(() => { if (pagoConfirmandoId === p.id) { pagoConfirmandoId = null; renderTarjeta(); } }, 3000);
-      }));
-    }
+    acciones.appendChild(botonEliminar('Eliminar pago', () => {
+      pagos = pagos.filter((x) => x.id !== p.id);
+      pagosCambiados();
+    }));
     tPagos.appendChild(tr);
   }
   $('tabla-pagos').classList.toggle('hidden', !lista.length);
@@ -3092,7 +3090,7 @@ function descargar(nombre, contenido, tipo) {
 
 function campoCSV(v) {
   let s = String(v);
-  if (/^[=+\-@]/.test(s)) s = "'" + s; // evita fórmulas al abrir en Excel
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; // evita fórmulas al abrir en Excel
   return '"' + s.replace(/"/g, '""') + '"';
 }
 
@@ -3107,7 +3105,7 @@ function gastoValido(g) {
     importe,
     moneda: g.moneda === 'USD' ? 'USD' : 'PEN',
     // Se conserva el nombre aunque aún no esté en la lista: la categoría pudo crearse en otro dispositivo
-    categoria: (typeof g.categoria === 'string' && g.categoria.trim().slice(0, 30)) || CATEGORIA_FIJA,
+    categoria: (typeof g.categoria === 'string' && !(g.categoria.trim() in Object.prototype) && g.categoria.trim().slice(0, 30)) || CATEGORIA_FIJA,
     medio: medioValido(g.medio),
     fecha: g.fecha,
   };
@@ -3226,11 +3224,13 @@ $('exp-csv').addEventListener('click', () => {
   mensajeDatos(`Exportados ${gastos.length} gastos en CSV.`);
 });
 
+const MAX_IMPORTACION = 20 * 1024 * 1024; // más que suficiente para una copia; evita colgar la pestaña
 $('imp-json').addEventListener('click', () => $('imp-archivo').click());
 $('imp-archivo').addEventListener('change', async (e) => {
   const archivo = e.target.files[0];
   e.target.value = '';
   if (!archivo) return;
+  if (archivo.size > MAX_IMPORTACION) return mensajeDatos('El archivo es demasiado grande.', true);
   try {
     const datos = JSON.parse(await archivo.text());
     const lista = Array.isArray(datos) ? datos : datos?.gastos;
@@ -3558,8 +3558,8 @@ function cerrarMenuMovil() {
 // ---- Categorías ----
 function categoriaValida(x) {
   const nombre = typeof x?.nombre === 'string' ? x.nombre.trim().slice(0, 30) : '';
-  if (!nombre) return null;
-  return { nombre, icono: x.icono in ICONOS ? x.icono : 'otros', color: COLORES.includes(x.color) ? x.color : 'gris' };
+  if (!nombre || nombre in Object.prototype) return null;
+  return { nombre, icono: Object.hasOwn(ICONOS, x.icono) ? x.icono : 'otros', color: COLORES.includes(x.color) ? x.color : 'gris' };
 }
 
 // Sin repetidos (sin distinguir mayúsculas) y siempre con «Otros», que va al final
@@ -3766,7 +3766,7 @@ function planValido(p) {
   const tipos = {};
   for (const [c, t] of Object.entries(p?.tipos && typeof p.tipos === 'object' ? p.tipos : {})) if (t === 'n' || t === 'g') tipos[c] = t;
   return {
-    regla: p?.regla in REGLAS_PLAN || p?.regla === 'propia' ? p.regla : '50-30-20',
+    regla: Object.hasOwn(REGLAS_PLAN, p?.regla ?? '') || p?.regla === 'propia' ? p.regla : '50-30-20',
     pct: pct[0] + pct[1] + pct[2] === 100 ? pct : [...REGLAS_PLAN['50-30-20']],
     tipos,
     meses: [3, 6, 9, 12].includes(Number(p?.meses)) ? Number(p.meses) : 6,
@@ -3783,7 +3783,7 @@ function cambiarPlan(cambios) {
 
 // Un gasto es necesidad o gusto según su categoría (`tipos`, o el valor por defecto)
 function tipoPlan(nombre) {
-  return ajustes.plan.tipos[nombre] || (ESENCIALES_PLAN.includes(nombre) ? 'n' : 'g');
+  return Object.hasOwn(ajustes.plan.tipos, nombre) ? ajustes.plan.tipos[nombre] : ESENCIALES_PLAN.includes(nombre) ? 'n' : 'g';
 }
 
 function moverCategoriaEnPlan(vieja, nueva) {
@@ -4034,7 +4034,7 @@ function deudaValida(d) {
   const nombre = typeof d?.nombre === 'string' ? d.nombre.trim().slice(0, 40) : '';
   const monto = redondear(Number(d?.monto));
   if (!nombre || !(monto > 0) || !fechaValida(d.fecha)) return null;
-  return { id: idValido(d), nombre, tipo: d.tipo in TIPOS_DEUDA ? d.tipo : 'otro', moneda: d.moneda === 'USD' ? 'USD' : 'PEN', monto, fecha: d.fecha };
+  return { id: idValido(d), nombre, tipo: Object.hasOwn(TIPOS_DEUDA, d.tipo) ? d.tipo : 'otro', moneda: d.moneda === 'USD' ? 'USD' : 'PEN', monto, fecha: d.fecha };
 }
 
 function abonoValido(a) {
@@ -4048,7 +4048,7 @@ function metaValida(m) {
   const objetivo = redondear(Number(m?.objetivo));
   if (!nombre || !(objetivo > 0)) return null;
   return {
-    id: idValido(m), nombre, icono: m.icono in ICONOS ? m.icono : 'meta', color: COLORES.includes(m.color) ? m.color : 'azul',
+    id: idValido(m), nombre, icono: Object.hasOwn(ICONOS, m.icono) ? m.icono : 'meta', color: COLORES.includes(m.color) ? m.color : 'azul',
     moneda: m.moneda === 'USD' ? 'USD' : 'PEN', objetivo, limite: fechaValida(m.limite) ? m.limite : null,
   };
 }
@@ -4492,10 +4492,18 @@ form.addEventListener('submit', (e) => {
 });
 
 $('btn-cancelar').addEventListener('click', () => { salirEdicion(); render(); });
-$('buscar').addEventListener('input', render);
-$('filtro-categoria').addEventListener('change', render);
-$('filtro-medio').addEventListener('change', render);
-$('orden').addEventListener('change', render);
+const alFiltrarGastos = () => {
+  limiteLista = TAM_LISTA;
+  renderListaGastos();
+};
+$('buscar').addEventListener('input', alFiltrarGastos);
+$('ver-mas').addEventListener('click', () => {
+  limiteLista += TAM_LISTA;
+  renderListaGastos();
+});
+$('filtro-categoria').addEventListener('change', alFiltrarGastos);
+$('filtro-medio').addEventListener('change', alFiltrarGastos);
+$('orden').addEventListener('change', alFiltrarGastos);
 $('dash-base').addEventListener('change', renderDashboard);
 $('dash-periodo').addEventListener('change', renderDashboard);
 $('dash-medio').addEventListener('change', renderDashboard);
@@ -4733,9 +4741,9 @@ addEventListener('storage', (e) => {
     renderVista();
   }
   if (e.key === 'finanzas.paleta') {
-    if (!e.newValue || e.newValue === 'azul') delete document.documentElement.dataset.paleta;
-    else document.documentElement.dataset.paleta = e.newValue;
-    for (const r of document.querySelectorAll('input[name="paleta"]')) r.checked = r.value === (e.newValue || 'azul');
+    document.documentElement.dataset.paleta = Object.hasOwn(PALETAS, e.newValue ?? '') ? e.newValue : 'esmeralda';
+    for (const r of document.querySelectorAll('input[name="paleta"]')) r.checked = r.value === document.documentElement.dataset.paleta;
+    pintarColorNavegador();
     renderVista();
   }
   if (![CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_TC, CLAVE_SIM, CLAVE_CATEGORIAS, CLAVE_AJUSTES, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_SALDOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO].includes(e.key)) return;
@@ -4885,6 +4893,11 @@ function temaGuardado() {
   } catch { return 'sistema'; }
 }
 
+// La barra de estado del celular usa el color de fondo de la web
+function pintarColorNavegador() {
+  $('color-navegador').content = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+}
+
 function aplicarTema(tema) {
   document.documentElement.dataset.theme = tema === 'sistema' ? (temaSistema.matches ? 'dark' : 'light') : tema;
   try {
@@ -4892,6 +4905,7 @@ function aplicarTema(tema) {
     else localStorage.setItem('finanzas.tema', tema);
   } catch {}
   for (const r of document.querySelectorAll('input[name="tema"], input[name="tema-menu"]')) r.checked = r.value === tema;
+  pintarColorNavegador();
 }
 
 temaSistema.addEventListener('change', () => {
@@ -4901,13 +4915,13 @@ temaSistema.addEventListener('change', () => {
 });
 for (const r of document.querySelectorAll('input[name="tema"], input[name="tema-menu"]')) r.addEventListener('change', () => aplicarTema(r.value));
 
-// Paleta de color (se guarda en este navegador); «azul» es la de por defecto
-const PALETAS = { azul: 'Azul', indigo: 'Índigo', ciruela: 'Ciruela', petroleo: 'Petróleo', esmeralda: 'Esmeralda', oliva: 'Oliva', terracota: 'Terracota', grafito: 'Grafito' };
+// Paleta de color (se guarda en este navegador); «esmeralda» es la de por defecto
+const PALETAS = { esmeralda: 'Esmeralda', petroleo: 'Petróleo', azul: 'Azul', indigo: 'Índigo', ciruela: 'Ciruela', oliva: 'Oliva', terracota: 'Terracota', grafito: 'Grafito' };
 
 function aplicarPaleta(paleta) {
-  if (paleta === 'azul') delete document.documentElement.dataset.paleta;
-  else document.documentElement.dataset.paleta = paleta;
+  document.documentElement.dataset.paleta = paleta;
   try { localStorage.setItem('finanzas.paleta', paleta); } catch {}
+  pintarColorNavegador();
   renderVista(); // los gráficos se repintan con los colores nuevos
 }
 
@@ -4919,7 +4933,7 @@ function crearPaletas() {
     s.append(...hijos);
     return s;
   };
-  const actual = document.documentElement.dataset.paleta || 'azul';
+  const actual = document.documentElement.dataset.paleta;
   for (const [valor, nombre] of Object.entries(PALETAS)) {
     const label = document.createElement('label');
     label.className = 'paleta';
@@ -4952,10 +4966,7 @@ cargarTiposCambio();
 cargar();
 cargarIngresos();
 cargarTarjetas(); // después de cargar(): la migración mira los gastos con medio 'interbank'
-for (const g of gastos) {
-  g.medio = medioValido(g.medio);
-  g.moneda = g.moneda === 'USD' ? 'USD' : 'PEN';
-}
+normalizarGastos();
 cargarPagos(); // después de tarjetas y gastos: migra los ciclos marcados como pagados
 normalizarIds();
 poblarMedios();

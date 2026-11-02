@@ -7,10 +7,11 @@
     tema = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
   document.documentElement.dataset.theme = tema;
-  // Paleta elegida en Ajustes (sin atributo = azul, la de por defecto)
+  // Paleta elegida en Ajustes (esmeralda, si no se eligió ninguna)
   let paleta = null;
   try { paleta = localStorage.getItem('finanzas.paleta'); } catch {}
-  if (['indigo', 'ciruela', 'petroleo', 'esmeralda', 'oliva', 'terracota', 'grafito'].includes(paleta)) document.documentElement.dataset.paleta = paleta;
+  const paletas = ['esmeralda', 'petroleo', 'azul', 'indigo', 'ciruela', 'oliva', 'terracota', 'grafito'];
+  document.documentElement.dataset.paleta = paletas.includes(paleta) ? paleta : 'esmeralda';
   // Barra lateral oculta (solo en pantallas anchas; en móvil siempre empieza cerrada)
   try {
     if (localStorage.getItem('finanzas.menu') === 'oculto') document.documentElement.dataset.menu = 'oculto';

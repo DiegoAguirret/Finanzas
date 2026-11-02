@@ -34,8 +34,8 @@ create table if not exists public.gastos (
   importe numeric(12, 2) not null check (importe > 0),
   moneda text not null default 'PEN' check (moneda in ('PEN', 'USD')),
   categoria text not null,
-  -- efectivo | debito | credito (otra tarjeta sin registrar) | tarjeta (una de public.tarjetas)
-  medio text not null default 'efectivo' check (medio in ('efectivo', 'debito', 'credito', 'tarjeta')),
+  -- efectivo | debito | yape | plin | credito (otro medio de pago; nombre histórico) | tarjeta (una de public.tarjetas)
+  medio text not null default 'efectivo' constraint gastos_medio_check check (medio in ('efectivo', 'debito', 'yape', 'plin', 'credito', 'tarjeta')),
   tarjeta uuid references public.tarjetas on delete set null,
   fecha date not null,
   creado timestamptz not null default now()
@@ -97,6 +97,11 @@ create table if not exists public.preferencias (
   simulacion jsonb not null default '{}'::jsonb,
   actualizado timestamptz not null default now()
 );
+
+-- Medios de pago: en bases ya creadas, la lista se amplía aquí
+alter table public.gastos drop constraint if exists gastos_medio_check;
+alter table public.gastos add constraint gastos_medio_check
+  check (medio in ('efectivo', 'debito', 'yape', 'plin', 'credito', 'tarjeta'));
 
 -- Días para pagar tras el corte, en tarjetas sin un día fijo de pago (entonces `pago` queda vacío)
 alter table public.tarjetas add column if not exists plazo smallint check (plazo between 1 and 90);
