@@ -213,7 +213,7 @@ function leerPagoTarjeta() {
 
 function pintarModoPago() {
   const conPlazo = $('tar-modo-pago').value === 'plazo';
-  $('tar-pago-etiqueta').textContent = conPlazo ? 'Días para pagar' : 'Último día de pago';
+  $('tar-pago-etiqueta').textContent = conPlazo ? 'Días después del corte' : 'Último día de pago';
   $('tar-pago').max = conPlazo ? 90 : 31;
   $('tar-pago').placeholder = conPlazo ? 'Ej. 25' : 'Ej. 15';
   const t = { corte: diaDelMes($('tar-corte').value), ...leerPagoTarjeta() };

@@ -17,6 +17,13 @@ function diaDelMes(v) {
   return v !== '' && v !== null && Number.isInteger(n) && n >= 1 && n <= 31 ? n : null;
 }
 
+function bancoDeNombre(nombre) {
+  return /bcp/i.test(nombre) ? 'bcp' : /interbank/i.test(nombre) ? 'interbank' : 'otro';
+}
+
+// Formulario de tarjeta: true cuando el usuario ya eligió el banco (no se deduce más del nombre)
+let bancoElegido = false;
+
 function configurada(t) {
   return !!(t.corte && (t.pago || t.plazo));
 }
@@ -27,7 +34,7 @@ function tarjetaValida(t) {
   if (!nombre) return null;
   const id = typeof t.id === 'string' && t.id && !Object.hasOwn(MEDIOS_FIJOS, t.id) ? t.id : nuevoId();
   // Tarjetas de versiones anteriores sin banco: se deduce del nombre
-  const banco = Object.hasOwn(BANCOS, t.banco) ? t.banco : /bcp/i.test(nombre) ? 'bcp' : /interbank/i.test(nombre) ? 'interbank' : 'otro';
+  const banco = Object.hasOwn(BANCOS, t.banco) ? t.banco : bancoDeNombre(nombre);
   const plazo = Number.isInteger(Number(t.plazo)) && t.plazo >= 1 && t.plazo <= 90 ? Number(t.plazo) : null;
   return { id, nombre, banco, corte: diaDelMes(t.corte), pago: plazo ? null : diaDelMes(t.pago), plazo, linea: numero(t.linea) };
 }
@@ -308,6 +315,8 @@ function editarTarjeta(id) {
   const t = tarjetaDe(id);
   if (!t) return;
   tarEditandoId = id;
+  bancoElegido = true;
+  $('tar-mas').open = true;
   $('tar-nombre').value = t.nombre;
   $('tar-banco').value = t.banco;
   $('tar-corte').value = t.corte ?? '';
@@ -326,6 +335,8 @@ function editarTarjeta(id) {
 
 function salirEdicionTarjeta() {
   tarEditandoId = null;
+  bancoElegido = false;
+  $('tar-mas').open = false;
   $('tar-form').reset();
   pintarModoPago();
   $('tar-form-titulo').textContent = 'Nueva tarjeta';
@@ -375,6 +386,10 @@ function prepararPago(sugerido) {
 // propone el monto sugerido por «Pagar» (convertido a soles si la deuda es en dólares)
 function actualizarFormPago(rellenar = false) {
   const t = tarjetaDe(tarSeleccion);
+  // Sin deuda en dólares no hay nada que elegir
+  const conDolares = !!t && deudaDeTarjeta(t).USD > 0;
+  $('pago-moneda-campo').classList.toggle('hidden', !conDolares);
+  if (!conDolares) $('pago-moneda').value = 'PEN';
   const usd = $('pago-moneda').value === 'USD';
   if (!usd) $('pago-con').value = 'PEN';
   const conSoles = $('pago-con').value === 'PEN';
@@ -394,7 +409,7 @@ function actualizarFormPago(rellenar = false) {
   }
   const pagado = Number($('pago-importe').value);
   $('pago-preview').textContent = convertir && pagado > 0 && tc > 0
-    ? `Abona ${dinero(redondear(pagado / tc), 'USD')} a tu deuda en dólares.`
+    ? `Baja ${dinero(redondear(pagado / tc), 'USD')} tu deuda en dólares.`
     : '';
 }
 
@@ -444,7 +459,6 @@ function renderTarjeta() {
     const tr = document.createElement('tr');
     if (t.id === tarEditandoId) tr.classList.add('editando');
     celda(tr, 'Tarjeta', etiquetaTarjeta(t));
-    celda(tr, 'Corte / pago', configurada(t) ? `Corte ${t.corte} · ${textoPago(t)}` : 'Sin configurar', 'pago');
     celda(tr, 'A pagar', r.ciclos ? textoMontos(r.aPagar) : '—', 'num');
     const [venceTexto, venceClase] = r.ciclos ? textoVencimiento(r.proximo) : ['—', ''];
     const vence = document.createElement('span');
@@ -455,7 +469,7 @@ function renderTarjeta() {
     celda(tr, 'Disponible', r.disponible !== null ? soles.format(r.disponible) : '—', 'num');
 
     const acciones = celda(tr, '', '', 'acciones');
-    acciones.appendChild(boton('Ciclos', `Ver ciclos y pagos de ${t.nombre}`, () => {
+    acciones.appendChild(boton('Ciclos', `Ver pagos de ${t.nombre}`, () => {
       tarSeleccion = t.id;
       renderTarjeta();
       $('tar-detalle').scrollIntoView({ behavior: desplazamiento(), block: 'start' });
@@ -488,7 +502,7 @@ function renderTarjeta() {
     const tr = document.createElement('tr');
     celda(tr, 'Fecha', formatearFecha(p.fecha), 'fecha');
     celda(tr, 'Pagaste', dinero(p.pagado, p.pagadoMoneda), 'num');
-    celda(tr, 'Abono a la deuda', dinero(p.importe, p.moneda) + (p.tipoCambio ? ` · TC ${formatoTC(p.tipoCambio)}` : ''), 'num');
+    celda(tr, 'Baja tu deuda', dinero(p.importe, p.moneda) + (p.tipoCambio ? ` · TC ${formatoTC(p.tipoCambio)}` : ''), 'num');
     const acciones = celda(tr, '', '', 'acciones');
     acciones.appendChild(botonEliminar('Eliminar pago', () => {
       pagos = pagos.filter((x) => x.id !== p.id);

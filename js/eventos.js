@@ -8,10 +8,11 @@ form.addEventListener('submit', (e) => {
   if (!datos.descripcion || !(datos.importe > 0) || !datos.fecha || datos.fecha > hoyISO()) return;
   if (editandoId) actualizar(editandoId, datos);
   else crear(datos);
+  try { localStorage.setItem(CLAVE_ULTIMO_MEDIO, datos.medio); } catch {}
   guardar();
   salirEdicion();
   render();
-  $('descripcion').focus();
+  $('importe').focus();
 });
 
 $('btn-cancelar').addEventListener('click', () => { salirEdicion(); render(); });
@@ -38,7 +39,7 @@ $('ing-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const datos = ingresoValido({
     id: ingEditandoId || nuevoId(),
-    descripcion: $('ing-descripcion').value,
+    descripcion: $('ing-descripcion').value.trim() || 'Ingreso',
     importe: $('ing-importe').value,
     moneda: $('ing-moneda').value,
     fecha: $('ing-fecha').value,
@@ -53,7 +54,7 @@ $('ing-form').addEventListener('submit', (e) => {
     : '');
   salirEdicionIngreso();
   ingresosCambiados();
-  $('ing-descripcion').focus();
+  $('ing-importe').focus();
 });
 $('ing-cancelar').addEventListener('click', () => { salirEdicionIngreso(); renderBalance(); });
 $('bal-periodo').addEventListener('change', () => {
@@ -87,7 +88,7 @@ $('pago-form').addEventListener('submit', (e) => {
   $('pago-form').reset();
   $('pago-fecha').value = hoyISO();
   mensajeTarjeta(`Pago de ${dinero(p.pagado, p.pagadoMoneda)} registrado` +
-    (p.tipoCambio ? ` (abona ${dinero(p.importe, 'USD')}).` : '.'));
+    (p.tipoCambio ? ` (tu deuda baja ${dinero(p.importe, 'USD')}).` : '.'));
   pagosCambiados();
 });
 $('pago-moneda').addEventListener('change', () => actualizarFormPago(true));
@@ -202,10 +203,12 @@ addEventListener('online', () => {
 
 $('btn-menu').addEventListener('click', () => alternarMenu(true));
 $('tab-mas').addEventListener('click', () => alternarMenu(true));
-$('btn-filtros').addEventListener('click', () => {
-  const abierto = $('filtros-extra').classList.toggle('abierto');
-  $('btn-filtros').setAttribute('aria-expanded', String(abierto));
-});
+for (const [boton, extra] of [['btn-filtros', 'filtros-extra'], ['dash-filtros', 'dash-extra']]) {
+  $(boton).addEventListener('click', () => {
+    const abierto = $(extra).classList.toggle('abierto');
+    $(boton).setAttribute('aria-expanded', String(abierto));
+  });
+}
 $('fab').addEventListener('click', () => abrirHoja());
 $('hoja-fondo').addEventListener('click', pedirCerrarHoja);
 for (const [vista, [idForm]] of Object.entries(HOJAS)) {
@@ -338,6 +341,11 @@ $('tar-modo-pago').addEventListener('change', () => {
   pintarModoPago();
 });
 for (const id of ['tar-corte', 'tar-pago']) $(id).addEventListener('input', pintarModoPago);
+// El banco se deduce del nombre hasta que el usuario lo elija
+$('tar-nombre').addEventListener('input', () => {
+  if (!bancoElegido) $('tar-banco').value = bancoDeNombre($('tar-nombre').value);
+});
+$('tar-banco').addEventListener('change', () => { bancoElegido = true; });
 for (const id of ['medio', 'fecha']) $(id).addEventListener('change', pintarNotaMedio);
 for (const r of document.querySelectorAll('input[name="aj-compras"]')) {
   r.addEventListener('change', () => {

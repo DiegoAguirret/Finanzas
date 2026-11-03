@@ -17,9 +17,10 @@ function baseDashboard() {
   const antes = sel.value;
   const conCiclo = tarjetas.filter(configurada);
   sel.replaceChildren(
+    new Option('Por mes', 'mes'),
     ...conCiclo.map((t) => new Option(`Por ciclo de ${t.nombre}`, t.id)),
-    new Option('Por mes calendario', 'mes'),
   );
+  sel.classList.toggle('hidden', !conCiclo.length);
   sel.value = [...sel.options].some((o) => o.value === antes) ? antes : sel.options[0].value;
   const t = tarjetaDe(sel.value) || null;
   for (const o of $('dash-periodo').options) o.textContent = TEXTOS_PERIODO[o.value][t ? 1 : 0];

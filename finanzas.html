@@ -48,12 +48,14 @@
     <nav class="barra-nav" aria-label="Secciones">
       <a class="nav-item" href="#gastos" data-vista="gastos">Gastos</a>
       <a class="nav-item" href="#ingresos" data-vista="ingresos">Ingresos</a>
-      <a class="nav-item" href="#dashboard" data-vista="dashboard">Dashboard</a>
       <a class="nav-item" href="#tarjeta" data-vista="tarjeta">Tarjetas</a>
       <a class="nav-item" href="#deudas" data-vista="deudas">Deudas</a>
       <a class="nav-item" href="#ahorro" data-vista="ahorro">Ahorro</a>
+      <hr class="nav-separador">
+      <a class="nav-item" href="#dashboard" data-vista="dashboard">Resumen</a>
       <a class="nav-item" href="#plan" data-vista="plan">Plan</a>
-      <a class="nav-item" href="#simulador" data-vista="simulador">Simulaciones</a>
+      <a class="nav-item" href="#simulador" data-vista="simulador">Simular</a>
+      <hr class="nav-separador">
       <a class="nav-item" href="#datos" data-vista="datos">Ajustes</a>
     </nav>
     <div class="sidebar-pie">
@@ -106,16 +108,16 @@
         <section class="card estrecha hoja">
           <h2 id="form-titulo">Nuevo gasto</h2>
           <form id="form" autocomplete="off">
-            <div class="campo-desc">
-              <label for="descripcion">Descripción</label>
-              <input id="descripcion" required maxlength="100" placeholder="Ej. Supermercado">
-            </div>
-            <div>
-              <label for="importe">Importe</label>
+            <div class="campo-par">
+              <label for="importe">Monto</label>
               <div class="importe-moneda">
                 <input id="importe" type="number" step="0.01" inputmode="decimal" min="0.01" required placeholder="0.00">
                 <select id="moneda" aria-label="Moneda del gasto"><option value="PEN">S/</option><option value="USD">US$</option></select>
               </div>
+            </div>
+            <div class="campo-par">
+              <label for="descripcion">Descripción (opcional)</label>
+              <input id="descripcion" maxlength="100" placeholder="Ej. Supermercado">
             </div>
             <div class="campo-ancho">
               <div class="fila-etiqueta">
@@ -125,7 +127,7 @@
               <div class="selector-cat" id="categoria" role="radiogroup" aria-labelledby="categoria-titulo"></div>
             </div>
             <div>
-              <label for="medio">Medio de pago</label>
+              <label for="medio">Pagaste con</label>
               <select id="medio"></select>
               <p class="nota-campo hidden" id="medio-nota"></p>
             </div>
@@ -158,8 +160,8 @@
               <select id="orden" aria-label="Ordenar">
                 <option value="fecha-desc">Más recientes</option>
                 <option value="fecha-asc">Más antiguos</option>
-                <option value="importe-desc">Mayor importe</option>
-                <option value="importe-asc">Menor importe</option>
+                <option value="importe-desc">Mayor monto</option>
+                <option value="importe-asc">Menor monto</option>
               </select>
               </div>
             </div>
@@ -171,7 +173,7 @@
                 <th>Descripción</th>
                 <th>Categoría</th>
                 <th>Pago</th>
-                <th class="num">Importe</th>
+                <th class="num">Monto</th>
                 <th></th>
               </tr>
             </thead>
@@ -189,7 +191,7 @@
     <div class="vista hidden" id="vista-ingresos">
       <section class="card vista-cabecera">
         <div>
-          <h2>Ingresos y balance</h2>
+          <h2>Ingresos</h2>
           
         </div>
         <div class="filtros">
@@ -221,7 +223,7 @@
           <div class="sub" id="bal-res-sub"></div>
         </div>
         <div class="card card-acum">
-          <div class="label">Saldo acumulado</div>
+          <div class="label">Acumulado</div>
           <div class="valor" id="bal-acum">S/ 0.00</div>
           <div class="sub" id="bal-acum-sub"></div>
         </div>
@@ -239,8 +241,7 @@
               <th>Fecha</th>
               <th>Descripción</th>
               <th>Tipo</th>
-              <th class="num">Importe</th>
-              <th class="num">En tu dinero</th>
+              <th class="num">Monto</th>
               <th></th>
             </tr>
           </thead>
@@ -253,16 +254,16 @@
         <section class="card estrecha hoja">
           <h2 id="ing-form-titulo">Nuevo ingreso</h2>
           <form id="ing-form" autocomplete="off">
-            <div class="campo-desc">
-              <label for="ing-descripcion">Descripción</label>
-              <input id="ing-descripcion" required maxlength="100" placeholder="Ej. Sueldo">
-            </div>
-            <div>
-              <label for="ing-importe">Importe</label>
+            <div class="campo-par">
+              <label for="ing-importe">Monto</label>
               <div class="importe-moneda">
                 <input id="ing-importe" type="number" step="0.01" inputmode="decimal" min="0.01" required placeholder="0.00">
                 <select id="ing-moneda" aria-label="Moneda del ingreso"><option value="PEN">S/</option><option value="USD">US$</option></select>
               </div>
+            </div>
+            <div class="campo-par">
+              <label for="ing-descripcion">Descripción (opcional)</label>
+              <input id="ing-descripcion" maxlength="100" placeholder="Ej. Sueldo">
             </div>
             <div>
               <label for="ing-fecha">Fecha</label>
@@ -289,9 +290,7 @@
               <th>Mes</th>
               <th class="num">Ingresos</th>
               <th class="num">Gastos</th>
-              <th class="num">Pagos de tarjetas</th>
               <th class="num">Ahorro</th>
-              <th class="num">Cambio en tu dinero</th>
               <th class="num">Acumulado</th>
             </tr>
           </thead>
@@ -306,26 +305,31 @@
     <div class="vista hidden" id="vista-dashboard">
       <section class="card vista-cabecera">
         <div>
-          <h2>Dashboard</h2>
+          <h2>Resumen</h2>
           
         </div>
         <div class="filtros">
-          <select id="dash-base" aria-label="Agrupar por"></select>
-          <select id="dash-periodo" aria-label="Periodo">
-            <option value="mes">Este mes</option>
-            <option value="3m">Últimos 3 meses</option>
-            <option value="anio">Este año</option>
-            <option value="todo">Todo</option>
-          </select>
-          <select id="dash-medio" aria-label="Medio de pago">
-            <option value="">Todos los medios</option>
-          </select>
+          <div class="buscar-fila">
+            <select id="dash-periodo" aria-label="Periodo">
+              <option value="mes">Este mes</option>
+              <option value="3m">Últimos 3 meses</option>
+              <option value="anio">Este año</option>
+              <option value="todo">Todo</option>
+            </select>
+            <button type="button" class="icon-btn solo-ico filtrar" id="dash-filtros" aria-label="Filtros" aria-expanded="false" title="Filtros"></button>
+          </div>
+          <div class="filtros-extra" id="dash-extra">
+            <select id="dash-base" aria-label="Agrupar por"></select>
+            <select id="dash-medio" aria-label="Medio de pago">
+              <option value="">Todos los medios</option>
+            </select>
+          </div>
         </div>
       </section>
 
       <div class="resumen">
         <div class="card">
-          <div class="label">Total del periodo</div>
+          <div class="label">Total</div>
           <div class="valor" id="dash-total">S/ 0.00</div>
           <div class="sub" id="dash-total-sub"></div>
         </div>
@@ -378,33 +382,35 @@
               <input id="tar-nombre" required maxlength="40" placeholder="Ej. Interbank Visa">
             </div>
             <div>
-              <label for="tar-banco">Banco</label>
-              <select id="tar-banco">
-                <option value="bcp">BCP</option>
-                <option value="interbank">Interbank</option>
-                <option value="otro">Otro banco</option>
-              </select>
-            </div>
-            <div>
               <label for="tar-corte">Día de corte</label>
               <input id="tar-corte" type="number" min="1" max="31" step="1" required placeholder="Ej. 20">
-            </div>
-            <div>
-              <label for="tar-modo-pago">Cómo se fija el pago</label>
-              <select id="tar-modo-pago">
-                <option value="dia">Día fijo</option>
-                <option value="plazo">Días tras el corte</option>
-              </select>
             </div>
             <div>
               <label for="tar-pago" id="tar-pago-etiqueta">Último día de pago</label>
               <input id="tar-pago" type="number" min="1" max="31" step="1" required placeholder="Ej. 15">
             </div>
             <p class="nota-campo campo-ancho hidden" id="tar-plazo-nota"></p>
-            <div>
-              <label for="tar-linea">Línea de crédito (S/)</label>
-              <input id="tar-linea" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Opcional">
-            </div>
+            <details class="mas-opciones" id="tar-mas"><summary>Más opciones</summary><div class="mas-campos">
+              <div>
+                <label for="tar-modo-pago">Cuándo vence el pago</label>
+                <select id="tar-modo-pago">
+                  <option value="dia">Día fijo</option>
+                  <option value="plazo">Tras el corte</option>
+                </select>
+              </div>
+              <div>
+                <label for="tar-banco">Banco</label>
+                <select id="tar-banco">
+                  <option value="bcp">BCP</option>
+                  <option value="interbank">Interbank</option>
+                  <option value="otro" selected>Otro banco</option>
+                </select>
+              </div>
+              <div class="campo-ancho">
+                <label for="tar-linea">Línea de crédito (S/)</label>
+                <input id="tar-linea" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Opcional">
+              </div>
+            </div></details>
             <div class="acciones-form">
               <button type="submit" class="btn-primary" id="tar-guardar">Añadir tarjeta</button>
               <button type="button" class="btn-secondary hidden" id="tar-cancelar">Cancelar</button>
@@ -417,9 +423,8 @@
           <thead>
             <tr>
               <th>Tarjeta</th>
-              <th>Corte / pago</th>
               <th class="num">A pagar</th>
-              <th>Próximo vencimiento</th>
+              <th>Vence</th>
               <th class="num">Deuda</th>
               <th class="num">Disponible</th>
               <th></th>
@@ -451,25 +456,9 @@
           <h2>Qué pagar</h2>
           <div class="cuadre" id="tar-proximos-lista"></div>
         </section>
-        <section class="card plegable" id="tar-ciclos-card"><details data-escritorio><summary><h2>Ciclos</h2></summary>
-            <table id="tabla-ciclos">
-              <thead>
-                <tr>
-                  <th>Periodo</th>
-                  <th>Vencimiento</th>
-                  <th class="num">Consumos</th>
-                  <th class="num">Total</th>
-                  <th class="num">Pendiente</th>
-                  <th>Estado</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="tar-ciclos"></tbody>
-            </table>
-          </details></section>
         <section class="card plegable"><details data-escritorio><summary><h2>Registrar pago</h2></summary>
             <form id="pago-form" autocomplete="off">
-              <div>
+              <div id="pago-moneda-campo" class="hidden">
                 <label for="pago-moneda">Deuda que pagas</label>
                 <select id="pago-moneda">
                   <option value="PEN">En soles</option>
@@ -505,13 +494,29 @@
                 <tr>
                   <th>Fecha</th>
                   <th class="num">Pagaste</th>
-                  <th class="num">Abono a la deuda</th>
+                  <th class="num">Baja tu deuda</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody id="tar-pagos"></tbody>
             </table>
             <div class="vacio hidden" id="pagos-vacio">Aún no registras pagos a esta tarjeta.</div>
+          </details></section>
+        <section class="card plegable" id="tar-ciclos-card"><details><summary><h2>Estados de cuenta</h2></summary>
+            <table id="tabla-ciclos">
+              <thead>
+                <tr>
+                  <th>Periodo</th>
+                  <th>Vencimiento</th>
+                  <th class="num">Consumos</th>
+                  <th class="num">Total</th>
+                  <th class="num">Pendiente</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="tar-ciclos"></tbody>
+            </table>
           </details></section>
         <section class="card plegable" id="sal-card"><details><summary><h2>Deuda anterior</h2></summary>
           <div class="sal-elegir">
@@ -594,21 +599,21 @@
     <div class="vista hidden" id="vista-simulador">
       <section class="card vista-cabecera">
         <div>
-          <h2>Simulaciones de gasto</h2>
+          <h2>Simular</h2>
           
         </div>
         <button type="button" class="btn-secondary" id="sim-reiniciar">Restablecer</button>
       </section>
 
       <section class="card">
-        <h2>Parámetros</h2>
+        <h2>Tus números</h2>
         <div class="sim-params">
           <div>
             <label for="sim-ingreso">Ingreso mensual (S/)</label>
             <input id="sim-ingreso" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
           </div>
           <div>
-            <label for="sim-extra">Nuevo gasto fijo mensual (S/)</label>
+            <label for="sim-extra">Gasto nuevo al mes (S/)</label>
             <input id="sim-extra" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
           </div>
           <div>
@@ -616,7 +621,7 @@
             <input id="sim-meta" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
           </div>
           <div>
-            <label for="sim-horizonte">Horizonte</label>
+            <label for="sim-horizonte">Calcular a</label>
             <select id="sim-horizonte">
               <option value="3">3 meses</option>
               <option value="6">6 meses</option>
@@ -627,23 +632,14 @@
         </div>
       </section>
 
-      <section class="card">
-        <h2>Ajustes por categoría</h2>
-        <div class="sim-fila sim-cab">
-          <span>Categoría</span><span>Base mensual</span><span>Ajuste</span><span class="derecha">Simulado</span>
-        </div>
-        <div id="sim-filas"></div>
-        
-      </section>
-
       <div class="resumen">
         <div class="card">
-          <div class="label">Gasto mensual simulado</div>
+          <div class="label">Gastarías al mes</div>
           <div class="valor" id="sim-gasto">S/ 0.00</div>
           <div class="sub" id="sim-gasto-sub"></div>
         </div>
         <div class="card">
-          <div class="label">Ahorro mensual</div>
+          <div class="label">Ahorrarías al mes</div>
           <div class="valor" id="sim-ahorro">—</div>
           <div class="sub" id="sim-ahorro-sub"></div>
         </div>
@@ -667,6 +663,13 @@
         </div>
         <div class="grafico" id="sim-grafico"></div>
       </section>
+
+      <section class="card plegable"><details><summary><h2>Cambiar por categoría</h2></summary>
+        <div class="sim-fila sim-cab">
+          <span>Categoría</span><span>Al mes</span><span>Cambio</span><span class="derecha">Queda en</span>
+        </div>
+        <div id="sim-filas"></div>
+      </details></section>
     </div>
 
     <!-- ===== Plan ===== -->
@@ -688,7 +691,7 @@
           <h2>Reparto de tus ingresos</h2>
           <div class="fila-ajuste">
             <div>
-              <label class="fa-titulo" for="plan-regla">Regla</label>
+              <label class="fa-titulo" for="plan-regla">Cómo repartir</label>
               <p class="fa-texto" id="plan-regla-texto"></p>
             </div>
             <select id="plan-regla" class="fa-select">
@@ -718,7 +721,7 @@
         <h2>Fondo de emergencia</h2>
         <div class="fila-ajuste">
           <div>
-            <label class="fa-titulo" for="plan-meses">Meses de gastos esenciales</label>
+            <label class="fa-titulo" for="plan-meses">¿Para cuántos meses?</label>
             
           </div>
           <select id="plan-meses" class="fa-select">
@@ -795,24 +798,26 @@
               <input id="deu-nombre" required maxlength="40" placeholder="Ej. Préstamo del carro">
             </div>
             <div>
-              <label for="deu-tipo">Tipo</label>
-              <select id="deu-tipo">
-                <option value="prestamo">Préstamo</option>
-                <option value="persona">A una persona</option>
-                <option value="otro">Otra</option>
-              </select>
-            </div>
-            <div>
               <label for="deu-monto">Cuánto debes</label>
               <div class="importe-moneda">
                 <input id="deu-monto" type="number" step="0.01" inputmode="decimal" min="0.01" required placeholder="0.00">
                 <select id="deu-moneda" aria-label="Moneda de la deuda"><option value="PEN">S/</option><option value="USD">US$</option></select>
               </div>
             </div>
-            <div>
-              <label for="deu-fecha">Desde</label>
-              <input id="deu-fecha" type="date" required>
-            </div>
+            <details class="mas-opciones" id="deu-mas"><summary>Más opciones</summary><div class="mas-campos">
+              <div>
+                <label for="deu-tipo">Tipo</label>
+                <select id="deu-tipo">
+                  <option value="prestamo">Préstamo</option>
+                  <option value="persona">A una persona</option>
+                  <option value="otro" selected>Otra</option>
+                </select>
+              </div>
+              <div>
+                <label for="deu-fecha">Desde</label>
+                <input id="deu-fecha" type="date">
+              </div>
+            </div></details>
             <div class="acciones-form">
               <button type="submit" class="btn-primary" id="deu-guardar">Añadir deuda</button>
               <button type="button" class="btn-secondary hidden" id="deu-cancelar">Cancelar</button>
@@ -833,15 +838,15 @@
             <input id="abo-fecha" type="date" required>
           </div>
           <div>
-            <label for="abo-importe" id="abo-etiqueta">Abono</label>
+            <label for="abo-importe" id="abo-etiqueta">Pago</label>
             <input id="abo-importe" type="number" step="0.01" inputmode="decimal" min="0.01" required placeholder="0.00">
           </div>
           <div class="acciones-form">
-            <button type="submit" class="btn-primary">Registrar abono</button>
+            <button type="submit" class="btn-primary">Registrar pago</button>
           </div>
         </form>
         <table>
-          <thead><tr><th>Fecha</th><th class="num">Abono</th><th></th></tr></thead>
+          <thead><tr><th>Fecha</th><th class="num">Pago</th><th></th></tr></thead>
           <tbody id="abo-lista"></tbody>
         </table>
         
@@ -868,7 +873,7 @@
           <div class="sub" id="aho-metas-sub"></div>
         </div>
         <div class="card">
-          <div class="label">Sin asignar</div>
+          <div class="label">Libre</div>
           <div class="valor" id="aho-libre">S/ 0.00</div>
           <div class="sub" id="aho-libre-sub"></div>
         </div>
@@ -892,18 +897,20 @@
                 <select id="met-moneda" aria-label="Moneda de la meta"><option value="PEN">S/</option><option value="USD">US$</option></select>
               </div>
             </div>
-            <div>
-              <label for="met-limite">Para cuándo (opcional)</label>
-              <input id="met-limite" type="date">
-            </div>
-            <div class="campo-ancho">
-              <span class="etiqueta">Ícono</span>
-              <div class="selector-iconos" id="met-iconos"></div>
-            </div>
-            <div class="campo-ancho">
-              <span class="etiqueta">Color</span>
-              <div class="selector-colores" id="met-colores"></div>
-            </div>
+<details class="mas-opciones" id="met-mas"><summary>Más opciones</summary><div class="mas-campos">
+              <div class="campo-ancho">
+                <label for="met-limite">Para cuándo</label>
+                <input id="met-limite" type="date">
+              </div>
+              <div class="campo-ancho">
+                <span class="etiqueta">Ícono</span>
+                <div class="selector-iconos" id="met-iconos"></div>
+              </div>
+              <div class="campo-ancho">
+                <span class="etiqueta">Color</span>
+                <div class="selector-colores" id="met-colores"></div>
+              </div>
+            </div></details>
             <div class="acciones-form">
               <button type="submit" class="btn-primary" id="met-guardar">Añadir meta</button>
               <button type="button" class="btn-secondary hidden" id="met-cancelar">Cancelar</button>
@@ -919,15 +926,15 @@
         <h2 id="met-det-titulo"></h2>
         <form id="apo-form" class="form-movimiento" autocomplete="off">
           <div>
-            <label for="apo-tipo">Movimiento</label>
-            <select id="apo-tipo"><option value="aporte">Aporte</option><option value="retiro">Retiro</option></select>
+            <label for="apo-tipo">Qué haces</label>
+            <select id="apo-tipo"><option value="aporte">Guardar</option><option value="retiro">Sacar</option></select>
           </div>
           <div>
             <label for="apo-fecha">Fecha</label>
             <input id="apo-fecha" type="date" required>
           </div>
           <div>
-            <label for="apo-importe" id="apo-etiqueta">Importe</label>
+            <label for="apo-importe" id="apo-etiqueta">Monto</label>
             <input id="apo-importe" type="number" step="0.01" inputmode="decimal" min="0.01" required placeholder="0.00">
           </div>
           <div class="acciones-form">
@@ -935,7 +942,7 @@
           </div>
         </form>
         <table>
-          <thead><tr><th>Fecha</th><th>Movimiento</th><th class="num">Importe</th><th></th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Movimiento</th><th class="num">Monto</th><th></th></tr></thead>
           <tbody id="apo-lista"></tbody>
         </table>
         
@@ -1020,10 +1027,10 @@
           <h2>Preferencias</h2>
           <div class="fila-ajuste">
             <div>
-              <label class="fa-titulo" for="aj-inicio">Al abrir, ir a</label>
-              
+              <label class="fa-titulo" for="aj-limite">Límite de gasto al mes (S/)</label>
+              <p class="fa-texto">Te avisa al superarlo. Vacío: sin límite.</p>
             </div>
-            <select id="aj-inicio" class="fa-select"></select>
+            <input id="aj-limite" class="fa-select" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Sin límite">
           </div>
           <div class="fila-ajuste">
             <div>
@@ -1032,12 +1039,13 @@
             </div>
             <input id="aj-saldo" class="fa-select" type="number" step="0.01" placeholder="0.00">
           </div>
+          <details class="mas-opciones bloque" id="aj-mas"><summary>Más opciones</summary>
           <div class="fila-ajuste">
             <div>
-              <label class="fa-titulo" for="aj-limite">Límite de gasto al mes (S/)</label>
-              <p class="fa-texto">Te avisa al superarlo. Vacío: sin límite.</p>
+              <label class="fa-titulo" for="aj-inicio">Al abrir, ir a</label>
+              
             </div>
-            <input id="aj-limite" class="fa-select" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Sin límite">
+            <select id="aj-inicio" class="fa-select"></select>
           </div>
           <fieldset class="opciones-ajuste">
             <legend class="fa-titulo">¿Cuándo restar de tu ahorro las compras con tarjeta?</legend>
@@ -1052,6 +1060,7 @@
             </label>
             
           </fieldset>
+          </details>
         </section>
         <div class="ajuste-panel columnas-categorias" id="aj-categorias">
           <section class="card">
@@ -1093,6 +1102,7 @@
             </div>
             <button type="button" class="btn-primary" id="exp-xlsx">Descargar Excel</button>
           </div>
+<details class="mas-opciones bloque" id="datos-mas"><summary>Más opciones</summary>
           <div class="fila-ajuste">
             <div>
               <span class="fa-titulo">CSV</span>
@@ -1116,6 +1126,7 @@
             <input type="file" id="imp-archivo" accept=".json,application/json" class="hidden">
             <button type="button" class="btn-secondary" id="imp-json">Elegir archivo…</button>
           </div>
+          </details>
           <h3 class="fa-grupo">Borrar</h3>
           <div class="fila-ajuste">
             <div>

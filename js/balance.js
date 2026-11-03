@@ -138,7 +138,7 @@ function editarIngreso(id) {
   $('ing-cancelar').classList.remove('hidden');
   abrirHoja('ingresos');
   $('ing-form').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
-  $('ing-descripcion').focus();
+  $('ing-importe').focus();
   renderBalance();
 }
 
@@ -249,14 +249,14 @@ function renderBalance() {
   filaCuadre(cuadre, 'Ingresos', '', conSigno(c.ingresos));
   filaCuadre(cuadre, 'Gastos pagados al momento', hayTarjetas ? 'Efectivo o débito' : '', conSigno(-c.sinTarjeta));
   if (hayTarjetas) filaCuadre(cuadre, 'Pagos de tarjetas', '', conSigno(-c.pagos));
-  if (c.abonos) filaCuadre(cuadre, 'Abonos a otras deudas', '', conSigno(-c.abonos));
+  if (c.abonos) filaCuadre(cuadre, 'Pagos a otras deudas', '', conSigno(-c.abonos));
   filaCuadre(cuadre, 'Cambio en tu dinero', '', montoConSigno(c.dinero, true), true);
   if (hayTarjetas) {
     filaCuadre(cuadre2, 'Cambio en tu dinero', '', conSigno(c.dinero));
     filaCuadre(cuadre2, ajustes.compras === 'vence' ? 'Compras que vencen en el periodo' : 'Compras con tus tarjetas',
       ajustes.compras === 'vence' ? 'Las hiciste antes o en el periodo' : 'Suben tu deuda', conSigno(-c.conTarjeta));
     filaCuadre(cuadre2, 'Pagos de tarjetas', 'Bajan tu deuda; no son gasto', conSigno(c.pagos));
-    if (c.abonos) filaCuadre(cuadre2, 'Abonos a otras deudas', 'No son gasto', conSigno(c.abonos));
+    if (c.abonos) filaCuadre(cuadre2, 'Pagos a otras deudas', 'No son gasto', conSigno(c.abonos));
   } else {
     filaCuadre(cuadre2, 'Ingresos', '', conSigno(c.ingresos));
     filaCuadre(cuadre2, 'Gastos', '', conSigno(-c.gastos));
@@ -275,27 +275,26 @@ function renderBalance() {
   // Movimientos del periodo: ingresos, gastos y pagos de tarjeta juntos
   const movs = [
     ...ingPeriodo.map((i) => ({
-      fecha: i.fecha, descripcion: i.descripcion, tipo: 'Ingreso', importe: i.importe, moneda: i.moneda, efecto: i.importe, ingreso: i,
+      fecha: i.fecha, descripcion: i.descripcion, tipo: 'Ingreso', importe: i.importe, moneda: i.moneda, ingreso: i,
     })),
     ...gasPeriodo.map((g) => ({
       fecha: fechaDeCuenta(g),
       descripcion: g.descripcion + (fechaDeCuenta(g) !== g.fecha ? ` (compra del ${fechaCorta(g.fecha)})` : ''),
       tipo: 'Gasto · ' + nombreMedio(g.medio), importe: g.importe, moneda: g.moneda,
-      efecto: tarjetaDe(g.medio) ? null : -g.importe,
     })),
     ...saldos.filter(() => ajustes.compras === 'vence').map((s) => ({ s, fecha: venceSaldo(s) }))
       .filter(({ fecha }) => fecha >= desde && fecha <= hasta).map(({ s, fecha }) => ({
-        fecha, descripcion: 'Deuda anterior de ' + tarjetaDe(s.tarjeta).nombre, tipo: 'Deuda anterior', importe: s.importe, moneda: s.moneda, efecto: null,
+        fecha, descripcion: 'Deuda anterior de ' + tarjetaDe(s.tarjeta).nombre, tipo: 'Deuda anterior', importe: s.importe, moneda: s.moneda,
       })),
     ...pagPeriodo.map((x) => ({
       fecha: x.fecha,
-      descripcion: 'Pago a ' + tarjetaDe(x.tarjeta).nombre + (x.moneda !== x.pagadoMoneda ? ` (abona ${dinero(x.importe, x.moneda)})` : ''),
+      descripcion: 'Pago a ' + tarjetaDe(x.tarjeta).nombre + (x.moneda !== x.pagadoMoneda ? ` (tu deuda baja ${dinero(x.importe, x.moneda)})` : ''),
       tipo: x.moneda === 'USD' ? 'Pago de tarjeta · deuda en dólares' : 'Pago de tarjeta',
-      importe: x.pagado, moneda: x.pagadoMoneda, efecto: -x.pagado,
+      importe: x.pagado, moneda: x.pagadoMoneda,
     })),
     ...entre(abonos, desde, hasta).map((x) => {
       const d = deudaDe(x.deuda);
-      return { fecha: x.fecha, descripcion: 'Abono a ' + d.nombre, tipo: 'Abono a deuda', importe: x.importe, moneda: d.moneda, efecto: -x.importe };
+      return { fecha: x.fecha, descripcion: 'Pago a ' + d.nombre, tipo: 'Pago de deuda', importe: x.importe, moneda: d.moneda };
     }),
   ].sort((x, y) => (x.fecha < y.fecha ? 1 : x.fecha > y.fecha ? -1 : 0));
   const tbody = $('bal-movs');
@@ -307,15 +306,6 @@ function renderBalance() {
     celda(tr, 'Descripción', mov.descripcion);
     celda(tr, 'Tipo', mov.tipo, 'tipo');
     celda(tr, 'Importe', dinero(mov.importe, mov.moneda), 'num');
-    let efecto;
-    if (mov.efecto === null) {
-      efecto = document.createElement('span');
-      efecto.className = 'estado';
-      efecto.textContent = 'A tu deuda';
-    } else {
-      efecto = montoConSigno(mov.efecto, mov.efecto > 0, mov.moneda);
-    }
-    celda(tr, 'En tu dinero', efecto, 'num');
     const acciones = celda(tr, '', '', 'acciones');
     const i = mov.ingreso;
     if (i) {
@@ -341,9 +331,7 @@ function renderBalance() {
     celda(tr, 'Mes', nombreMes(mes));
     celda(tr, 'Ingresos', soles.format(h.ingresos), 'num');
     celda(tr, 'Gastos', soles.format(h.gastos), 'num');
-    celda(tr, 'Pagos de tarjetas', soles.format(h.pagos), 'num');
     celda(tr, 'Ahorro', montoConSigno(h.ahorro, h.ingresos > 0), 'num');
-    celda(tr, 'Cambio en tu dinero', montoConSigno(h.dinero, true), 'num');
     celda(tr, 'Acumulado', montoConSigno(acumuladoHist, true), 'num');
     acumuladoHist = redondear(acumuladoHist - h.ahorro);
     hist.appendChild(tr);

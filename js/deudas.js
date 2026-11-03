@@ -161,6 +161,7 @@ function deudaDeTarjeta(t) {
 
 function salirEdicionDeuda() {
   deuEditandoId = null;
+  $('deu-mas').open = false;
   $('deu-form').reset();
   $('deu-fecha').value = hoyISO();
   $('deu-form-titulo').textContent = 'Nueva deuda';
@@ -170,6 +171,7 @@ function salirEdicionDeuda() {
 
 function editarDeuda(d) {
   deuEditandoId = d.id;
+  $('deu-mas').open = true;
   $('deu-nombre').value = d.nombre;
   $('deu-tipo').value = d.tipo;
   $('deu-monto').value = d.monto;
@@ -242,16 +244,16 @@ function renderDeudas() {
   $('deu-detalle').classList.toggle('hidden', !elegida);
   if (!elegida) return;
   const pendiente = pendienteDeuda(elegida);
-  $('deu-det-titulo').textContent = `Abonos a ${elegida.nombre}`;
-  $('abo-etiqueta').textContent = `Abono (${elegida.moneda === 'USD' ? 'US$' : 'S/'}, quedan ${dinero(pendiente, elegida.moneda)})`;
+  $('deu-det-titulo').textContent = `Pagos a ${elegida.nombre}`;
+  $('abo-etiqueta').textContent = `Pago (${elegida.moneda === 'USD' ? 'US$' : 'S/'}, quedan ${dinero(pendiente, elegida.moneda)})`;
   if (!$('abo-fecha').value) $('abo-fecha').value = hoy;
   const tbody = $('abo-lista');
   tbody.replaceChildren();
   for (const a of abonosDe(elegida).sort(porFechaDesc)) {
     const tr = document.createElement('tr');
     celda(tr, 'Fecha', formatearFecha(a.fecha), 'fecha');
-    celda(tr, 'Abono', dinero(a.importe, elegida.moneda), 'num');
-    celda(tr, '', botonEliminar('Eliminar abono', () => {
+    celda(tr, 'Pago', dinero(a.importe, elegida.moneda), 'num');
+    celda(tr, '', botonEliminar('Eliminar pago', () => {
       abonos = abonos.filter((x) => x.id !== a.id);
       guardarDeudas();
       render();
@@ -272,6 +274,7 @@ function guardadoEnMeta(m) {
 
 function salirEdicionMeta() {
   metEditandoId = null;
+  $('met-mas').open = false;
   $('met-form').reset();
   fijarSelectores('met', 'meta', 'azul');
   $('met-form-titulo').textContent = 'Nueva meta';
@@ -281,6 +284,7 @@ function salirEdicionMeta() {
 
 function editarMeta(m) {
   metEditandoId = m.id;
+  $('met-mas').open = true;
   $('met-nombre').value = m.nombre;
   $('met-objetivo').value = m.objetivo;
   $('met-moneda').value = m.moneda;
@@ -350,15 +354,15 @@ function renderAhorro() {
   $('met-detalle').classList.toggle('hidden', !elegida);
   if (!elegida) return;
   $('met-det-titulo').textContent = `Movimientos de ${elegida.nombre}`;
-  $('apo-etiqueta').textContent = `Importe (${elegida.moneda === 'USD' ? 'US$' : 'S/'})`;
+  $('apo-etiqueta').textContent = `Monto (${elegida.moneda === 'USD' ? 'US$' : 'S/'})`;
   if (!$('apo-fecha').value) $('apo-fecha').value = hoy;
   const tbody = $('apo-lista');
   tbody.replaceChildren();
   for (const a of aportesDe(elegida).sort(porFechaDesc)) {
     const tr = document.createElement('tr');
     celda(tr, 'Fecha', formatearFecha(a.fecha), 'fecha');
-    celda(tr, 'Movimiento', a.importe > 0 ? 'Aporte' : 'Retiro');
-    celda(tr, 'Importe', dinero(Math.abs(a.importe), elegida.moneda), 'num');
+    celda(tr, 'Movimiento', a.importe > 0 ? 'Guardaste' : 'Sacaste');
+    celda(tr, 'Monto', dinero(Math.abs(a.importe), elegida.moneda), 'num');
     celda(tr, '', botonEliminar('Eliminar movimiento', () => {
       aportes = aportes.filter((x) => x.id !== a.id);
       guardarMetas();
@@ -372,13 +376,13 @@ $('deu-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const d = deudaValida({
     id: deuEditandoId || nuevoId(), nombre: $('deu-nombre').value, tipo: $('deu-tipo').value,
-    moneda: $('deu-moneda').value, monto: $('deu-monto').value, fecha: $('deu-fecha').value,
+    moneda: $('deu-moneda').value, monto: $('deu-monto').value, fecha: $('deu-fecha').value || hoyISO(),
   });
   if (!d) return avisar('deu-msg', 'Revisa los datos de la deuda.', true);
   const actual = deudaDe(deuEditandoId);
   if (actual) {
     const abonado = redondear(actual.monto - pendienteDeuda(actual));
-    if (d.monto < abonado) return avisar('deu-msg', `Ya abonaste ${dinero(abonado, actual.moneda)}: el monto no puede ser menor.`, true);
+    if (d.monto < abonado) return avisar('deu-msg', `Ya pagaste ${dinero(abonado, actual.moneda)}: el monto no puede ser menor.`, true);
     Object.assign(actual, d);
   } else {
     deudas.push(d);
@@ -395,7 +399,7 @@ $('abo-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const d = deudaDe(deuSeleccion);
   const a = abonoValido({ id: nuevoId(), deuda: deuSeleccion, fecha: $('abo-fecha').value, importe: $('abo-importe').value });
-  if (!d || !a) return avisar('deu-msg', 'Revisa la fecha y el importe.', true);
+  if (!d || !a) return avisar('deu-msg', 'Revisa la fecha y el monto.', true);
   const pendiente = pendienteDeuda(d);
   if (a.importe > pendiente) return avisar('deu-msg', `Solo quedan ${dinero(pendiente, d.moneda)} por pagar.`, true);
   abonos.push(a);
@@ -429,7 +433,7 @@ $('apo-form').addEventListener('submit', (e) => {
   const retiro = $('apo-tipo').value === 'retiro';
   const importe = redondear(parseFloat($('apo-importe').value));
   const a = aporteValido({ id: nuevoId(), meta: metSeleccion, fecha: $('apo-fecha').value, importe: retiro ? -importe : importe });
-  if (!m || !a || !(importe > 0)) return avisar('aho-msg', 'Revisa la fecha y el importe.', true);
+  if (!m || !a || !(importe > 0)) return avisar('aho-msg', 'Revisa la fecha y el monto.', true);
   const guardado = guardadoEnMeta(m);
   if (retiro && importe > guardado) return avisar('aho-msg', `Solo tienes ${dinero(guardado, m.moneda)} en esta meta.`, true);
   aportes.push(a);

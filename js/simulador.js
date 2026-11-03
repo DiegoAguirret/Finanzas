@@ -89,9 +89,25 @@ function crearFilasSim() {
   }
 }
 
+// Si no escribe su ingreso, se usa el promedio de lo registrado en los últimos 3 meses
+function ingresoEstimado() {
+  const hoy = new Date();
+  const ultimos = [0, 1, 2].map((i) => isoMes(new Date(hoy.getFullYear(), hoy.getMonth() - i, 1)));
+  const conRegistros = new Set();
+  let total = 0;
+  for (const i of ingresos) {
+    const mes = i.fecha.slice(0, 7);
+    if (!ultimos.includes(mes)) continue;
+    conRegistros.add(mes);
+    total += enSoles(i);
+  }
+  return conRegistros.size ? redondear(total / conRegistros.size) : 0;
+}
+
 function renderSimulador() {
   basesCalculadas = basesDesdeRegistros();
   $('sim-ingreso').value = sim.ingreso;
+  $('sim-ingreso').placeholder = (ingresoEstimado() || 0).toFixed(2);
   $('sim-extra').value = sim.extra;
   $('sim-meta').value = sim.meta;
   $('sim-horizonte').value = sim.horizonte;
@@ -129,7 +145,7 @@ function calcularSim() {
     simFilas[c].resultado.textContent = soles.format(v);
   }
 
-  const ingreso = numero(sim.ingreso);
+  const ingreso = numero(sim.ingreso) || ingresoEstimado();
   const meta = numero(sim.meta);
   const N = Number(sim.horizonte) || 12;
   const ahorroAct = ingreso - actual;

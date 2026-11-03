@@ -14,6 +14,7 @@ const CLAVE_METAS = 'finanzas.metas';
 const CLAVE_APORTES = 'finanzas.aportes';
 const CLAVE_SALDOS = 'finanzas.saldos';
 const CLAVE_AVISO_LIMITE = 'finanzas.aviso_limite';
+const CLAVE_ULTIMO_MEDIO = 'finanzas.ultimo_medio'; // lo más probable es que se repita: se propone en el siguiente gasto
 const CLAVE_INICIO = 'finanzas.inicio';
 const CLAVE_AJUSTES = 'finanzas.ajustes';
 // Trazos propios en una cuadrícula de 24 × 24 (ver .icono-cat en el CSS)
@@ -91,11 +92,11 @@ const CATEGORIA_FIJA = 'Otros'; // recibe los gastos de las categorías eliminad
 const MEDIOS_FIJOS = { efectivo: 'Efectivo', debito: 'Débito / transferencia', yape: 'Yape', plin: 'Plin', credito: 'Otro medio de pago' };
 const MEDIO_OTRO = 'credito'; // clave histórica: así está guardado en la base; siempre va al final de la lista
 const VISTAS = ['gastos', 'ingresos', 'dashboard', 'tarjeta', 'deudas', 'ahorro', 'plan', 'simulador', 'datos'];
-const NOMBRES_VISTAS = { gastos: 'Gastos', ingresos: 'Ingresos', dashboard: 'Dashboard', tarjeta: 'Tarjetas', deudas: 'Deudas', ahorro: 'Ahorro', plan: 'Plan', simulador: 'Simulaciones', datos: 'Ajustes' };
+const NOMBRES_VISTAS = { gastos: 'Gastos', ingresos: 'Ingresos', dashboard: 'Resumen', tarjeta: 'Tarjetas', deudas: 'Deudas', ahorro: 'Ahorro', plan: 'Plan', simulador: 'Simular', datos: 'Ajustes' };
 // Vistas con un formulario que en celular se abre como hoja: [formulario, texto del botón, primer campo]
 const HOJAS = {
-  gastos: ['form', 'Añadir gasto', 'descripcion'],
-  ingresos: ['ing-form', 'Añadir ingreso', 'ing-descripcion'],
+  gastos: ['form', 'Añadir gasto', 'importe'],
+  ingresos: ['ing-form', 'Añadir ingreso', 'ing-importe'],
   tarjeta: ['tar-form', 'Añadir tarjeta', 'tar-nombre'],
   deudas: ['deu-form', 'Añadir deuda', 'deu-nombre'],
   ahorro: ['met-form', 'Añadir meta', 'met-nombre'],
@@ -245,5 +246,13 @@ function poblarMedios() {
     if (todos) opciones.unshift(new Option('Todos los medios', ''));
     sel.replaceChildren(...opciones);
     if ([...sel.options].some((o) => o.value === antes)) sel.value = antes;
+    else if (!todos) sel.value = ultimoMedio();
   }
+}
+
+// El medio del último gasto, si sigue existiendo
+function ultimoMedio() {
+  let m = null;
+  try { m = localStorage.getItem(CLAVE_ULTIMO_MEDIO); } catch {}
+  return medios().includes(m) ? m : 'efectivo';
 }

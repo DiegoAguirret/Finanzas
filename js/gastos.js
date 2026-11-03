@@ -19,7 +19,7 @@ function guardar() {
 // ---- CRUD ----
 function leerFormulario() {
   return {
-    descripcion: $('descripcion').value.trim(),
+    descripcion: $('descripcion').value.trim() || categoriaElegida(), // sin descripción, la categoría
     importe: redondear(parseFloat($('importe').value)),
     moneda: $('moneda').value === 'USD' ? 'USD' : 'PEN',
     categoria: categoriaElegida(),
@@ -59,7 +59,7 @@ function editar(id) {
   $('btn-cancelar').classList.remove('hidden');
   abrirHoja('gastos');
   form.scrollIntoView({ behavior: desplazamiento(), block: 'center' });
-  $('descripcion').focus();
+  $('importe').focus();
   render();
 }
 
@@ -67,6 +67,7 @@ function salirEdicion() {
   editandoId = null;
   form.reset();
   fijarCategoria();
+  $('medio').value = ultimoMedio();
   $('fecha').value = hoyISO();
   $('form-titulo').textContent = 'Nuevo gasto';
   $('btn-guardar').textContent = 'Añadir gasto';
@@ -98,6 +99,7 @@ function pintarIconos() {
   $('btn-menu').append(icono('menu'));
   $('btn-ocultar').append(icono('cerrar'));
   $('btn-filtros').append(icono('filtro'));
+  $('dash-filtros').append(icono('filtro'));
   verClave($('acceso-clave').type !== 'password');
   // Lo secundario se abre solo en pantallas grandes; en el celular, al pulsarlo
   if (!pantallaMovil.matches) for (const d of document.querySelectorAll('details[data-escritorio]')) d.open = true;
