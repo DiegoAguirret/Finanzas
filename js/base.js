@@ -13,7 +13,7 @@ const CLAVE_ABONOS = 'finanzas.abonos';
 const CLAVE_METAS = 'finanzas.metas';
 const CLAVE_APORTES = 'finanzas.aportes';
 const CLAVE_SALDOS = 'finanzas.saldos';
-const CLAVE_AVISO_LIMITE = 'finanzas.aviso_limite';
+const CLAVE_ALERTA_LIMITE = 'finanzas.alerta_limite'; // en sessionStorage: el aviso al abrir sale una vez por sesión
 const CLAVE_ULTIMO_MEDIO = 'finanzas.ultimo_medio'; // lo más probable es que se repita: se propone en el siguiente gasto
 const CLAVE_INICIO = 'finanzas.inicio';
 const CLAVE_AJUSTES = 'finanzas.ajustes';
@@ -63,6 +63,7 @@ const ICONOS_UI = {
   mas: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
   anadir: 'M12 5v14M5 12h14',
   cerrar: 'M6 6l12 12M18 6L6 18',
+  alerta: 'M12 3.5L2.5 20h19zM12 10v4.5M12 17.5v.01',
   menu: 'M4 7h16M4 12h16M4 17h16',
   editar: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
   eliminar: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5',

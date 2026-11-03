@@ -35,6 +35,37 @@ body {
 @keyframes aviso-entra { from { opacity: 0; transform: translateY(6px); } }
 @media (prefers-reduced-motion: reduce) { .aviso-guardado { animation: none; } }
 
+/* Aviso emergente al superar el límite: arriba y al centro; la barra de abajo cuenta los 5 s */
+.alerta-limite {
+  position: fixed; top: calc(16px + env(safe-area-inset-top)); left: 50%; z-index: 18;
+  width: min(420px, calc(100% - 24px)); transform: translateX(-50%);
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 14px 8px 18px 14px; border-radius: 14px; overflow: hidden;
+  background: var(--surface); color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--border));
+  box-shadow: 0 14px 36px rgba(15, 17, 23, .24);
+  animation: alerta-entra .32s cubic-bezier(.2, .9, .3, 1.15);
+}
+.alerta-icono {
+  display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--danger-soft); color: var(--danger);
+}
+.alerta-icono .ico { width: 24px; height: 24px; stroke-width: 2; }
+.alerta-texto { display: grid; gap: 2px; }
+.alerta-texto strong { font-size: 1.02rem; color: var(--danger); }
+.alerta-texto span { font-size: .9rem; line-height: 1.4; }
+.alerta-limite .icon-btn { align-self: start; }
+.alerta-tiempo {
+  position: absolute; inset: auto 0 0; height: 4px;
+  background: var(--danger); transform-origin: left;
+}
+.alerta-tiempo.corre { animation: alerta-tiempo 5s linear forwards; }
+.alerta-limite:focus-within .alerta-tiempo { animation-play-state: paused; }
+@media (hover: hover) and (pointer: fine) { .alerta-limite:hover .alerta-tiempo { animation-play-state: paused; } }
+@keyframes alerta-entra { from { opacity: 0; transform: translate(-50%, -16px) scale(.96); } }
+@keyframes alerta-tiempo { to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .alerta-limite { animation: none; } }
+
 /* Esperas: barra fina arriba, cifras en espera durante la primera descarga y botones ocupados */
 .barra-carga { position: fixed; inset: 0 0 auto; z-index: 30; height: 3px; overflow: hidden; background: var(--accent-soft); pointer-events: none; }
 .barra-carga::before { content: ''; display: block; width: 40%; height: 100%; background: var(--accent); animation: barra-carga 1.2s ease-in-out infinite; }
@@ -172,9 +203,7 @@ form.acceso-caja #acceso-texto { margin: -8px 0 4px; }
 .importe-moneda { display: flex; gap: 6px; }
 .importe-moneda input { min-width: 0; }
 .importe-moneda select { width: auto; flex-shrink: 0; }
-#aviso-carga, #aviso-tc, #aviso-nube, #aviso-limite { margin-bottom: 20px; }
-.aviso-limite { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 600; }
-.aviso-limite .icon-btn { flex-shrink: 0; color: inherit; }
+#aviso-carga, #aviso-tc, #aviso-nube { margin-bottom: 20px; }
 #tc-form { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 16px; }
 @media (max-width: 640px) { #tc-form { grid-template-columns: 1fr 1fr; } }
 

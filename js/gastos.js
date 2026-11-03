@@ -172,18 +172,46 @@ function pintarResumenMes(delMes, mesActual) {
   pintarAvisoLimite(delMes, mesActual);
 }
 
-// Aviso visible en todos los apartados. Al cerrarlo no vuelve ese mes con ese límite, en este navegador.
-function claveAvisoLimite(mesActual) {
-  return `${mesActual}|${ajustes.limite}`;
+// Aviso emergente al superar el límite: sale al guardar un gasto que lo deja superado y,
+// al abrir la web, una vez por sesión para ese mes y ese límite. Se cierra solo a los 5 s.
+function gastadoEsteMes() {
+  const mes = hoyISO().slice(0, 7);
+  return sumar(gastos.filter((g) => g.fecha.startsWith(mes)));
 }
 
 function pintarAvisoLimite(delMes, mesActual) {
-  const exceso = redondear(delMes - ajustes.limite);
-  let cerrado = null;
-  try { cerrado = localStorage.getItem(CLAVE_AVISO_LIMITE); } catch {}
-  const ver = ajustes.limite > 0 && exceso > 0 && cerrado !== claveAvisoLimite(mesActual);
-  $('aviso-limite').classList.toggle('hidden', !ver);
-  if (ver) $('aviso-limite-texto').textContent = `Superaste tu límite de ${soles.format(ajustes.limite)} por ${soles.format(exceso)}.`;
+  const exceso = ajustes.limite > 0 ? redondear(delMes - ajustes.limite) : 0;
+  if (exceso <= 0) { cerrarAlertaLimite(); return; }
+  // Ni sobre la pantalla de acceso ni mientras llegan los datos de la nube
+  if (!$('acceso').classList.contains('hidden') || document.documentElement.classList.contains('cargando-datos')) return;
+  const clave = `${mesActual}|${ajustes.limite}`;
+  let vista = null;
+  try { vista = sessionStorage.getItem(CLAVE_ALERTA_LIMITE); } catch {}
+  if (vista === clave) return;
+  try { sessionStorage.setItem(CLAVE_ALERTA_LIMITE, clave); } catch {}
+  mostrarAlertaLimite(delMes, exceso);
+}
+
+// Tras guardar un gasto: si el mes queda por encima del límite, avisa siempre
+function alertarSiSuperaLimite() {
+  const gastado = gastadoEsteMes();
+  const exceso = ajustes.limite > 0 ? redondear(gastado - ajustes.limite) : 0;
+  if (exceso > 0) mostrarAlertaLimite(gastado, exceso);
+}
+
+function mostrarAlertaLimite(gastado, exceso) {
+  $('alerta-limite-texto').textContent = `Llevas ${soles.format(gastado)} este mes, ${soles.format(exceso)} más que tu límite.`;
+  $('alerta-limite').classList.remove('hidden');
+  // La barra cuenta los 5 s; al terminar cierra el aviso (se pausa con el ratón encima o con foco)
+  const tiempo = $('alerta-limite-tiempo');
+  tiempo.classList.remove('corre');
+  void tiempo.offsetWidth;
+  tiempo.classList.add('corre');
+}
+
+function cerrarAlertaLimite() {
+  $('alerta-limite').classList.add('hidden');
+  $('alerta-limite-tiempo').classList.remove('corre');
 }
 
 function render() {

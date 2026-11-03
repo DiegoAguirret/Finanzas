@@ -12,6 +12,7 @@ form.addEventListener('submit', (e) => {
   guardar();
   salirEdicion();
   render();
+  alertarSiSuperaLimite();
   $('importe').focus();
 });
 
@@ -384,10 +385,8 @@ $('aj-limite').addEventListener('change', () => {
   guardarAjustes();
   render();
 });
-$('aviso-limite-cerrar').addEventListener('click', () => {
-  try { localStorage.setItem(CLAVE_AVISO_LIMITE, claveAvisoLimite(hoyISO().slice(0, 7))); } catch {}
-  $('aviso-limite').classList.add('hidden');
-});
+$('alerta-limite-cerrar').addEventListener('click', cerrarAlertaLimite);
+$('alerta-limite-tiempo').addEventListener('animationend', cerrarAlertaLimite);
 $('tar-sel').addEventListener('change', () => {
   tarSeleccion = $('tar-sel').value;
   pagoSugerido = null;

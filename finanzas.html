@@ -87,10 +87,6 @@
 
   <main class="container">
     <div class="mensaje hidden" id="aviso-carga" role="status">Cargando tus datos…</div>
-    <div class="mensaje error aviso-limite hidden" id="aviso-limite" role="status">
-      <span id="aviso-limite-texto"></span>
-      <button type="button" class="icon-btn solo-ico" id="aviso-limite-cerrar" data-ico="cerrar" aria-label="Cerrar aviso" title="Cerrar aviso"></button>
-    </div>
     <div class="mensaje error hidden" id="aviso-tc" role="status"></div>
     <div class="mensaje hidden" id="aviso-nube" role="status"></div>
     <!-- ===== Gastos ===== -->
@@ -1147,6 +1143,17 @@
 <div class="aviso-guardado hidden" id="sync-estado" role="status">
   <span id="sync-texto"></span>
   <button type="button" class="hidden" id="sync-reintentar">Reintentar</button>
+</div>
+
+<!-- Aviso emergente al superar el límite de gasto: se cierra solo a los 5 s -->
+<div class="alerta-limite hidden" id="alerta-limite" role="alert">
+  <span class="alerta-icono" data-ico="alerta"></span>
+  <div class="alerta-texto">
+    <strong>Superaste tu límite</strong>
+    <span id="alerta-limite-texto"></span>
+  </div>
+  <button type="button" class="icon-btn solo-ico" id="alerta-limite-cerrar" data-ico="cerrar" aria-label="Cerrar aviso" title="Cerrar aviso"></button>
+  <div class="alerta-tiempo" id="alerta-limite-tiempo"></div>
 </div>
 
 <div class="tooltip hidden" id="tooltip" role="tooltip"></div>
