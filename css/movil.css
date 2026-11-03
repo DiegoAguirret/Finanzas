@@ -154,7 +154,7 @@
   :is(#tabla-gastos, #tabla-movs) td[data-label="Fecha"] { grid-area: 2 / 2; font-size: .82rem; }
   :is(#tabla-gastos, #tabla-movs) td.acciones { grid-area: 2 / 3; display: flex; justify-content: flex-end; }
   :is(#tabla-gastos, #tabla-movs) td.acciones:empty { display: none; }
-  #tabla-gastos td[data-label="Pago"], #tabla-movs td[data-label="Tipo"] { display: none; }
+  #tabla-gastos td[data-label="Pago"] { display: none; }
   /* Agrupados por día, la fecha ya está en el encabezado: debajo va con qué se pagó */
   #tabla-gastos.agrupada td[data-label="Fecha"] { display: none; }
   #tabla-gastos.agrupada td[data-label="Pago"] { display: block; grid-area: 2 / 2; font-size: .82rem; white-space: normal; }

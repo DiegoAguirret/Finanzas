@@ -201,8 +201,6 @@ function renderBalance() {
   const { desde, hasta } = rangoBalance();
   const c = cifrasPeriodo(desde, hasta);
   const ingPeriodo = entre(ingresos, desde, hasta);
-  const gasPeriodo = gastosDeCuenta(desde, hasta);
-  const pagPeriodo = entre(pagos, desde, hasta);
   const pct = (n) => Math.round((n / c.ingresos) * 100) + ' %';
 
   // Tarjetas de resumen
@@ -272,31 +270,9 @@ function renderBalance() {
       texto.charAt(0).toUpperCase() + texto.slice(1), textoDeuda(deudaAl(hasta)));
   }
 
-  // Movimientos del periodo: ingresos, gastos y pagos de tarjeta juntos
-  const movs = [
-    ...ingPeriodo.map((i) => ({
-      fecha: i.fecha, descripcion: i.descripcion, tipo: 'Ingreso', importe: i.importe, moneda: i.moneda, ingreso: i,
-    })),
-    ...gasPeriodo.map((g) => ({
-      fecha: fechaDeCuenta(g),
-      descripcion: g.descripcion + (fechaDeCuenta(g) !== g.fecha ? ` (compra del ${fechaCorta(g.fecha)})` : ''),
-      tipo: 'Gasto · ' + nombreMedio(g.medio), importe: g.importe, moneda: g.moneda,
-    })),
-    ...saldos.filter(() => ajustes.compras === 'vence').map((s) => ({ s, fecha: venceSaldo(s) }))
-      .filter(({ fecha }) => fecha >= desde && fecha <= hasta).map(({ s, fecha }) => ({
-        fecha, descripcion: 'Deuda anterior de ' + tarjetaDe(s.tarjeta).nombre, tipo: 'Deuda anterior', importe: s.importe, moneda: s.moneda,
-      })),
-    ...pagPeriodo.map((x) => ({
-      fecha: x.fecha,
-      descripcion: 'Pago a ' + tarjetaDe(x.tarjeta).nombre + (x.moneda !== x.pagadoMoneda ? ` (tu deuda baja ${dinero(x.importe, x.moneda)})` : ''),
-      tipo: x.moneda === 'USD' ? 'Pago de tarjeta · deuda en dólares' : 'Pago de tarjeta',
-      importe: x.pagado, moneda: x.pagadoMoneda,
-    })),
-    ...entre(abonos, desde, hasta).map((x) => {
-      const d = deudaDe(x.deuda);
-      return { fecha: x.fecha, descripcion: 'Pago a ' + d.nombre, tipo: 'Pago de deuda', importe: x.importe, moneda: d.moneda };
-    }),
-  ].sort((x, y) => (x.fecha < y.fecha ? 1 : x.fecha > y.fecha ? -1 : 0));
+  // Solo los ingresos del periodo: los gastos ya están en Gastos, con su fecha de compra
+  const movs = ingPeriodo.map((i) => ({ fecha: i.fecha, descripcion: i.descripcion, importe: i.importe, moneda: i.moneda, ingreso: i }))
+    .sort((x, y) => (x.fecha < y.fecha ? 1 : x.fecha > y.fecha ? -1 : 0));
   const tbody = $('bal-movs');
   tbody.replaceChildren();
   for (const mov of movs) {
@@ -304,7 +280,6 @@ function renderBalance() {
     if (mov.ingreso && mov.ingreso.id === ingEditandoId) tr.classList.add('editando');
     celda(tr, 'Fecha', formatearFecha(mov.fecha), 'fecha');
     celda(tr, 'Descripción', mov.descripcion);
-    celda(tr, 'Tipo', mov.tipo, 'tipo');
     celda(tr, 'Importe', dinero(mov.importe, mov.moneda), 'num');
     const acciones = celda(tr, '', '', 'acciones');
     const i = mov.ingreso;
