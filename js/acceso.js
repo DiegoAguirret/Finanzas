@@ -85,7 +85,7 @@ function borrarCopiaLocal() {
   tarSeleccion = null;
   deuSeleccion = null;
   metSeleccion = null;
-  for (const clave of [CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_CATEGORIAS, CLAVE_AJUSTES, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_SALDOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO, CLAVE_DUENO]) {
+  for (const clave of [CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_CATEGORIAS, CLAVE_AJUSTES, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_SALDOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO, CLAVE_DUENO, CLAVE_AVISO_LIMITE]) {
     try { localStorage.removeItem(clave); } catch {}
   }
   escribirJSON(CLAVE_TC, tiposCambio);
@@ -266,16 +266,18 @@ async function iniciarNube() {
       await sincronizar();
       if (errorSync) throw errorSync;
     }
-    const unir = !dueno && [tarjetas, gastos, ingresos, pagos, deudas, metas].some((l) => l.length);
+    let unir = false;
     let nubeVacia = false;
     await conCandado(CANDADO_SYNC, async () => {
       const nube = await descargarDeLaNube();
       nubeVacia = ORDEN_TABLAS.every((t) => !nube[t].length);
       if (dueno === id) {
-        // Otra pestaña guardó mientras se descargaba: lo suyo se sube primero y no se pisa
+        // Se guardó algo mientras se descargaba: se sube primero y no se pisa
         recargarDeLocal();
         if (hayCambiosSinSubir()) { nubeLista = true; return; }
       }
+      // Se mira después de descargar: lo registrado durante la espera también se une
+      unir = dueno !== id && [tarjetas, gastos, ingresos, pagos, deudas, metas].some((l) => l.length);
       aplicarNube(nube, unir);
       escribirJSON(CLAVE_DUENO, id);
       escribirJSON(CLAVE_SINCRONIZADO, sincronizado);
@@ -285,9 +287,9 @@ async function iniciarNube() {
     ultimaDescarga = Date.now();
     actualizarPerfil();
     refrescarTodo();
-    if (unir) {
+    if (unir || hayCambiosSinSubir()) {
       await sincronizar();
-      if (!errorSync) {
+      if (unir && !errorSync) {
         avisoNube(nubeVacia
           ? 'Tus datos de este navegador se subieron a tu cuenta.'
           : 'Tus datos de este navegador se unieron a tu cuenta.');

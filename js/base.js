@@ -13,6 +13,7 @@ const CLAVE_ABONOS = 'finanzas.abonos';
 const CLAVE_METAS = 'finanzas.metas';
 const CLAVE_APORTES = 'finanzas.aportes';
 const CLAVE_SALDOS = 'finanzas.saldos';
+const CLAVE_AVISO_LIMITE = 'finanzas.aviso_limite';
 const CLAVE_INICIO = 'finanzas.inicio';
 const CLAVE_AJUSTES = 'finanzas.ajustes';
 // Trazos propios en una cuadrícula de 24 × 24 (ver .icono-cat en el CSS)

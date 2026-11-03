@@ -11,6 +11,7 @@
 
 create extension if not exists http with schema extensions;
 create extension if not exists pg_cron;
+create extension if not exists pg_net;
 
 -- ---------------------------------------------------------------------
 -- Tablas del usuario
@@ -296,6 +297,157 @@ grant select, insert, update, delete on public.tarjetas, public.gastos, public.i
   public.pagos, public.saldos, public.deudas, public.abonos, public.metas, public.aportes,
   public.tipos_cambio, public.preferencias to authenticated;
 grant select on public.tipos_cambio_bcrp to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- Alerta por correo al superar el límite de gasto del mes
+--
+-- Cada gasto nuevo de este mes que deje el total por encima de ajustes.limite envía un correo.
+-- Corregir o eliminar un gasto no envía nada. Sale por Brevo y necesita dos secretos en
+-- Supabase → Vault: correo_api_clave y correo_remitente (remitente verificado en Brevo).
+-- Sin ellos no se envía nada, y un fallo aquí nunca impide guardar el gasto.
+-- ---------------------------------------------------------------------
+
+-- Tope de correos por usuario y día: el cupo del proveedor es uno solo para todas las cuentas
+create table if not exists public.alertas_limite (
+  usuario uuid not null references auth.users on delete cascade,
+  dia date not null,
+  enviados smallint not null default 0,
+  primary key (usuario, dia)
+);
+alter table public.alertas_limite enable row level security;
+revoke all on public.alertas_limite from anon, authenticated;
+
+-- Total del mes en soles, igual que en la web (enSoles): dólares a la venta del banco de la tarjeta
+-- si tiene tipo de cambio; si no, BCRP; sin ninguno, no suman. Tasa: la última hasta esa fecha o,
+-- si no hay, la más antigua.
+create or replace function public.gastado_en_mes(u uuid, inicio date)
+returns numeric
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(sum(case when g.moneda = 'USD' then g.importe * coalesce(
+      (select c.venta from public.tipos_cambio c
+        where c.usuario = u and c.banco = t.banco
+        order by c.fecha > g.fecha, case when c.fecha <= g.fecha then c.fecha end desc nulls last, c.fecha
+        limit 1),
+      (select b.venta from public.tipos_cambio_bcrp b
+        order by b.fecha > g.fecha, case when b.fecha <= g.fecha then b.fecha end desc nulls last, b.fecha
+        limit 1),
+      0) else g.importe end), 0)
+  from public.gastos g
+  left join public.tarjetas t on t.id = g.tarjeta
+  where g.usuario = u and g.fecha >= inicio and g.fecha < (inicio + interval '1 month')::date;
+$$;
+
+create or replace function public.enviar_alerta_limite(u uuid, inicio date, hoy date)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  fuente constant text := 'font-family:''Segoe UI'',Roboto,Helvetica,Arial,sans-serif;';
+  web constant text := 'https://finanzas.prueba-go.workers.dev/#gastos';
+  tope constant smallint := 20;
+  aj jsonb;
+  limite numeric;
+  gastado numeric;
+  correo text;
+  nombre text;
+  clave text;
+  remitente text;
+  v_gastado text;
+  v_limite text;
+  v_exceso text;
+begin
+  select p.ajustes into aj from public.preferencias p where p.usuario = u;
+  if jsonb_typeof(aj -> 'limite') is distinct from 'number' then return; end if;
+  limite := (aj ->> 'limite')::numeric;
+  if limite <= 0 then return; end if;
+
+  gastado := public.gastado_en_mes(u, inicio);
+  if round(gastado - limite, 2) <= 0 then return; end if;
+
+  select a.email, split_part(trim(coalesce(a.raw_user_meta_data ->> 'full_name', '')), ' ', 1)
+    into correo, nombre
+    from auth.users a
+    where a.id = u and a.email_confirmed_at is not null;
+  if correo is null then return; end if;
+
+  select s.decrypted_secret into clave from vault.decrypted_secrets s where s.name = 'correo_api_clave';
+  select s.decrypted_secret into remitente from vault.decrypted_secrets s where s.name = 'correo_remitente';
+  if clave is null or remitente is null then return; end if;
+
+  insert into public.alertas_limite as al (usuario, dia, enviados) values (u, hoy, 1)
+    on conflict (usuario, dia) do update set enviados = al.enviados + 1 where al.enviados < tope;
+  if not found then return; end if;
+
+  -- El nombre lo escribe el usuario: se escapa antes de ponerlo en el HTML
+  nombre := replace(replace(replace(replace(nombre, '&', '&amp;'), '<', '&lt;'), '>', '&gt;'), '"', '&quot;');
+  v_gastado := 'S/ ' || to_char(gastado, 'FM999,999,999,990.00');
+  v_limite := 'S/ ' || to_char(limite, 'FM999,999,999,990.00');
+  v_exceso := 'S/ ' || to_char(gastado - limite, 'FM999,999,999,990.00');
+
+  perform net.http_post(
+    url := 'https://api.brevo.com/v3/smtp/email',
+    headers := jsonb_build_object('api-key', clave, 'Content-Type', 'application/json', 'Accept', 'application/json'),
+    body := jsonb_build_object(
+      'sender', jsonb_build_object('name', 'Mis Finanzas', 'email', remitente),
+      'to', jsonb_build_array(jsonb_build_object('email', correo)),
+      'subject', 'Superaste tu límite de gasto de este mes',
+      'textContent', format(E'Hola%s:\n\nEste mes llevas %s en gastos y tu límite es %s. Te pasaste por %s.\n\nRevisa tu historial para ver en qué se fue: %s\n\nTe llegó porque fijaste este límite en Mis Finanzas. Puedes cambiarlo o quitarlo en Ajustes.',
+        case when nombre <> '' then ' ' || nombre else '' end, v_gastado, v_limite, v_exceso, web),
+      'htmlContent', format($html$<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Superaste tu límite</title></head>
+<body style="margin:0;padding:0;background-color:#f3f8f5;"><table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f8f5;"><tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;background-color:#ffffff;border:1px solid #dde9e3;border-radius:16px;">
+<tr><td style="padding:32px 32px 0;%1$sfont-size:18px;font-weight:700;color:#064e3b;">Mis Finanzas</td></tr>
+<tr><td style="padding:20px 32px 0;%1$sfont-size:24px;line-height:30px;font-weight:700;color:#1f2333;">Hola%2$s, superaste tu límite del mes</td></tr>
+<tr><td style="padding:10px 32px 0;%1$sfont-size:16px;line-height:24px;color:#3f4a45;">Llevas <strong>%3$s</strong> en gastos y tu límite es %4$s: te pasaste por <strong>%5$s</strong>. Revisa tu historial para ver en qué se fue.</td></tr>
+<tr><td style="padding:24px 32px 0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#047857" style="border-radius:10px;"><a href="%6$s" style="display:inline-block;padding:14px 26px;%1$sfont-size:16px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:10px;">Revisar mi historial</a></td></tr></table></td></tr>
+<tr><td style="padding:24px 32px 32px;%1$sfont-size:14px;line-height:21px;color:#5f7169;">Te llegó porque fijaste este límite. Puedes cambiarlo o quitarlo en Ajustes.</td></tr>
+</table></td></tr></table></body></html>$html$,
+        fuente, case when nombre <> '' then ' ' || nombre else '' end, v_gastado, v_limite, v_exceso, web)
+    )
+  );
+end;
+$$;
+
+create or replace function public.avisar_limite_superado()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  hoy constant date := (now() at time zone 'America/Lima')::date;
+  inicio constant date := date_trunc('month', hoy)::date;
+  u uuid;
+begin
+  -- Por sentencia: subir muchos gastos juntos (importar, unir datos) envía un solo correo
+  for u in
+    select distinct n.usuario from nuevos n
+    where n.fecha >= inicio and n.fecha < (inicio + interval '1 month')::date
+  loop
+    begin
+      perform public.enviar_alerta_limite(u, inicio, hoy);
+    exception when others then
+      raise log 'alerta de límite: no se pudo enviar (%)', sqlerrm;
+    end;
+  end loop;
+  return null;
+end;
+$$;
+
+revoke all on function public.gastado_en_mes(uuid, date) from public, anon, authenticated;
+revoke all on function public.enviar_alerta_limite(uuid, date, date) from public, anon, authenticated;
+revoke all on function public.avisar_limite_superado() from public, anon, authenticated;
+
+drop trigger if exists alerta_limite on public.gastos;
+create trigger alerta_limite after insert on public.gastos
+  referencing new table as nuevos
+  for each statement execute function public.avisar_limite_superado();
 
 -- ---------------------------------------------------------------------
 -- Tipo de cambio del BCRP (serie "TC Sistema bancario SBS", S/ por US$)

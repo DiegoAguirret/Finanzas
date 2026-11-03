@@ -157,14 +157,31 @@ function etiquetaTarjeta(t) {
 
 // Gastos del mes frente a los ingresos del mes
 function pintarResumenMes(delMes, mesActual) {
-  const ingMes = sumar(ingresos.filter((i) => i.fecha.startsWith(mesActual)));
+  const limite = ajustes.limite;
+  // La barra se mide contra el límite si el usuario eligió uno; si no, contra los ingresos del mes
+  const tope = limite > 0 ? limite : sumar(ingresos.filter((i) => i.fecha.startsWith(mesActual)));
   $('mes').textContent = soles.format(delMes);
-  const pct = ingMes > 0 ? Math.round(delMes / ingMes * 100) : 0;
-  $('mes-detalle').classList.toggle('hidden', !(ingMes > 0));
+  const pct = tope > 0 ? Math.round(delMes / tope * 100) : 0;
+  $('mes-detalle').classList.toggle('hidden', !(tope > 0));
   $('mes-barra').style.width = `${Math.min(pct, 100)}%`;
-  $('mes-de').textContent = `De ${soles.format(ingMes)}`;
+  $('mes-de').textContent = `${limite > 0 ? 'Límite' : 'De'} ${soles.format(tope)}`;
   $('mes-pct').textContent = `${pct} %`;
   $('mes-detalle').classList.toggle('excedido', pct > 100);
+  pintarAvisoLimite(delMes, mesActual);
+}
+
+// Aviso visible en todos los apartados. Al cerrarlo no vuelve ese mes con ese límite, en este navegador.
+function claveAvisoLimite(mesActual) {
+  return `${mesActual}|${ajustes.limite}`;
+}
+
+function pintarAvisoLimite(delMes, mesActual) {
+  const exceso = redondear(delMes - ajustes.limite);
+  let cerrado = null;
+  try { cerrado = localStorage.getItem(CLAVE_AVISO_LIMITE); } catch {}
+  const ver = ajustes.limite > 0 && exceso > 0 && cerrado !== claveAvisoLimite(mesActual);
+  $('aviso-limite').classList.toggle('hidden', !ver);
+  if (ver) $('aviso-limite-texto').textContent = `Superaste tu límite de ${soles.format(ajustes.limite)} por ${soles.format(exceso)}.`;
 }
 
 function render() {

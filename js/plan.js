@@ -4,7 +4,13 @@
 // ---- Preferencias de cálculo ----
 function ajustesValidos(x) {
   const saldo = redondear(Number(x?.saldoInicial));
-  return { compras: x?.compras === 'compra' ? 'compra' : 'vence', saldoInicial: Number.isFinite(saldo) ? saldo : 0, plan: planValido(x?.plan) };
+  const limite = redondear(Number(x?.limite));
+  return {
+    compras: x?.compras === 'compra' ? 'compra' : 'vence',
+    saldoInicial: Number.isFinite(saldo) ? saldo : 0,
+    limite: limite > 0 ? limite : 0, // gasto máximo al mes en soles; 0 = sin límite
+    plan: planValido(x?.plan),
+  };
 }
 
 // ---- Plan: reglas generales para organizar el dinero. No recomienda productos ni inversiones ----

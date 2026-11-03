@@ -371,6 +371,15 @@ $('aj-saldo').addEventListener('change', () => {
   guardarAjustes();
   render();
 });
+$('aj-limite').addEventListener('change', () => {
+  ajustes = ajustesValidos({ ...ajustes, limite: $('aj-limite').value });
+  guardarAjustes();
+  render();
+});
+$('aviso-limite-cerrar').addEventListener('click', () => {
+  try { localStorage.setItem(CLAVE_AVISO_LIMITE, claveAvisoLimite(hoyISO().slice(0, 7))); } catch {}
+  $('aviso-limite').classList.add('hidden');
+});
 $('tar-sel').addEventListener('change', () => {
   tarSeleccion = $('tar-sel').value;
   pagoSugerido = null;

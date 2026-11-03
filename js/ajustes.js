@@ -31,6 +31,7 @@ function renderAjustes() {
   }
   for (const r of document.querySelectorAll('input[name="aj-compras"]')) r.checked = r.value === ajustes.compras;
   if (document.activeElement !== $('aj-saldo')) $('aj-saldo').value = ajustes.saldoInicial || '';
+  if (document.activeElement !== $('aj-limite')) $('aj-limite').value = ajustes.limite || '';
   pintarEjemplosCompras();
   for (const nombre of ['cuenta', 'apariencia', 'preferencias', 'categorias', 'datos']) $('aj-' + nombre).classList.toggle('activo', nombre === ajusteActual);
   if (ajusteActual === 'categorias') renderCategorias();
