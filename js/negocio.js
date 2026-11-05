@@ -117,13 +117,22 @@ function fijarOpcionNegocio(nombre, valor) {
   pintarCanalNegocio();
 }
 
-const fijarTipoNegocio = (tipo) => fijarOpcionNegocio('neg-tipo', tipo);
+function fijarTipoNegocio(tipo) {
+  verTiposNegocio = false;
+  fijarOpcionNegocio('neg-tipo', tipo);
+}
 
-// El canal solo se pregunta en las ventas; los productos, en ventas y compras de mercadería
+// Al elegir Venta, la cuadrícula de tipos deja su sitio a «← Venta», el canal y los productos;
+// la flecha vuelve a mostrar los tipos. Los productos también salen en mercadería.
+let verTiposNegocio = false;
+
 function pintarCanalNegocio() {
   const tipo = tipoNegocioElegido();
-  $('neg-canal-campo').classList.toggle('hidden', tipo !== 'venta');
-  $('neg-productos-campo').classList.toggle('hidden', tipo !== 'venta' && tipo !== 'mercaderia');
+  const modoVenta = tipo === 'venta' && !verTiposNegocio;
+  $('neg-tipo-campo').classList.toggle('hidden', modoVenta);
+  $('neg-venta-cabecera').classList.toggle('hidden', !modoVenta);
+  $('neg-canal-campo').classList.toggle('hidden', !modoVenta);
+  $('neg-productos-campo').classList.toggle('hidden', !modoVenta && tipo !== 'mercaderia');
 }
 
 // Productos: tocar uno lo pone como descripción; con «Editar», tocarlo lo quita de la lista
@@ -354,7 +363,36 @@ function renderNegocio() {
 
 crearOpcionesNegocio('neg-tipo', TIPOS_NEGOCIO);
 crearOpcionesNegocio('neg-canal', CANALES_NEGOCIO);
+$('neg-venta-cabecera').append(etiquetaTipoNegocio('venta'));
+// Un toque en un tipo (también en Venta, aunque ya estuviera elegida) cierra la cuadrícula.
+// Con las flechas del teclado la cuadrícula sigue a la vista; la barra espaciadora en Venta la cierra.
+function abrirModoVenta() {
+  verTiposNegocio = false;
+  pintarCanalNegocio();
+  if (tipoNegocioElegido() === 'venta') $('neg-volver-tipo').focus();
+}
+let tipoConPuntero = false;
+$('neg-tipo').addEventListener('pointerdown', () => { tipoConPuntero = true; });
+$('neg-tipo').addEventListener('click', (e) => {
+  if (!(e.target instanceof HTMLInputElement)) return;
+  const puntero = tipoConPuntero;
+  tipoConPuntero = false;
+  if (puntero) return abrirModoVenta();
+  verTiposNegocio = true;
+  pintarCanalNegocio();
+});
+$('neg-tipo').addEventListener('keydown', (e) => {
+  if (e.key !== ' ' || e.target.value !== 'venta') return;
+  e.preventDefault();
+  e.target.checked = true;
+  abrirModoVenta();
+});
 $('neg-tipo').addEventListener('change', pintarCanalNegocio);
+$('neg-volver-tipo').addEventListener('click', () => {
+  verTiposNegocio = true;
+  pintarCanalNegocio();
+  document.querySelector('input[name="neg-tipo"]:checked')?.focus();
+});
 $('neg-descripcion').addEventListener('input', pintarProductos);
 $('neg-producto-anadir').addEventListener('click', anadirProducto);
 // Enter en el nombre añade el producto, no guarda el movimiento

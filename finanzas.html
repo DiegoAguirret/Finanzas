@@ -1003,9 +1003,12 @@
                 <select id="neg-moneda" aria-label="Moneda del movimiento"><option value="PEN">S/</option><option value="USD">US$</option></select>
               </div>
             </div>
-            <div class="campo-ancho">
+            <div class="campo-ancho" id="neg-tipo-campo">
               <span class="etiqueta" id="neg-tipo-titulo">Tipo</span>
               <div class="selector-cat" id="neg-tipo" role="radiogroup" aria-labelledby="neg-tipo-titulo"></div>
+            </div>
+            <div class="campo-ancho venta-cabecera hidden" id="neg-venta-cabecera">
+              <button type="button" class="icon-btn solo-ico" id="neg-volver-tipo" data-ico="atras" aria-label="Elegir otro tipo" title="Elegir otro tipo"></button>
             </div>
             <div class="campo-ancho" id="neg-canal-campo">
               <span class="etiqueta" id="neg-canal-titulo">Dónde vendiste</span>

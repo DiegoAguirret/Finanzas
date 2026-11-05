@@ -80,6 +80,7 @@ const ICONOS_UI = {
   eliminar: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5',
   ver: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z' + circulo(12, 12, 3),
   ocultar: 'M6 15l6-6 6 6',
+  atras: 'M15 5l-7 7 7 7',
   'no-ver': 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7zM4 4l16 16' + circulo(12, 12, 3),
   filtro: 'M4 5h16l-6 8v6l-4-2v-4z',
   salir: 'M10 5H5v14h5M14 8l4 4-4 4M18 12H9',
