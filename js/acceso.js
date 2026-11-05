@@ -81,11 +81,12 @@ function borrarCopiaLocal() {
   saldos = [];
   metas = [];
   aportes = [];
+  negocio = [];
   sincronizado = {};
   tarSeleccion = null;
   deuSeleccion = null;
   metSeleccion = null;
-  for (const clave of [CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_CATEGORIAS, CLAVE_AJUSTES, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_SALDOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO, CLAVE_DUENO, CLAVE_ULTIMO_MEDIO]) {
+  for (const clave of [CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_CATEGORIAS, CLAVE_AJUSTES, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_SALDOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_NEGOCIO, CLAVE_SINCRONIZADO, CLAVE_DUENO, CLAVE_ULTIMO_MEDIO]) {
     try { localStorage.removeItem(clave); } catch {}
   }
   escribirJSON(CLAVE_TC, tiposCambio);
@@ -277,7 +278,7 @@ async function iniciarNube() {
         if (hayCambiosSinSubir()) { nubeLista = true; return; }
       }
       // Se mira después de descargar: lo registrado durante la espera también se une
-      unir = dueno !== id && [tarjetas, gastos, ingresos, pagos, deudas, metas].some((l) => l.length);
+      unir = dueno !== id && [tarjetas, gastos, ingresos, pagos, deudas, metas, negocio].some((l) => l.length);
       aplicarNube(nube, unir);
       escribirJSON(CLAVE_DUENO, id);
       escribirJSON(CLAVE_SINCRONIZADO, sincronizado);
@@ -319,6 +320,7 @@ function guardarCopiaLocal() {
   guardarDeudas();
   guardarSaldos();
   guardarMetas();
+  guardarNegocio();
 }
 
 // Trae lo que cambió en otro dispositivo (al volver a la pestaña, como mucho una vez por minuto)
@@ -376,6 +378,7 @@ function refrescarTodo() {
   if (salEditandoIds.length && !saldos.some((x) => salEditandoIds.includes(x.id))) salirEdicionSaldo();
   if (deuEditandoId && !deudaDe(deuEditandoId)) salirEdicionDeuda();
   if (metEditandoId && !metaDe(metEditandoId)) salirEdicionMeta();
+  if (negEditandoId && !negocio.some((x) => x.id === negEditandoId)) salirEdicionNegocio();
   poblarMedios();
   poblarCategorias();
   render();

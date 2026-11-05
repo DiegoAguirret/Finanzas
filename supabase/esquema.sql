@@ -155,6 +155,19 @@ create table if not exists public.aportes (
   creado timestamptz not null default now()
 );
 
+-- Negocio: ventas, inversión y gastos del negocio, separados de las finanzas personales
+create table if not exists public.negocio (
+  id uuid primary key default gen_random_uuid(),
+  usuario uuid not null default auth.uid() references auth.users on delete cascade,
+  tipo text not null check (tipo in ('venta', 'otro_ingreso', 'inversion', 'mercaderia', 'publicidad', 'personal',
+    'alquiler', 'servicios', 'transporte', 'comisiones', 'impuestos', 'otro_gasto')),
+  descripcion text not null check (char_length(descripcion) between 1 and 100),
+  importe numeric(12, 2) not null check (importe > 0),
+  moneda text not null default 'PEN' check (moneda in ('PEN', 'USD')),
+  fecha date not null,
+  creado timestamptz not null default now()
+);
+
 -- Tipo de cambio oficial del sistema bancario (BCRP), común a todos
 create table if not exists public.tipos_cambio_bcrp (
   fecha date primary key,
@@ -177,6 +190,7 @@ create index if not exists abonos_deuda on public.abonos (deuda);
 create index if not exists metas_usuario on public.metas (usuario);
 create index if not exists aportes_usuario_fecha on public.aportes (usuario, fecha);
 create index if not exists aportes_meta on public.aportes (meta);
+create index if not exists negocio_usuario_fecha on public.negocio (usuario, fecha);
 
 -- ---------------------------------------------------------------------
 -- Seguridad (Row Level Security)
@@ -194,6 +208,7 @@ alter table public.deudas enable row level security;
 alter table public.abonos enable row level security;
 alter table public.metas enable row level security;
 alter table public.aportes enable row level security;
+alter table public.negocio enable row level security;
 
 -- La tarjeta indicada (si hay) debe ser del mismo usuario
 create or replace function public.tarjeta_propia(t uuid)
@@ -285,16 +300,20 @@ create policy "propios" on public.aportes for all to authenticated
   using (usuario = (select auth.uid()))
   with check (usuario = (select auth.uid()) and public.meta_propia(meta));
 
+drop policy if exists "propios" on public.negocio;
+create policy "propios" on public.negocio for all to authenticated
+  using (usuario = (select auth.uid())) with check (usuario = (select auth.uid()));
+
 drop policy if exists "lectura publica" on public.tipos_cambio_bcrp;
 create policy "lectura publica" on public.tipos_cambio_bcrp for select to anon, authenticated
   using (true);
 
 revoke all on public.tarjetas, public.gastos, public.ingresos, public.pagos, public.saldos,
-  public.deudas, public.abonos, public.metas, public.aportes,
+  public.deudas, public.abonos, public.metas, public.aportes, public.negocio,
   public.tipos_cambio, public.preferencias, public.tipos_cambio_bcrp from anon;
 grant select, insert, update, delete on public.tarjetas, public.gastos, public.ingresos,
   public.pagos, public.saldos, public.deudas, public.abonos, public.metas, public.aportes,
-  public.tipos_cambio, public.preferencias to authenticated;
+  public.negocio, public.tipos_cambio, public.preferencias to authenticated;
 grant select on public.tipos_cambio_bcrp to anon, authenticated;
 
 -- ---------------------------------------------------------------------

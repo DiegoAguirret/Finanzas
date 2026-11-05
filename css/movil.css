@@ -143,17 +143,17 @@
   .filtros-extra { display: none; }
   .filtros-extra.abierto { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .filtros-extra select:last-child { grid-column: 1 / -1; }
-  :is(#tabla-gastos, #tabla-movs) tbody tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0 12px; align-items: center; padding: 12px 0; margin: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
-  :is(#tabla-gastos, #tabla-movs) tbody tr:last-child { border-bottom: 0; }
-  :is(#tabla-gastos, #tabla-movs) td { display: block; width: auto; padding: 0; text-align: left; }
-  :is(#tabla-gastos, #tabla-movs) td::before { display: none; }
-  #tabla-gastos td[data-label="Categoría"] { grid-area: 1 / 1 / 3 / 2; }
-  #tabla-gastos .cat-chip span:last-child { display: none; }
-  :is(#tabla-gastos, #tabla-movs) td[data-label="Descripción"] { grid-area: 1 / 2; font-weight: 600; overflow-wrap: anywhere; }
-  :is(#tabla-gastos, #tabla-movs) td[data-label="Importe"] { grid-area: 1 / 3; text-align: right; }
-  :is(#tabla-gastos, #tabla-movs) td[data-label="Fecha"] { grid-area: 2 / 2; font-size: .82rem; }
-  :is(#tabla-gastos, #tabla-movs) td.acciones { grid-area: 2 / 3; display: flex; justify-content: flex-end; }
-  :is(#tabla-gastos, #tabla-movs) td.acciones:empty { display: none; }
+  :is(#tabla-gastos, #tabla-movs, #neg-tabla) tbody tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0 12px; align-items: center; padding: 12px 0; margin: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
+  :is(#tabla-gastos, #tabla-movs, #neg-tabla) tbody tr:last-child { border-bottom: 0; }
+  :is(#tabla-gastos, #tabla-movs, #neg-tabla) td { display: block; width: auto; padding: 0; text-align: left; }
+  :is(#tabla-gastos, #tabla-movs, #neg-tabla) td::before { display: none; }
+  :is(#tabla-gastos td[data-label="Categoría"], #neg-tabla td[data-label="Tipo"]) { grid-area: 1 / 1 / 3 / 2; }
+  :is(#tabla-gastos, #neg-tabla) .cat-chip span:last-child { display: none; }
+  :is(#tabla-gastos, #tabla-movs, #neg-tabla) td[data-label="Descripción"] { grid-area: 1 / 2; font-weight: 600; overflow-wrap: anywhere; }
+  :is(#tabla-gastos, #tabla-movs, #neg-tabla) td:is([data-label="Importe"], [data-label="Monto"]) { grid-area: 1 / 3; text-align: right; }
+  :is(#tabla-gastos, #tabla-movs, #neg-tabla) td[data-label="Fecha"] { grid-area: 2 / 2; font-size: .82rem; }
+  :is(#tabla-gastos, #tabla-movs, #neg-tabla) td.acciones { grid-area: 2 / 3; display: flex; justify-content: flex-end; }
+  :is(#tabla-gastos, #tabla-movs, #neg-tabla) td.acciones:empty { display: none; }
   #tabla-gastos td[data-label="Pago"] { display: none; }
   /* Agrupados por día, la fecha ya está en el encabezado: debajo va con qué se pagó */
   #tabla-gastos.agrupada td[data-label="Fecha"] { display: none; }

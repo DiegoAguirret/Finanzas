@@ -4,7 +4,7 @@
 // ---- Cambios sin guardar ----
 // Un formulario queda «sucio» si lo escrito difiere de cómo estaba antes de empezar a escribir.
 // Salir de él (apartado, hoja, sesión, recarga) pide confirmar; si se acepta, lo escrito se pierde.
-const FORMS_CONTROLADOS = ['form', 'ing-form', 'tar-form', 'tc-form', 'pago-form', 'sal-form', 'deu-form', 'abo-form', 'met-form', 'apo-form', 'cat-form', 'cuenta-form'];
+const FORMS_CONTROLADOS = ['form', 'ing-form', 'tar-form', 'tc-form', 'pago-form', 'sal-form', 'deu-form', 'abo-form', 'met-form', 'apo-form', 'neg-form', 'cat-form', 'cuenta-form'];
 const sucios = new Set();
 const basesForm = {};
 
@@ -105,6 +105,7 @@ function renderVista() {
   if (vistaActual === 'simulador') renderSimulador();
   if (vistaActual === 'deudas') renderDeudas();
   if (vistaActual === 'ahorro') renderAhorro();
+  if (vistaActual === 'negocio') renderNegocio();
   if (vistaActual === 'plan') renderPlan();
   if (vistaActual === 'datos') renderAjustes();
 }
@@ -132,6 +133,7 @@ function mostrarVista() {
   if (vistaActual !== 'ingresos') mensajeBalance('');
   if (vistaActual !== 'deudas') avisar('deu-msg', '');
   if (vistaActual !== 'ahorro') avisar('aho-msg', '');
+  if (vistaActual !== 'negocio') avisar('neg-msg', '');
   ocultarTip();
   renderVista();
   cerrarMenuMovil();

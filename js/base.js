@@ -13,6 +13,7 @@ const CLAVE_ABONOS = 'finanzas.abonos';
 const CLAVE_METAS = 'finanzas.metas';
 const CLAVE_APORTES = 'finanzas.aportes';
 const CLAVE_SALDOS = 'finanzas.saldos';
+const CLAVE_NEGOCIO = 'finanzas.negocio';
 const CLAVE_ALERTA_LIMITE = 'finanzas.alerta_limite'; // en sessionStorage: el aviso al abrir sale una vez por sesión
 const CLAVE_ULTIMO_MEDIO = 'finanzas.ultimo_medio'; // lo más probable es que se repita: se propone en el siguiente gasto
 const CLAVE_INICIO = 'finanzas.inicio';
@@ -47,6 +48,10 @@ const ICONOS = {
   tarjeta: 'M3 6h18v12H3zM3 10h18M7 15h3',
   banco: 'M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18',
   persona: circulo(12, 8, 4) + 'M5 20c1-4 4-6 7-6s6 2 7 6',
+  megafono: 'M4 10v4h3l8 5V5l-8 5zM18 9a4 4 0 0 1 0 6M7 14l1.5 5H11l-1-5',
+  camion: 'M3 6h11v10H3zM14 10h4l3 3v3h-7' + circulo(7, 18, 1.8) + circulo(17, 18, 1.8),
+  documento: 'M6 3h9l4 4v14H6zM15 3v4h4M9 12h6M9 16h6',
+  crecer: 'M3 17l6-6 4 4 8-8M15 7h6v6',
   otros: circulo(5, 12, 1.5) + circulo(12, 12, 1.5) + circulo(19, 12, 1.5),
 };
 // Íconos de la interfaz (navegación y acciones); los de categorías, metas y deudas están en ICONOS
@@ -56,6 +61,7 @@ const ICONOS_UI = {
   dashboard: 'M5 20V11M12 20V4M19 20v-6M2 20h20',
   tarjeta: ICONOS.tarjeta,
   deudas: ICONOS.banco,
+  negocio: ICONOS.trabajo,
   ahorro: 'M4 7c0-2.5 16-2.5 16 0s-16 2.5-16 0zM4 7v5c0 2.5 16 2.5 16 0V7M4 12v5c0 2.5 16 2.5 16 0v-5',
   plan: circulo(12, 12, 9) + circulo(12, 12, 5) + circulo(12, 12, 1),
   simulador: 'M4 7h10M18 7h2M4 17h2M10 17h10M14 5h4v4h-4zM6 15h4v4H6z',
@@ -92,8 +98,8 @@ const CATEGORIA_FIJA = 'Otros'; // recibe los gastos de las categorías eliminad
 // Medios de pago fijos; además, cada tarjeta es un medio cuya clave es el id de la tarjeta
 const MEDIOS_FIJOS = { efectivo: 'Efectivo', debito: 'Débito / transferencia', yape: 'Yape', plin: 'Plin', credito: 'Otro medio de pago' };
 const MEDIO_OTRO = 'credito'; // clave histórica: así está guardado en la base; siempre va al final de la lista
-const VISTAS = ['gastos', 'ingresos', 'dashboard', 'tarjeta', 'deudas', 'ahorro', 'plan', 'simulador', 'datos'];
-const NOMBRES_VISTAS = { gastos: 'Gastos', ingresos: 'Ingresos', dashboard: 'Resumen', tarjeta: 'Tarjetas', deudas: 'Deudas', ahorro: 'Ahorro', plan: 'Plan', simulador: 'Simular', datos: 'Ajustes' };
+const VISTAS = ['gastos', 'ingresos', 'dashboard', 'tarjeta', 'deudas', 'ahorro', 'negocio', 'plan', 'simulador', 'datos'];
+const NOMBRES_VISTAS = { gastos: 'Gastos', ingresos: 'Ingresos', dashboard: 'Resumen', tarjeta: 'Tarjetas', deudas: 'Deudas', ahorro: 'Ahorro', negocio: 'Negocio', plan: 'Plan', simulador: 'Simular', datos: 'Ajustes' };
 // Vistas con un formulario que en celular se abre como hoja: [formulario, texto del botón, primer campo]
 const HOJAS = {
   gastos: ['form', 'Añadir gasto', 'importe'],
@@ -101,6 +107,7 @@ const HOJAS = {
   tarjeta: ['tar-form', 'Añadir tarjeta', 'tar-nombre'],
   deudas: ['deu-form', 'Añadir deuda', 'deu-nombre'],
   ahorro: ['met-form', 'Añadir meta', 'met-nombre'],
+  negocio: ['neg-form', 'Añadir movimiento', 'neg-importe'],
 };
 const soles = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' });
 const decimales = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -119,6 +126,7 @@ let deudas = [];
 let abonos = [];
 let metas = [];
 let aportes = [];
+let negocio = []; // Movimientos del negocio: { id, tipo, descripcion, importe, moneda, fecha }
 let saldos = []; // Deuda anterior de tarjetas: { id, tarjeta, fecha (corte del ciclo en que se paga), moneda, importe }
 let ajustes = { compras: 'vence' }; // compras con tarjeta: se restan al vencer su pago o el día de la compra
 let editandoId = null;

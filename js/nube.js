@@ -79,9 +79,15 @@ const TABLAS = {
     deFila: (f) => aporteValido(f),
     poner: (l) => { aportes = l; },
   },
+  negocio: {
+    lista: () => negocio,
+    aFila: (m) => ({ id: m.id, tipo: m.tipo, descripcion: m.descripcion, importe: m.importe, moneda: m.moneda, fecha: m.fecha }),
+    deFila: (f) => movimientoNegocioValido(f),
+    poner: (l) => { negocio = l; },
+  },
 };
 // Las tablas padre antes que lo que las usa
-const ORDEN_TABLAS = ['tarjetas', 'gastos', 'ingresos', 'pagos', 'saldos', 'deudas', 'abonos', 'metas', 'aportes'];
+const ORDEN_TABLAS = ['tarjetas', 'gastos', 'ingresos', 'pagos', 'saldos', 'deudas', 'abonos', 'metas', 'aportes', 'negocio'];
 
 const ERRORES_ACCESO = {
   invalid_credentials: 'Correo o contraseña incorrectos.',

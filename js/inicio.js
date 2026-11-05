@@ -25,6 +25,7 @@ poblarCategorias();
 salirEdicion();
 salirEdicionDeuda();
 salirEdicionMeta();
+salirEdicionNegocio();
 salirEdicionCategoria();
 iniciarFormularios();
 pintarIconos();

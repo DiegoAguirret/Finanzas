@@ -578,6 +578,7 @@ tbody tr.editando { background: var(--accent-soft); }
 .objetivo-acciones { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 2px; margin-left: -10px; }
 .progreso { height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; }
 .progreso div { height: 100%; border-radius: 4px; background: var(--accent); }
+#neg-recupero { margin-top: 10px; }
 .form-movimiento { margin-bottom: 16px; }
 .num { text-align: right; }
 

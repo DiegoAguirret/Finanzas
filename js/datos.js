@@ -74,7 +74,7 @@ function normalizarIds() {
 }
 
 $('exp-json').addEventListener('click', () => {
-  descargar(`finanzas-${hoyISO()}.json`, JSON.stringify({ gastos, ingresos, tarjetas, pagos, categorias, ajustes, saldos, deudas, abonos, metas, aportes, tiposCambio: { bcp: tiposCambio.bcp, interbank: tiposCambio.interbank } }, null, 2), 'application/json');
+  descargar(`finanzas-${hoyISO()}.json`, JSON.stringify({ gastos, ingresos, tarjetas, pagos, categorias, ajustes, saldos, deudas, abonos, metas, aportes, negocio, tiposCambio: { bcp: tiposCambio.bcp, interbank: tiposCambio.interbank } }, null, 2), 'application/json');
   mensajeDatos(`Exportados ${gastos.length} gastos, ${ingresos.length} ingresos, ${tarjetas.length} tarjetas y ${pagos.length} pagos de tarjeta en JSON.`);
 });
 
@@ -140,6 +140,11 @@ function hojasExcel() {
       nombre: 'Aportes',
       columnas: [col('Fecha', 'fecha', 12), col('Meta', 'texto', 28), col('Moneda', 'texto', 9), col('Importe (negativo = retiro)', 'importe', 26)],
       filas: orden(aportes).map((a) => [a.fecha, metaDe(a.meta)?.nombre ?? '', metaDe(a.meta)?.moneda ?? '', a.importe]),
+    },
+    {
+      nombre: 'Negocio',
+      columnas: [col('Fecha', 'fecha', 12), col('Tipo', 'texto', 16), col('Descripción', 'texto', 34), col('Moneda', 'texto', 9), col('Importe', 'importe', 13), col('En soles', 'importe', 13)],
+      filas: orden(negocio).map((m) => [m.fecha, TIPOS_NEGOCIO[m.tipo].nombre, m.descripcion, m.moneda, m.importe, redondear(negocioEnSoles(m)) || null]),
     },
   ];
 }
@@ -216,7 +221,7 @@ $('imp-archivo').addEventListener('change', async (e) => {
     }
     // En orden: las deudas y metas antes que sus movimientos
     let nuevosObjetivos = 0;
-    for (const t of ['saldos', 'deudas', 'abonos', 'metas', 'aportes']) {
+    for (const t of ['saldos', 'deudas', 'abonos', 'metas', 'aportes', 'negocio']) {
       const ids = new Set(TABLAS[t].lista().map((x) => x.id));
       for (const item of Array.isArray(datos?.[t]) ? datos[t] : []) {
         const x = TABLAS[t].deFila(item);
@@ -230,6 +235,7 @@ $('imp-archivo').addEventListener('change', async (e) => {
       guardarSaldos();
       guardarDeudas();
       guardarMetas();
+      guardarNegocio();
     }
     for (const banco of ['bcp', 'interbank']) {
       for (const item of Array.isArray(datos?.tiposCambio?.[banco]) ? datos.tiposCambio[banco] : []) {
@@ -249,7 +255,7 @@ $('imp-archivo').addEventListener('change', async (e) => {
       nuevosIngresos && contar(nuevosIngresos, 'ingreso', 'ingresos'),
       nuevasTarjetas && contar(nuevasTarjetas, 'tarjeta', 'tarjetas'),
       nuevosPagos && contar(nuevosPagos, 'pago de tarjeta', 'pagos de tarjeta'),
-      nuevosObjetivos && contar(nuevosObjetivos, 'registro de deudas y metas', 'registros de deudas y metas'),
+      nuevosObjetivos && contar(nuevosObjetivos, 'registro de deudas, metas o negocio', 'registros de deudas, metas o negocio'),
     ].filter(Boolean);
     mensajeDatos((partes.length
       ? 'Importados ' + (partes.length > 1 ? partes.slice(0, -1).join(', ') + ' y ' + partes.at(-1) : partes[0])

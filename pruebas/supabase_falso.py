@@ -30,7 +30,7 @@ LIMITE_FILAS = 1000  # como el max_rows de Supabase
 
 usuarios = {}   # correo → {id, clave, confirmado}
 tokens = {}     # token → id de usuario
-tablas = {t: {} for t in ['tarjetas', 'gastos', 'ingresos', 'pagos', 'saldos', 'deudas', 'abonos', 'metas', 'aportes', 'tipos_cambio', 'preferencias']}
+tablas = {t: {} for t in ['tarjetas', 'gastos', 'ingresos', 'pagos', 'saldos', 'deudas', 'abonos', 'metas', 'aportes', 'negocio', 'tipos_cambio', 'preferencias']}
 BCRP = [
     {"fecha": "2026-10-23", "compra": 3.431, "venta": 3.437},
     {"fecha": "2026-10-26", "compra": 3.446, "venta": 3.453},

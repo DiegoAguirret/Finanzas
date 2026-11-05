@@ -21,7 +21,7 @@ RAIZ = pathlib.Path(__file__).resolve().parent.parent
 PUERTO = 8765
 RUTAS = [
     re.compile(r'^auth/v1/(signup|token|logout|user|settings|authorize|recover)$'),
-    re.compile(r'^rest/v1/(tarjetas|gastos|ingresos|pagos|saldos|deudas|abonos|metas|aportes|tipos_cambio|preferencias|tipos_cambio_bcrp)$'),
+    re.compile(r'^rest/v1/(tarjetas|gastos|ingresos|pagos|saldos|deudas|abonos|metas|aportes|negocio|tipos_cambio|preferencias|tipos_cambio_bcrp)$'),
 ]
 CABECERAS_ENTRADA = ['authorization', 'content-type', 'prefer', 'range', 'accept']
 CABECERAS_SALIDA = ['content-type', 'content-range', 'location', 'preference-applied']

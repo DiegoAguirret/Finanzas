@@ -277,7 +277,7 @@ addEventListener('storage', (e) => {
     pintarColorNavegador();
     renderVista();
   }
-  if (![CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_TC, CLAVE_SIM, CLAVE_CATEGORIAS, CLAVE_AJUSTES, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_SALDOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_SINCRONIZADO].includes(e.key)) return;
+  if (![CLAVE, CLAVE_INGRESOS, CLAVE_TARJETAS, CLAVE_PAGOS, CLAVE_TC, CLAVE_SIM, CLAVE_CATEGORIAS, CLAVE_AJUSTES, CLAVE_DEUDAS, CLAVE_ABONOS, CLAVE_SALDOS, CLAVE_METAS, CLAVE_APORTES, CLAVE_NEGOCIO, CLAVE_SINCRONIZADO].includes(e.key)) return;
   // Un guardado puede tocar varias claves seguidas: se repinta una sola vez
   clearTimeout(esperaPestana);
   esperaPestana = setTimeout(() => {
@@ -423,4 +423,5 @@ function pintarFecha() {
   // Un gasto o un ingreso no puede tener fecha futura
   $('fecha').max = hoyISO();
   $('ing-fecha').max = hoyISO();
+  $('neg-fecha').max = hoyISO();
 }

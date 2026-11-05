@@ -53,6 +53,7 @@ function cargarObjetivos() {
   saldos = lista(CLAVE_SALDOS, saldoValido);
   metas = lista(CLAVE_METAS, metaValida);
   aportes = lista(CLAVE_APORTES, aporteValido);
+  cargarNegocio();
 }
 
 function guardarDeudas() {
