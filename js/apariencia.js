@@ -44,7 +44,7 @@ function aplicarPaleta(paleta) {
   renderVista(); // los gráficos se repintan con los colores nuevos
 }
 
-const FONDOS = { liso: 'Liso', degradado: 'Degradado', navidad: 'Navidad' };
+const FONDOS = { liso: 'Liso', degradado: 'Degradado', navidad: 'Navidad', nochebuena: 'Nochebuena', luces: 'Luces' };
 
 function aplicarFondo(fondo) {
   document.documentElement.dataset.fondo = fondo;

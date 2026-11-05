@@ -15,7 +15,7 @@
   // Fondo elegido en Ajustes (liso, si no se eligió ninguno)
   let fondo = null;
   try { fondo = localStorage.getItem('finanzas.fondo'); } catch {}
-  document.documentElement.dataset.fondo = ['degradado', 'navidad'].includes(fondo) ? fondo : 'liso';
+  document.documentElement.dataset.fondo = ['degradado', 'navidad', 'nochebuena', 'luces'].includes(fondo) ? fondo : 'liso';
   // Barra lateral oculta (solo en pantallas anchas; en móvil siempre empieza cerrada)
   try {
     if (localStorage.getItem('finanzas.menu') === 'oculto') document.documentElement.dataset.menu = 'oculto';
