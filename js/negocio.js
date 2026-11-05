@@ -1,24 +1,21 @@
-// Negocio: ventas, inversión y gastos de un negocio, separados de las finanzas personales
+// Negocio: ventas y gastos de un negocio, separados de las finanzas personales
 'use strict';
 
 // ---- Negocio ----
-// Tipos al estilo de las apps para pequeños negocios: lo que entra (ventas), lo que se invierte
-// para arrancar o crecer (equipos, local, primer stock) y los gastos de cada mes.
-// La ganancia = entradas − gastos; la inversión se recupera con la ganancia acumulada.
+// Pocos tipos y sin solaparse: lo que entra (ventas) y lo que sale (gastos). Todo lo que sale es
+// lo que pones en el negocio; se recupera cuando lo vendido desde el inicio lo iguala.
+// Ganancia = entradas − gastos.
 const TIPOS_NEGOCIO = {
   venta: { nombre: 'Venta', grupo: 'entrada', icono: 'dinero', color: 'verde' },
-  inversion: { nombre: 'Inversión', grupo: 'inversion', icono: 'crecer', color: 'indigo' },
   mercaderia: { nombre: 'Mercadería', grupo: 'gasto', icono: 'compras', color: 'ambar' },
   publicidad: { nombre: 'Publicidad', grupo: 'gasto', icono: 'megafono', color: 'rosa' },
-  personal: { nombre: 'Personal', grupo: 'gasto', icono: 'persona', color: 'violeta' },
-  alquiler: { nombre: 'Alquiler', grupo: 'gasto', icono: 'casa', color: 'azul' },
-  servicios: { nombre: 'Servicios', grupo: 'gasto', icono: 'luz', color: 'naranja' },
   transporte: { nombre: 'Envíos', grupo: 'gasto', icono: 'camion', color: 'cian' },
   comisiones: { nombre: 'Comisiones', grupo: 'gasto', icono: 'banco', color: 'gris' },
-  impuestos: { nombre: 'Impuestos', grupo: 'gasto', icono: 'documento', color: 'rojo' },
   otro_gasto: { nombre: 'Otro gasto', grupo: 'gasto', icono: 'otros', color: 'gris' },
   otro_ingreso: { nombre: 'Otro ingreso', grupo: 'entrada', icono: 'regalo', color: 'verde' },
 };
+// Tipos que ya no se ofrecen (se solapaban): pasan a «Otro gasto» con su nombre como descripción
+const TIPOS_NEGOCIO_ANTIGUOS = { inversion: 'Inversión', personal: 'Personal', alquiler: 'Alquiler', servicios: 'Servicios', impuestos: 'Impuestos' };
 // Dónde se hizo la venta (solo para el tipo Venta); sin elegir, «Otro»
 const CANALES_NEGOCIO = {
   mercadolibre: { nombre: 'Mercado Libre', icono: 'apreton', color: 'ambar' },
@@ -31,6 +28,10 @@ const CANALES_NEGOCIO = {
 let negEditandoId = null, limiteNegocio = TAM_LISTA;
 
 function movimientoNegocioValido(m) {
+  if (Object.hasOwn(TIPOS_NEGOCIO_ANTIGUOS, m?.tipo ?? '')) {
+    const desc = typeof m.descripcion === 'string' ? m.descripcion.trim() : '';
+    m = { ...m, tipo: 'otro_gasto', descripcion: desc || TIPOS_NEGOCIO_ANTIGUOS[m.tipo] };
+  }
   const importe = redondear(Number(m?.importe));
   if (!Object.hasOwn(TIPOS_NEGOCIO, m?.tipo) || !(importe > 0) || !fechaValida(m.fecha)) return null;
   const descripcion = (typeof m.descripcion === 'string' ? m.descripcion.trim().slice(0, 100) : '') || TIPOS_NEGOCIO[m.tipo].nombre;
@@ -54,7 +55,7 @@ function negocioEnSoles(m) {
 }
 
 function cifrasNegocio(lista) {
-  const c = { ventas: 0, gastos: 0, inversion: 0, porTipo: {}, porCanal: {} };
+  const c = { ventas: 0, gastos: 0, porTipo: {}, porCanal: {} };
   for (const m of lista) {
     const s = negocioEnSoles(m);
     const grupo = TIPOS_NEGOCIO[m.tipo].grupo;
@@ -62,7 +63,6 @@ function cifrasNegocio(lista) {
       c.ventas += s;
       if (m.canal) c.porCanal[m.canal] = (c.porCanal[m.canal] || 0) + s;
     }
-    else if (grupo === 'inversion') c.inversion += s;
     else {
       c.gastos += s;
       c.porTipo[m.tipo] = (c.porTipo[m.tipo] || 0) + s;
@@ -70,7 +70,6 @@ function cifrasNegocio(lista) {
   }
   c.ventas = redondear(c.ventas);
   c.gastos = redondear(c.gastos);
-  c.inversion = redondear(c.inversion);
   c.ganancia = redondear(c.ventas - c.gastos);
   return c;
 }
@@ -266,18 +265,18 @@ function renderNegocio() {
   $('neg-ganancia-sub').textContent = sinTasa ? 'Sin tipo de cambio: faltan los dólares'
     : c.ventas > 0 ? `${Math.round((c.ganancia / c.ventas) * 100)}% de lo que vendes` : '';
 
-  // La inversión se mira desde el inicio: se recupera con la ganancia de todos los meses
-  $('neg-inversion').textContent = soles.format(total.inversion);
+  // Lo invertido se mira desde el inicio: todo lo que pusiste, recuperado con lo que vendiste
+  $('neg-inversion').textContent = soles.format(total.gastos);
   const barra = $('neg-recupero');
-  barra.classList.toggle('hidden', !total.inversion);
-  if (total.inversion) {
-    const fraccion = Math.max(0, total.ganancia) / total.inversion;
-    $('neg-inversion-sub').textContent = fraccion >= 1 ? 'Ya la recuperaste'
-      : `Recuperaste ${soles.format(Math.max(0, total.ganancia))} (${Math.floor(fraccion * 100)}%)`;
+  barra.classList.toggle('hidden', !total.gastos);
+  if (total.gastos) {
+    const fraccion = total.ventas / total.gastos;
+    $('neg-inversion-sub').textContent = fraccion >= 1 ? 'Ya lo recuperaste'
+      : `Recuperaste ${soles.format(total.ventas)} (${Math.floor(fraccion * 100)}%)`;
     barra.firstElementChild.style.width = Math.min(100, fraccion * 100) + '%';
     barra.firstElementChild.classList.toggle('ok', fraccion >= 1);
   } else {
-    $('neg-inversion-sub').textContent = 'Sin inversión registrada';
+    $('neg-inversion-sub').textContent = 'Desde el inicio';
   }
   // Lo marcado «Para mi negocio» en tus gastos y en la deuda anterior de tus tarjetas
   const bolsillo = redondear(sumar(gastos.filter((g) => g.negocio)) +
@@ -355,13 +354,12 @@ function renderNegocio() {
     celda(tr, 'Ventas', soles.format(h.ventas), 'num');
     celda(tr, 'Gastos', soles.format(h.gastos), 'num');
     celda(tr, 'Ganancia', montoConSigno(h.ganancia, true), 'num');
-    celda(tr, 'Inversión', soles.format(h.inversion), 'num');
     cuerpoMeses.append(tr);
   }
   if (!meses.length) {
     const tr = document.createElement('tr');
     const td = celda(tr, '', 'Aún no hay movimientos.');
-    td.colSpan = 5;
+    td.colSpan = 4;
     cuerpoMeses.append(tr);
   }
 }
