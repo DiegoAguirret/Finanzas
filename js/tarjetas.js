@@ -653,7 +653,6 @@ function salirEdicionSaldo() {
 
 function renderSaldos(t) {
   const lista = saldosDe(t);
-  $('sal-negocio-campo').classList.toggle('hidden', !usaNegocio());
   // Se elige la tarjeta aquí mismo; las fechas salen del corte y el pago de la elegida
   $('sal-tarjeta').replaceChildren(...tarjetas.map((x) => new Option(x.nombre, x.id)));
   $('sal-tarjeta').value = t.id;

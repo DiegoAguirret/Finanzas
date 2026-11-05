@@ -248,7 +248,7 @@ function normalizarGastos() {
 // el Resumen, el Plan ni el simulador; en el ahorro se suma de vuelta como «Para tu negocio»)
 const personales = (lista) => lista.filter((g) => !g.negocio);
 
-// El campo solo aparece a quien usa el apartado Negocio (o ya marcó algo)
+// En los gastos, el campo solo aparece a quien usa el apartado Negocio o ya marcó algo (en la deuda anterior, siempre)
 function usaNegocio() {
   return negocio.length > 0 || gastos.some((g) => g.negocio) || saldos.some((s) => s.negocio);
 }
