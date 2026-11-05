@@ -603,6 +603,13 @@ td.num .chip-negocio { margin: 0 8px 0 0; }
 .producto.nuevo { border-style: dashed; color: var(--muted); }
 .producto.quitar { border-color: var(--danger); color: var(--danger); }
 @media (hover: hover) and (pointer: fine) { .producto:hover { background: var(--accent-soft); } .producto.quitar:hover { background: var(--danger-soft); } }
+.producto-stock { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--text); font-size: .75rem; font-weight: 600; text-align: center; }
+.producto-stock.mal { background: var(--danger-soft); color: var(--danger); }
+.cantidad-producto { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.cantidad-producto label { margin: 0; }
+.cantidad-producto input { width: 110px; }
+#neg-stock td.fuerte { font-weight: 700; }
+#neg-stock td.mal { color: var(--danger); }
 .producto-nuevo { display: flex; gap: 6px; margin-top: 8px; }
 .producto-nuevo input { flex: 1; min-width: 0; }
 .boton-enlace { border: 0; background: none; color: var(--accent); font: inherit; font-size: .8rem; cursor: pointer; }

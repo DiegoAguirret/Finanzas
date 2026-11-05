@@ -36,7 +36,10 @@ function movimientoNegocioValido(m) {
   if (!Object.hasOwn(TIPOS_NEGOCIO, m?.tipo) || !(importe > 0) || !fechaValida(m.fecha)) return null;
   const descripcion = (typeof m.descripcion === 'string' ? m.descripcion.trim().slice(0, 100) : '') || TIPOS_NEGOCIO[m.tipo].nombre;
   const canal = m.tipo !== 'venta' ? null : Object.hasOwn(CANALES_NEGOCIO, m.canal ?? '') ? m.canal : 'otro';
-  return { id: idValido(m), tipo: m.tipo, canal, descripcion, importe, moneda: m.moneda === 'USD' ? 'USD' : 'PEN', fecha: m.fecha };
+  // Unidades de un producto: compradas (mercadería) o vendidas (venta); llevan el stock
+  const n = Number(m.cantidad);
+  const cantidad = (m.tipo === 'venta' || m.tipo === 'mercaderia') && Number.isInteger(n) && n >= 1 && n <= 99999 ? n : null;
+  return { id: idValido(m), tipo: m.tipo, canal, descripcion, importe, moneda: m.moneda === 'USD' ? 'USD' : 'PEN', fecha: m.fecha, cantidad };
 }
 
 function cargarNegocio() {
@@ -134,17 +137,43 @@ function pintarCanalNegocio() {
   $('neg-productos-campo').classList.toggle('hidden', !modoVenta && tipo !== 'mercaderia');
 }
 
+// Stock de cada producto de la lista: unidades compradas (mercadería) menos vendidas, desde el inicio
+function productoDe(descripcion) {
+  const d = descripcion.trim().toLowerCase();
+  return ajustes.productos.find((x) => x.toLowerCase() === d) ?? null;
+}
+
+function stockProductos() {
+  const stock = new Map(ajustes.productos.map((p) => [p, { compraste: 0, vendiste: 0 }]));
+  for (const m of negocio) {
+    const p = m.cantidad && productoDe(m.descripcion);
+    if (!p) continue;
+    stock.get(p)[m.tipo === 'venta' ? 'vendiste' : 'compraste'] += m.cantidad;
+  }
+  for (const s of stock.values()) s.quedan = s.compraste - s.vendiste;
+  return stock;
+}
+
 // Productos: tocar uno lo pone como descripción; con «Editar», tocarlo lo quita de la lista
 let editandoProductos = false;
 
 function pintarProductos() {
   const desc = $('neg-descripcion').value.trim().toLowerCase();
   const caja = $('neg-productos');
+  const stock = stockProductos();
   caja.replaceChildren(...ajustes.productos.map((nombre) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'producto' + (editandoProductos ? ' quitar' : '');
     b.textContent = nombre;
+    const s = stock.get(nombre);
+    if (!editandoProductos && s.compraste) {
+      const quedan = document.createElement('span');
+      quedan.className = 'producto-stock' + (s.quedan < 0 ? ' mal' : '');
+      quedan.textContent = s.quedan;
+      quedan.title = `Te quedan ${s.quedan}`;
+      b.append(quedan);
+    }
     b.setAttribute('aria-pressed', String(!editandoProductos && desc === nombre.toLowerCase()));
     if (editandoProductos) {
       b.append(icono('cerrar'));
@@ -181,6 +210,8 @@ function pintarProductos() {
     });
     caja.append(nuevo);
   }
+  // La cantidad solo se pide con un producto elegido
+  $('neg-cantidad-campo').classList.toggle('hidden', editandoProductos || !productoDe($('neg-descripcion').value));
   const editar = $('neg-productos-editar');
   editar.classList.toggle('hidden', !ajustes.productos.length);
   editar.textContent = editandoProductos ? 'Listo' : 'Editar';
@@ -238,6 +269,7 @@ function editarNegocio(m) {
   fijarOpcionNegocio('neg-canal', m.canal || 'otro');
   fijarTipoNegocio(m.tipo);
   $('neg-descripcion').value = m.descripcion === TIPOS_NEGOCIO[m.tipo].nombre ? '' : m.descripcion;
+  $('neg-cantidad').value = m.cantidad ?? '';
   $('neg-fecha').value = m.fecha;
   $('neg-form-titulo').textContent = 'Editar movimiento';
   $('neg-guardar').textContent = 'Guardar cambios';
@@ -292,7 +324,7 @@ function renderNegocio() {
     const tr = document.createElement('tr');
     if (m.id === negEditandoId) tr.classList.add('editando');
     celda(tr, 'Fecha', formatearFecha(m.fecha), 'fecha');
-    celda(tr, 'Descripción', m.descripcion);
+    celda(tr, 'Descripción', m.cantidad ? `${m.descripcion} × ${m.cantidad}` : m.descripcion);
     celda(tr, 'Tipo', etiquetaTipoNegocio(m.tipo, m.canal));
     const entra = TIPOS_NEGOCIO[m.tipo].grupo === 'entrada';
     celda(tr, 'Monto', entra ? montoConSigno(m.importe, true, m.moneda) : conSigno(-m.importe, m.moneda), 'num');
@@ -313,6 +345,23 @@ function renderNegocio() {
   $('neg-ver-mas').textContent = `Ver más (${restantes})`;
   $('neg-tabla').classList.toggle('hidden', !lista.length);
   $('neg-vacio').classList.toggle('hidden', lista.length > 0);
+
+  // Stock: solo los productos de los que registraste compras
+  const cuerpoStock = $('neg-stock');
+  cuerpoStock.replaceChildren();
+  for (const [nombre, s] of stockProductos()) {
+    if (!s.compraste) continue;
+    const tr = document.createElement('tr');
+    celda(tr, 'Producto', nombre);
+    celda(tr, 'Compraste', String(s.compraste), 'num');
+    celda(tr, 'Vendiste', String(s.vendiste), 'num');
+    const quedan = celda(tr, 'Te quedan', String(s.quedan), 'num');
+    quedan.classList.add('fuerte');
+    if (s.quedan < 0) quedan.classList.add('mal');
+    cuerpoStock.append(tr);
+  }
+  $('neg-tabla-stock').classList.toggle('hidden', !cuerpoStock.children.length);
+  $('neg-stock-vacio').classList.toggle('hidden', cuerpoStock.children.length > 0);
 
   // Dónde se vende, de mayor a menor
   const canales = Object.entries(c.porCanal).sort((a, b) => b[1] - a[1]);
@@ -417,8 +466,10 @@ $('neg-form').addEventListener('submit', (e) => {
   const m = movimientoNegocioValido({
     id: negEditandoId || nuevoId(), tipo: tipoNegocioElegido(), canal: canalNegocioElegido(), descripcion: $('neg-descripcion').value,
     importe: $('neg-importe').value, moneda: $('neg-moneda').value, fecha,
+    cantidad: productoDe($('neg-descripcion').value) ? Number($('neg-cantidad').value || 1) : null,
   });
   if (!m) return avisar('neg-msg', 'Revisa el monto y la fecha.', true);
+  if (productoDe(m.descripcion) && !m.cantidad && (m.tipo === 'venta' || m.tipo === 'mercaderia')) return avisar('neg-msg', 'Revisa la cantidad.', true);
   const actual = negocio.find((x) => x.id === negEditandoId);
   if (actual) Object.assign(actual, m);
   else negocio.push(m);

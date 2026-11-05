@@ -1031,6 +1031,10 @@
                 <input id="neg-producto-nombre" maxlength="60" placeholder="Nombre del producto" aria-label="Nombre del producto">
                 <button type="button" class="btn-secondary" id="neg-producto-anadir">Añadir</button>
               </div>
+              <div class="cantidad-producto hidden" id="neg-cantidad-campo">
+                <label for="neg-cantidad">Cantidad</label>
+                <input id="neg-cantidad" type="number" min="1" max="99999" step="1" inputmode="numeric" placeholder="1">
+              </div>
             </div>
             <div class="campo-par">
               <label for="neg-descripcion">Descripción (opcional)</label>
@@ -1047,6 +1051,13 @@
           </form>
         </section>
       </div>
+      <section class="card plegable"><details data-escritorio><summary><h2>Stock</h2></summary>
+        <table id="neg-tabla-stock">
+          <thead><tr><th>Producto</th><th class="num">Compraste</th><th class="num">Vendiste</th><th class="num">Te quedan</th></tr></thead>
+          <tbody id="neg-stock"></tbody>
+        </table>
+        <div class="vacio hidden" id="neg-stock-vacio">Aún no registras compras de productos.</div>
+      </details></section>
       <section class="card plegable"><details data-escritorio><summary><h2>Dónde vendes</h2></summary>
         <table id="neg-tabla-canales">
           <thead><tr><th>Canal</th><th class="num">Ventas</th><th class="num">Parte</th></tr></thead>

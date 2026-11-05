@@ -201,6 +201,8 @@ alter table public.negocio add column if not exists canal text;
 alter table public.negocio drop constraint if exists negocio_canal_check;
 alter table public.negocio add constraint negocio_canal_check
   check (canal in ('mercadolibre', 'marketplace', 'instagram', 'web', 'tiktok', 'otro'));
+-- Unidades de un producto compradas (mercadería) o vendidas (venta): llevan el stock
+alter table public.negocio add column if not exists cantidad integer check (cantidad between 1 and 99999);
 
 -- ---------------------------------------------------------------------
 -- Seguridad (Row Level Security)

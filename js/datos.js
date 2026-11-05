@@ -144,8 +144,8 @@ function hojasExcel() {
     },
     {
       nombre: 'Negocio',
-      columnas: [col('Fecha', 'fecha', 12), col('Tipo', 'texto', 16), col('Canal', 'texto', 16), col('Descripción', 'texto', 34), col('Moneda', 'texto', 9), col('Importe', 'importe', 13), col('En soles', 'importe', 13)],
-      filas: orden(negocio).map((m) => [m.fecha, TIPOS_NEGOCIO[m.tipo].nombre, m.canal ? CANALES_NEGOCIO[m.canal].nombre : '', m.descripcion, m.moneda, m.importe, redondear(negocioEnSoles(m)) || null]),
+      columnas: [col('Fecha', 'fecha', 12), col('Tipo', 'texto', 16), col('Canal', 'texto', 16), col('Descripción', 'texto', 34), col('Cantidad', 'numero', 10), col('Moneda', 'texto', 9), col('Importe', 'importe', 13), col('En soles', 'importe', 13)],
+      filas: orden(negocio).map((m) => [m.fecha, TIPOS_NEGOCIO[m.tipo].nombre, m.canal ? CANALES_NEGOCIO[m.canal].nombre : '', m.descripcion, m.cantidad, m.moneda, m.importe, redondear(negocioEnSoles(m)) || null]),
     },
   ];
 }
