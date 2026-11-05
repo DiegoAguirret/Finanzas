@@ -164,7 +164,7 @@ function fechaDeCuenta(g) {
 function saldoValido(s) {
   const importe = redondear(Number(s?.importe));
   if (!tarjetaDe(s?.tarjeta) || !(importe > 0) || !fechaValida(s.fecha)) return null;
-  return { id: idValido(s), tarjeta: s.tarjeta, fecha: s.fecha, moneda: s.moneda === 'USD' ? 'USD' : 'PEN', importe };
+  return { id: idValido(s), tarjeta: s.tarjeta, fecha: s.fecha, moneda: s.moneda === 'USD' ? 'USD' : 'PEN', importe, negocio: s.negocio === true };
 }
 
 function guardarSaldos() {
@@ -183,7 +183,7 @@ function venceSaldo(s) {
 function saldosDeCuenta(desde, hasta) {
   if (ajustes.compras !== 'vence') return [];
   return saldos
-    .map((s) => ({ importe: s.importe, moneda: s.moneda, categoria: '', medio: s.tarjeta, fecha: venceSaldo(s) }))
+    .map((s) => ({ importe: s.importe, moneda: s.moneda, categoria: '', medio: s.tarjeta, fecha: venceSaldo(s), negocio: s.negocio }))
     .filter((x) => x.fecha >= desde && x.fecha <= hasta);
 }
 
@@ -614,7 +614,7 @@ let salEditandoIds = [];
 
 // Pagos iguales en ciclos seguidos (las cuotas) se muestran y corrigen como un solo registro
 function gruposSaldos(t) {
-  const clave = (s) => `${s.moneda}|${s.importe}`;
+  const clave = (s) => `${s.moneda}|${s.importe}|${s.negocio}`;
   const orden = [...saldosDe(t)].sort((x, y) => (clave(x) < clave(y) ? -1 : clave(x) > clave(y) ? 1 : x.fecha < y.fecha ? -1 : 1));
   const grupos = [];
   for (const s of orden) {
@@ -631,6 +631,7 @@ function editarSaldo(grupo) {
   $('sal-moneda').value = grupo[0].moneda;
   $('sal-cuotas').value = grupo.length;
   $('sal-vence').value = grupo[0].fecha;
+  $('sal-negocio').checked = grupo[0].negocio;
   $('sal-guardar').textContent = 'Guardar cambios';
   $('sal-cancelar').classList.remove('hidden');
   renderSaldos(tarjetaDe(grupo[0].tarjeta));
@@ -645,12 +646,14 @@ function salirEdicionSaldo() {
   delete basesForm['sal-form'];
   $('sal-importe').value = '';
   $('sal-cuotas').value = '1';
+  $('sal-negocio').checked = false;
   $('sal-guardar').textContent = 'Añadir deuda anterior';
   $('sal-cancelar').classList.add('hidden');
 }
 
 function renderSaldos(t) {
   const lista = saldosDe(t);
+  $('sal-negocio-campo').classList.toggle('hidden', !usaNegocio());
   // Se elige la tarjeta aquí mismo; las fechas salen del corte y el pago de la elegida
   $('sal-tarjeta').replaceChildren(...tarjetas.map((x) => new Option(x.nombre, x.id)));
   $('sal-tarjeta').value = t.id;
@@ -681,7 +684,8 @@ function renderSaldos(t) {
     const tr = document.createElement('tr');
     if (salEditandoIds.includes(s.id)) tr.classList.add('editando');
     celda(tr, 'Se paga hasta', n > 1 ? `${formatearFecha(venceSaldo(s))} – ${formatearFecha(venceSaldo(grupo[n - 1]))} · ${n} pagos` : formatearFecha(venceSaldo(s)), 'fecha');
-    celda(tr, 'Monto', dinero(s.importe, s.moneda) + (n > 1 ? ' c/u' : ''), 'num');
+    const monto = celda(tr, 'Monto', dinero(s.importe, s.moneda) + (n > 1 ? ' c/u' : ''), 'num');
+    if (s.negocio) monto.prepend(chipNegocio());
     const acciones = celda(tr, '', '', 'acciones');
     const ids = grupo.map((x) => x.id);
     acciones.append(boton('Editar', 'Editar deuda anterior', () => editarSaldo(grupo)), botonEliminar('Eliminar deuda anterior', () => {

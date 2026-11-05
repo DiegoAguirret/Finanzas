@@ -40,6 +40,7 @@ function gastoValido(g) {
     categoria: (typeof g.categoria === 'string' && !(g.categoria.trim() in Object.prototype) && g.categoria.trim().slice(0, 30)) || CATEGORIA_FIJA,
     medio: medioValido(g.medio),
     fecha: g.fecha,
+    negocio: g.negocio === true,
   };
 }
 
@@ -98,8 +99,8 @@ function hojasExcel() {
     },
     {
       nombre: 'Gastos',
-      columnas: [col('Fecha', 'fecha', 12), col('Descripción', 'texto', 34), col('Categoría', 'texto', 18), col('Medio de pago', 'texto', 24), col('Moneda', 'texto', 9), col('Importe', 'importe', 13), col('En soles', 'importe', 13), col('Cuenta en tu ahorro el', 'fecha', 21)],
-      filas: orden(gastos).map((g) => [g.fecha, g.descripcion, g.categoria, nombreMedio(g.medio), g.moneda, g.importe, soles(g), fechaDeCuenta(g)]),
+      columnas: [col('Fecha', 'fecha', 12), col('Descripción', 'texto', 34), col('Categoría', 'texto', 18), col('Medio de pago', 'texto', 24), col('Moneda', 'texto', 9), col('Importe', 'importe', 13), col('En soles', 'importe', 13), col('Cuenta en tu ahorro el', 'fecha', 21), col('Para tu negocio', 'texto', 15)],
+      filas: orden(gastos).map((g) => [g.fecha, g.descripcion, g.categoria, nombreMedio(g.medio), g.moneda, g.importe, soles(g), fechaDeCuenta(g), g.negocio ? 'Sí' : '']),
     },
     {
       nombre: 'Ingresos',
@@ -113,8 +114,8 @@ function hojasExcel() {
     },
     {
       nombre: 'Deuda anterior',
-      columnas: [col('Tarjeta', 'texto', 26), col('Se paga hasta', 'fecha', 14), col('Moneda', 'texto', 9), col('Monto', 'importe', 13)],
-      filas: saldos.map((s) => [tarjetaDe(s.tarjeta)?.nombre ?? '', venceSaldo(s), s.moneda, s.importe]),
+      columnas: [col('Tarjeta', 'texto', 26), col('Se paga hasta', 'fecha', 14), col('Moneda', 'texto', 9), col('Monto', 'importe', 13), col('Para tu negocio', 'texto', 15)],
+      filas: saldos.map((s) => [tarjetaDe(s.tarjeta)?.nombre ?? '', venceSaldo(s), s.moneda, s.importe, s.negocio ? 'Sí' : '']),
     },
     {
       nombre: 'Tarjetas',

@@ -133,6 +133,9 @@
               <label for="fecha">Fecha</label>
               <input id="fecha" type="date" required>
             </div>
+            <div class="campo-ancho hidden" id="negocio-campo">
+              <label class="check-negocio"><input type="checkbox" id="para-negocio"><span data-ico="negocio"></span>Para mi negocio</label>
+            </div>
             <div class="acciones-form">
               <button type="submit" class="btn-primary" id="btn-guardar">Añadir gasto</button>
               <button type="button" class="btn-secondary hidden" id="btn-cancelar">Cancelar</button>
@@ -536,6 +539,9 @@
             <div id="sal-cuotas-campo">
               <label for="sal-cuotas">Número de pagos</label>
               <input id="sal-cuotas" type="number" min="1" max="60" step="1" value="1" required>
+            </div>
+            <div class="hidden" id="sal-negocio-campo">
+              <label class="check-negocio"><input type="checkbox" id="sal-negocio"><span data-ico="negocio"></span>Para mi negocio</label>
             </div>
             <div class="acciones-form">
               <button type="submit" class="btn-primary" id="sal-guardar">Añadir deuda anterior</button>
@@ -979,6 +985,7 @@
           <div class="label">Inversión</div>
           <div class="valor" id="neg-inversion">S/ 0.00</div>
           <div class="sub" id="neg-inversion-sub"></div>
+          <div class="sub hidden" id="neg-bolsillo"></div>
           <div class="progreso hidden" id="neg-recupero"><div></div></div>
         </div>
       </div>

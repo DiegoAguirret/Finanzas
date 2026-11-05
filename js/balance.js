@@ -89,15 +89,17 @@ function cifrasPeriodo(desde, hasta) {
   const ing = entre(ingresos, desde, hasta);
   const pag = entre(pagos, desde, hasta);
   const abo = entre(abonos, desde, hasta);
+  const personal = personales(gas);
   const conT = gas.filter((g) => tarjetaDe(g.medio));
   const sinT = gas.filter((g) => !tarjetaDe(g.medio));
   const en = (lista, m) => lista.reduce((s, x) => s + (x.moneda === m ? x.importe : 0), 0);
   const pagadoEn = (m) => pag.reduce((s, x) => s + (x.pagadoMoneda === m ? x.pagado : 0), 0);
   const c = {
     ingresos: redondear(sumar(ing)),
-    gastos: redondear(sumar(gas)),
+    gastos: redondear(sumar(personal)),
+    negocio: redondear(sumar(gas.filter((g) => g.negocio))), // pagado por ti para el negocio: no es gasto personal
     conTarjeta: redondear(sumar(conT)),
-    porVencer: redondear(sumar(comprasTarjeta.filter((g) => fechaDeCuenta(g) > hasta))),
+    porVencer: redondear(sumar(personales(comprasTarjeta).filter((g) => fechaDeCuenta(g) > hasta))),
     sinTarjeta: redondear(sumar(sinT)),
     pagos: redondear(pag.reduce((s, x) => s + pagoEnSoles(x), 0)),
     abonos: redondear(abo.reduce((s, x) => s + abonoEnSoles(x), 0)),
@@ -257,8 +259,9 @@ function renderBalance() {
     if (c.abonos) filaCuadre(cuadre2, 'Pagos a otras deudas', 'No son gasto', conSigno(c.abonos));
   } else {
     filaCuadre(cuadre2, 'Ingresos', '', conSigno(c.ingresos));
-    filaCuadre(cuadre2, 'Gastos', '', conSigno(-c.gastos));
+    filaCuadre(cuadre2, 'Gastos', '', conSigno(-(c.gastos + c.negocio)));
   }
+  if (c.negocio) filaCuadre(cuadre2, 'Para tu negocio', 'No es gasto personal', conSigno(c.negocio));
   filaCuadre(cuadre2, 'Ahorro del periodo', '', montoConSigno(c.ahorro, true), true);
   filaCuadre(cuadre2, 'Venía de antes', '', conSigno(antes));
   filaCuadre(cuadre2, 'Saldo acumulado', '', montoConSigno(acumulado, true), true);

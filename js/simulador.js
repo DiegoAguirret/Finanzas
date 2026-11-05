@@ -24,7 +24,7 @@ function basesDesdeRegistros() {
   const ultimos = [0, 1, 2].map((i) => isoMes(new Date(a, m - 1 - i, 1)));
   const suma = {};
   const conDatos = new Set();
-  for (const g of gastos) {
+  for (const g of personales(gastos)) {
     const mes = g.fecha.slice(0, 7);
     if (!ultimos.includes(mes)) continue;
     suma[g.categoria] = (suma[g.categoria] || 0) + enSoles(g);

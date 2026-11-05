@@ -331,6 +331,7 @@ $('sal-form').addEventListener('submit', (e) => {
   const primero = indiceCiclo($('sal-vence').value, t.corte);
   const nuevos = Array.from({ length: cuotas }, (_, i) => saldoValido({
     id: ids[i] || nuevoId(), tarjeta: t.id, fecha: cicloDe(primero + i, t).hasta, moneda: $('sal-moneda').value, importe: $('sal-importe').value,
+    negocio: $('sal-negocio').checked,
   }));
   if (nuevos.some((s) => !s)) return;
   saldos = saldos.filter((x) => !ids.includes(x.id)).concat(nuevos);

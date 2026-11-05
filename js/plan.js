@@ -72,7 +72,7 @@ function cifrasPlan() {
   const base = ajustes.plan.base;
   const desde = base === 'mes' ? hoy.slice(0, 8) + '01' : isoDia(new Date(a, m - (base === '3m' ? 4 : 2), 1));
   const hasta = base === 'mes' ? hoy : isoDia(new Date(a, m - 1, 0));
-  const gas = entre(gastos, desde, hasta), ing = entre(ingresos, desde, hasta);
+  const gas = entre(personales(gastos), desde, hasta), ing = entre(ingresos, desde, hasta);
   const meses = base === '3m' ? Math.max(1, new Set([...gas, ...ing].map((x) => x.fecha.slice(0, 7))).size) : 1;
   const porMes = (lista) => redondear(sumar(lista) / meses);
   const necesidades = porMes(gas.filter((g) => tipoPlan(g.categoria) === 'n'));

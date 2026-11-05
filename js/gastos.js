@@ -25,6 +25,7 @@ function leerFormulario() {
     categoria: categoriaElegida(),
     medio: medioValido($('medio').value),
     fecha: $('fecha').value,
+    negocio: $('para-negocio').checked,
   };
 }
 
@@ -54,6 +55,7 @@ function editar(id) {
   fijarCategoria(g.categoria);
   $('medio').value = g.medio;
   $('fecha').value = g.fecha;
+  $('para-negocio').checked = g.negocio;
   $('form-titulo').textContent = 'Editar gasto';
   $('btn-guardar').textContent = 'Guardar cambios';
   $('btn-cancelar').classList.remove('hidden');
@@ -69,6 +71,7 @@ function salirEdicion() {
   fijarCategoria();
   $('medio').value = ultimoMedio();
   $('fecha').value = hoyISO();
+  $('para-negocio').checked = false;
   $('form-titulo').textContent = 'Nuevo gasto';
   $('btn-guardar').textContent = 'Añadir gasto';
   $('btn-cancelar').classList.add('hidden');
@@ -117,6 +120,15 @@ function boton(texto, titulo, onClick, clase = '') {
   b.setAttribute('aria-label', titulo);
   b.addEventListener('click', onClick);
   return b;
+}
+
+// Marca de lo que es del negocio en las listas personales
+function chipNegocio() {
+  const c = document.createElement('span');
+  c.className = 'chip-negocio';
+  c.title = 'Para tu negocio: no es gasto personal';
+  c.append(icono('negocio'), document.createTextNode('Negocio'));
+  return c;
 }
 
 // Círculo de color con el ícono; `clase` = chico | grande
@@ -176,7 +188,7 @@ function pintarResumenMes(delMes, mesActual) {
 // al abrir la web, una vez por sesión para ese mes y ese límite. Se cierra solo a los 5 s.
 function gastadoEsteMes() {
   const mes = hoyISO().slice(0, 7);
-  return sumar(gastos.filter((g) => g.fecha.startsWith(mes)));
+  return sumar(personales(gastos).filter((g) => g.fecha.startsWith(mes)));
 }
 
 function pintarAvisoLimite(delMes, mesActual) {
@@ -217,7 +229,8 @@ function cerrarAlertaLimite() {
 function render() {
   pintarNotaMedio();
   const mesActual = hoyISO().slice(0, 7);
-  pintarResumenMes(sumar(gastos.filter((g) => g.fecha.startsWith(mesActual))), mesActual);
+  pintarResumenMes(sumar(personales(gastos).filter((g) => g.fecha.startsWith(mesActual))), mesActual);
+  $('negocio-campo').classList.toggle('hidden', !usaNegocio());
 
   // Balance del mes en la barra lateral (solo si el usuario registra ingresos)
   const [anioHoy, mesHoy] = mesActual.split('-').map(Number);
@@ -286,7 +299,8 @@ function renderListaGastos() {
     const tr = document.createElement('tr');
     if (g.id === editandoId) tr.classList.add('editando');
     celda(tr, 'Fecha', formatearFecha(g.fecha), 'fecha');
-    celda(tr, 'Descripción', g.descripcion);
+    const desc = celda(tr, 'Descripción', g.descripcion);
+    if (g.negocio) desc.append(chipNegocio());
     celda(tr, 'Categoría', etiquetaCategoria(g.categoria));
     celda(tr, 'Pago', etiquetaMedio(g.medio), 'pago');
     celda(tr, 'Importe', dinero(g.importe, g.moneda), 'num');

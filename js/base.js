@@ -240,7 +240,17 @@ function normalizarGastos() {
   for (const g of gastos) {
     g.medio = medioValido(g.medio);
     g.moneda = g.moneda === 'USD' ? 'USD' : 'PEN';
+    g.negocio = g.negocio === true;
   }
+}
+
+// «Para mi negocio»: lo pagaste tú, pero no es un gasto personal (no cuenta en el mes, el límite,
+// el Resumen, el Plan ni el simulador; en el ahorro se suma de vuelta como «Para tu negocio»)
+const personales = (lista) => lista.filter((g) => !g.negocio);
+
+// El campo solo aparece a quien usa el apartado Negocio (o ya marcó algo)
+function usaNegocio() {
+  return negocio.length > 0 || gastos.some((g) => g.negocio) || saldos.some((s) => s.negocio);
 }
 
 // Claves de todos los medios en el orden de los desplegables

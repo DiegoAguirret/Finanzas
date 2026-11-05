@@ -279,6 +279,11 @@ function renderNegocio() {
   } else {
     $('neg-inversion-sub').textContent = 'Sin inversión registrada';
   }
+  // Lo marcado «Para mi negocio» en tus gastos y en la deuda anterior de tus tarjetas
+  const bolsillo = redondear(sumar(gastos.filter((g) => g.negocio)) +
+    saldos.filter((s) => s.negocio).reduce((t, s) => t + aSoles(s.importe, s.moneda, venceSaldo(s), 'venta'), 0));
+  $('neg-bolsillo').textContent = bolsillo ? `De tu bolsillo: ${soles.format(bolsillo)}` : '';
+  $('neg-bolsillo').classList.toggle('hidden', !bolsillo);
 
   // Movimientos del periodo, los más recientes primero (el mismo día, el último registrado arriba)
   const lista = [...delPeriodo].reverse().sort(porFechaDesc);

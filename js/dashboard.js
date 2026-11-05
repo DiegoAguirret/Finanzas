@@ -57,7 +57,7 @@ function periodosDash(t, p) {
   let primero = actual;
   if (p === '3m') primero = actual - 2;
   if (p === 'anio') primero = Number(hoyISO().slice(0, 4)) * 12;
-  if (p === 'todo') for (const g of gastos) primero = Math.min(primero, indiceDash(t, g.fecha));
+  if (p === 'todo') for (const g of personales(gastos)) primero = Math.min(primero, indiceDash(t, g.fecha));
   const lista = [];
   for (let n = primero; n <= actual; n++) lista.push(periodoDash(t, n));
   return lista;
@@ -68,7 +68,7 @@ function renderDashboard() {
   const periodos = periodosDash(base, $('dash-periodo').value);
   const medio = $('dash-medio').value;
   const desde = periodos[0].desde, hasta = periodos[periodos.length - 1].hasta;
-  const delMedio = gastos.filter((g) => !medio || g.medio === medio);
+  const delMedio = personales(gastos).filter((g) => !medio || g.medio === medio);
   const lista = delMedio.filter((g) => g.fecha >= desde && g.fecha <= hasta);
   const total = sumar(lista);
   const hoy = hoyISO();

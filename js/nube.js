@@ -28,7 +28,7 @@ const TABLAS = {
       const t = tarjetaDe(g.medio);
       return {
         id: g.id, descripcion: g.descripcion, importe: g.importe, moneda: g.moneda, categoria: g.categoria,
-        medio: t ? 'tarjeta' : g.medio, tarjeta: t ? t.id : null, fecha: g.fecha,
+        medio: t ? 'tarjeta' : g.medio, tarjeta: t ? t.id : null, fecha: g.fecha, negocio: !!g.negocio,
       };
     },
     deFila: (f) => gastoValido({ ...f, medio: f.medio === 'tarjeta' ? f.tarjeta || MEDIO_OTRO : f.medio }),
@@ -51,7 +51,7 @@ const TABLAS = {
   },
   saldos: {
     lista: () => saldos,
-    aFila: (s) => ({ id: s.id, tarjeta: s.tarjeta, fecha: s.fecha, moneda: s.moneda, importe: s.importe }),
+    aFila: (s) => ({ id: s.id, tarjeta: s.tarjeta, fecha: s.fecha, moneda: s.moneda, importe: s.importe, negocio: !!s.negocio }),
     deFila: (f) => saldoValido(f),
     poner: (l) => { saldos = l; },
   },

@@ -192,6 +192,10 @@ create index if not exists aportes_usuario_fecha on public.aportes (usuario, fec
 create index if not exists aportes_meta on public.aportes (meta);
 create index if not exists negocio_usuario_fecha on public.negocio (usuario, fecha);
 
+-- «Para mi negocio»: gastos y deuda anterior que pagaste tú pero son del negocio (no son gasto personal)
+alter table public.gastos add column if not exists negocio boolean not null default false;
+alter table public.saldos add column if not exists negocio boolean not null default false;
+
 -- Dónde se hizo una venta (vacío en los demás tipos)
 alter table public.negocio add column if not exists canal text;
 alter table public.negocio drop constraint if exists negocio_canal_check;
