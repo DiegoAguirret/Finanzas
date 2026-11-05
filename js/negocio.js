@@ -19,13 +19,23 @@ const TIPOS_NEGOCIO = {
   otro_gasto: { nombre: 'Otro gasto', grupo: 'gasto', icono: 'otros', color: 'gris' },
   otro_ingreso: { nombre: 'Otro ingreso', grupo: 'entrada', icono: 'regalo', color: 'verde' },
 };
+// Dónde se hizo la venta (solo para el tipo Venta); sin elegir, «Otro»
+const CANALES_NEGOCIO = {
+  mercadolibre: { nombre: 'Mercado Libre', icono: 'apreton', color: 'ambar' },
+  marketplace: { nombre: 'FB Marketplace', icono: 'tienda', color: 'azul' },
+  instagram: { nombre: 'Instagram', icono: 'camara', color: 'rosa' },
+  web: { nombre: 'Web', icono: 'web', color: 'cian' },
+  tiktok: { nombre: 'TikTok', icono: 'nota', color: 'violeta' },
+  otro: { nombre: 'Otro', icono: 'otros', color: 'gris' },
+};
 let negEditandoId = null, limiteNegocio = TAM_LISTA;
 
 function movimientoNegocioValido(m) {
   const importe = redondear(Number(m?.importe));
   if (!Object.hasOwn(TIPOS_NEGOCIO, m?.tipo) || !(importe > 0) || !fechaValida(m.fecha)) return null;
   const descripcion = (typeof m.descripcion === 'string' ? m.descripcion.trim().slice(0, 100) : '') || TIPOS_NEGOCIO[m.tipo].nombre;
-  return { id: idValido(m), tipo: m.tipo, descripcion, importe, moneda: m.moneda === 'USD' ? 'USD' : 'PEN', fecha: m.fecha };
+  const canal = m.tipo !== 'venta' ? null : Object.hasOwn(CANALES_NEGOCIO, m.canal ?? '') ? m.canal : 'otro';
+  return { id: idValido(m), tipo: m.tipo, canal, descripcion, importe, moneda: m.moneda === 'USD' ? 'USD' : 'PEN', fecha: m.fecha };
 }
 
 function cargarNegocio() {
@@ -44,11 +54,14 @@ function negocioEnSoles(m) {
 }
 
 function cifrasNegocio(lista) {
-  const c = { ventas: 0, gastos: 0, inversion: 0, porTipo: {} };
+  const c = { ventas: 0, gastos: 0, inversion: 0, porTipo: {}, porCanal: {} };
   for (const m of lista) {
     const s = negocioEnSoles(m);
     const grupo = TIPOS_NEGOCIO[m.tipo].grupo;
-    if (grupo === 'entrada') c.ventas += s;
+    if (grupo === 'entrada') {
+      c.ventas += s;
+      if (m.canal) c.porCanal[m.canal] = (c.porCanal[m.canal] || 0) + s;
+    }
     else if (grupo === 'inversion') c.inversion += s;
     else {
       c.gastos += s;
@@ -72,13 +85,13 @@ function rangoNegocio() {
   return { desde: hoy.slice(0, 8) + '01', hasta: isoDia(new Date(a, m, 0)) };
 }
 
-// Selector visual del tipo, como el de categorías del gasto
-function crearTiposNegocio() {
-  $('neg-tipo').replaceChildren(...Object.entries(TIPOS_NEGOCIO).map(([clave, t]) => {
+// Selectores visuales del tipo y del canal, como el de categorías del gasto
+function crearOpcionesNegocio(id, opciones) {
+  $(id).replaceChildren(...Object.entries(opciones).map(([clave, t]) => {
     const label = document.createElement('label');
     const r = document.createElement('input');
     r.type = 'radio';
-    r.name = 'neg-tipo';
+    r.name = id;
     r.value = clave;
     const caja = document.createElement('span');
     caja.className = 'opcion-cat';
@@ -94,13 +107,97 @@ function tipoNegocioElegido() {
   return document.querySelector('input[name="neg-tipo"]:checked')?.value || 'venta';
 }
 
-function fijarTipoNegocio(tipo) {
-  const r = [...document.querySelectorAll('input[name="neg-tipo"]')].find((x) => x.value === tipo);
-  if (r) r.checked = true;
+function canalNegocioElegido() {
+  return document.querySelector('input[name="neg-canal"]:checked')?.value || 'otro';
 }
 
-function etiquetaTipoNegocio(tipo) {
-  const t = TIPOS_NEGOCIO[tipo];
+function fijarOpcionNegocio(nombre, valor) {
+  const r = [...document.querySelectorAll(`input[name="${nombre}"]`)].find((x) => x.value === valor);
+  if (r) r.checked = true;
+  pintarCanalNegocio();
+}
+
+const fijarTipoNegocio = (tipo) => fijarOpcionNegocio('neg-tipo', tipo);
+
+// El canal solo se pregunta en las ventas; los productos, en ventas y compras de mercadería
+function pintarCanalNegocio() {
+  const tipo = tipoNegocioElegido();
+  $('neg-canal-campo').classList.toggle('hidden', tipo !== 'venta');
+  $('neg-productos-campo').classList.toggle('hidden', tipo !== 'venta' && tipo !== 'mercaderia');
+}
+
+// Productos: tocar uno lo pone como descripción; con «Editar», tocarlo lo quita de la lista
+let editandoProductos = false;
+
+function pintarProductos() {
+  const desc = $('neg-descripcion').value.trim().toLowerCase();
+  const caja = $('neg-productos');
+  caja.replaceChildren(...ajustes.productos.map((nombre) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'producto' + (editandoProductos ? ' quitar' : '');
+    b.textContent = nombre;
+    b.setAttribute('aria-pressed', String(!editandoProductos && desc === nombre.toLowerCase()));
+    if (editandoProductos) {
+      b.append(icono('cerrar'));
+      b.setAttribute('aria-label', `Quitar ${nombre}`);
+      b.title = `Quitar ${nombre}`;
+    }
+    b.addEventListener('click', () => {
+      if (editandoProductos) {
+        ajustes.productos = ajustes.productos.filter((x) => x !== nombre);
+        guardarAjustes();
+        if (!ajustes.productos.length) editandoProductos = false;
+      } else {
+        const d = $('neg-descripcion');
+        d.value = desc === nombre.toLowerCase() ? '' : nombre;
+        d.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      pintarProductos();
+    });
+    return b;
+  }));
+  if (!editandoProductos) {
+    const nuevo = document.createElement('button');
+    nuevo.type = 'button';
+    nuevo.className = 'producto nuevo';
+    nuevo.append(icono('anadir'), document.createTextNode('Producto'));
+    nuevo.setAttribute('aria-label', 'Añadir producto');
+    nuevo.title = 'Añadir producto';
+    nuevo.setAttribute('aria-expanded', String(!$('neg-producto-nuevo').classList.contains('hidden')));
+    nuevo.addEventListener('click', () => {
+      const abrir = $('neg-producto-nuevo').classList.contains('hidden');
+      $('neg-producto-nuevo').classList.toggle('hidden', !abrir);
+      pintarProductos();
+      if (abrir) $('neg-producto-nombre').focus();
+    });
+    caja.append(nuevo);
+  }
+  const editar = $('neg-productos-editar');
+  editar.classList.toggle('hidden', !ajustes.productos.length);
+  editar.textContent = editandoProductos ? 'Listo' : 'Editar';
+}
+
+function anadirProducto() {
+  const nombre = $('neg-producto-nombre').value.trim().slice(0, 60);
+  if (!nombre) return $('neg-producto-nombre').focus();
+  const existente = ajustes.productos.find((x) => x.toLowerCase() === nombre.toLowerCase());
+  if (!existente) {
+    ajustes.productos = productosValidos([...ajustes.productos, nombre]);
+    guardarAjustes();
+  }
+  // Queda elegido para este movimiento
+  const d = $('neg-descripcion');
+  d.value = existente || nombre;
+  d.dispatchEvent(new Event('input', { bubbles: true }));
+  $('neg-producto-nombre').value = '';
+  $('neg-producto-nuevo').classList.add('hidden');
+  pintarProductos();
+}
+
+// En las listas, una venta se muestra con su canal
+function etiquetaTipoNegocio(tipo, canal = null) {
+  const t = canal ? CANALES_NEGOCIO[canal] : TIPOS_NEGOCIO[tipo];
   const chip = document.createElement('span');
   chip.className = 'cat-chip';
   const texto = document.createElement('span');
@@ -112,31 +209,39 @@ function etiquetaTipoNegocio(tipo) {
 // El tipo elegido se mantiene para el siguiente: se suelen registrar varios iguales seguidos
 function salirEdicionNegocio() {
   const tipo = negEditandoId ? 'venta' : tipoNegocioElegido();
+  const canal = negEditandoId ? 'otro' : canalNegocioElegido();
   negEditandoId = null;
   $('neg-form').reset();
+  $('neg-producto-nuevo').classList.add('hidden');
+  editandoProductos = false;
+  fijarOpcionNegocio('neg-canal', canal);
   fijarTipoNegocio(tipo);
   $('neg-fecha').value = hoyISO();
   $('neg-form-titulo').textContent = 'Nuevo movimiento';
   $('neg-guardar').textContent = 'Añadir movimiento';
   $('neg-cancelar').classList.add('hidden');
+  pintarProductos();
 }
 
 function editarNegocio(m) {
   negEditandoId = m.id;
   $('neg-importe').value = m.importe;
   $('neg-moneda').value = m.moneda;
+  fijarOpcionNegocio('neg-canal', m.canal || 'otro');
   fijarTipoNegocio(m.tipo);
   $('neg-descripcion').value = m.descripcion === TIPOS_NEGOCIO[m.tipo].nombre ? '' : m.descripcion;
   $('neg-fecha').value = m.fecha;
   $('neg-form-titulo').textContent = 'Editar movimiento';
   $('neg-guardar').textContent = 'Guardar cambios';
   $('neg-cancelar').classList.remove('hidden');
+  pintarProductos();
   renderNegocio();
   abrirHoja('negocio');
   $('neg-form').scrollIntoView({ behavior: desplazamiento(), block: 'center' });
 }
 
 function renderNegocio() {
+  pintarProductos(); // pudieron cambiar en otro dispositivo
   const { desde, hasta } = rangoNegocio();
   const delPeriodo = entre(negocio, desde, hasta);
   const c = cifrasNegocio(delPeriodo);
@@ -175,7 +280,7 @@ function renderNegocio() {
     if (m.id === negEditandoId) tr.classList.add('editando');
     celda(tr, 'Fecha', formatearFecha(m.fecha), 'fecha');
     celda(tr, 'Descripción', m.descripcion);
-    celda(tr, 'Tipo', etiquetaTipoNegocio(m.tipo));
+    celda(tr, 'Tipo', etiquetaTipoNegocio(m.tipo, m.canal));
     const entra = TIPOS_NEGOCIO[m.tipo].grupo === 'entrada';
     celda(tr, 'Monto', entra ? montoConSigno(m.importe, true, m.moneda) : conSigno(-m.importe, m.moneda), 'num');
     const acciones = celda(tr, '', '', 'acciones');
@@ -195,6 +300,21 @@ function renderNegocio() {
   $('neg-ver-mas').textContent = `Ver más (${restantes})`;
   $('neg-tabla').classList.toggle('hidden', !lista.length);
   $('neg-vacio').classList.toggle('hidden', lista.length > 0);
+
+  // Dónde se vende, de mayor a menor
+  const canales = Object.entries(c.porCanal).sort((a, b) => b[1] - a[1]);
+  const totalCanales = canales.reduce((s, [, monto]) => s + monto, 0);
+  const cuerpoCanales = $('neg-canales');
+  cuerpoCanales.replaceChildren();
+  for (const [canal, monto] of canales) {
+    const tr = document.createElement('tr');
+    celda(tr, 'Canal', etiquetaTipoNegocio('venta', canal));
+    celda(tr, 'Ventas', soles.format(monto), 'num');
+    celda(tr, 'Parte', totalCanales ? Math.round((monto / totalCanales) * 100) + '%' : '', 'num');
+    cuerpoCanales.append(tr);
+  }
+  $('neg-tabla-canales').classList.toggle('hidden', !canales.length);
+  $('neg-canales-vacio').classList.toggle('hidden', canales.length > 0);
 
   // En qué se va el dinero del periodo, de mayor a menor
   const tipos = Object.entries(c.porTipo).sort((a, b) => b[1] - a[1]);
@@ -232,14 +352,29 @@ function renderNegocio() {
   }
 }
 
-crearTiposNegocio();
+crearOpcionesNegocio('neg-tipo', TIPOS_NEGOCIO);
+crearOpcionesNegocio('neg-canal', CANALES_NEGOCIO);
+$('neg-tipo').addEventListener('change', pintarCanalNegocio);
+$('neg-descripcion').addEventListener('input', pintarProductos);
+$('neg-producto-anadir').addEventListener('click', anadirProducto);
+// Enter en el nombre añade el producto, no guarda el movimiento
+$('neg-producto-nombre').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  anadirProducto();
+});
+$('neg-productos-editar').addEventListener('click', () => {
+  editandoProductos = !editandoProductos;
+  $('neg-producto-nuevo').classList.add('hidden');
+  pintarProductos();
+});
 
 $('neg-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const fecha = $('neg-fecha').value || hoyISO();
   if (fecha > hoyISO()) return avisar('neg-msg', 'La fecha no puede ser futura.', true);
   const m = movimientoNegocioValido({
-    id: negEditandoId || nuevoId(), tipo: tipoNegocioElegido(), descripcion: $('neg-descripcion').value,
+    id: negEditandoId || nuevoId(), tipo: tipoNegocioElegido(), canal: canalNegocioElegido(), descripcion: $('neg-descripcion').value,
     importe: $('neg-importe').value, moneda: $('neg-moneda').value, fecha,
   });
   if (!m) return avisar('neg-msg', 'Revisa el monto y la fecha.', true);

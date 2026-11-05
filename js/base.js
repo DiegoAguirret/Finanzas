@@ -52,6 +52,11 @@ const ICONOS = {
   camion: 'M3 6h11v10H3zM14 10h4l3 3v3h-7' + circulo(7, 18, 1.8) + circulo(17, 18, 1.8),
   documento: 'M6 3h9l4 4v14H6zM15 3v4h4M9 12h6M9 16h6',
   crecer: 'M3 17l6-6 4 4 8-8M15 7h6v6',
+  apreton: 'M2 11l4-4h4l2 2 2-2h4l4 4M2 11l7 7a2 2 0 0 0 2.8 0l1.2-1.2M22 11l-6 6M9 13l3 3M11 11l3 3',
+  tienda: 'M3 9l2-5h14l2 5zM3 9a3 3 0 0 0 6 0a3 3 0 0 0 6 0a3 3 0 0 0 6 0M5 12v8h14v-8M10 20v-5h4v5',
+  camara: 'M8 3h8a5 5 0 0 1 5 5v8a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5zM17 7h.01' + circulo(12, 12, 4),
+  web: circulo(12, 12, 9) + 'M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
+  nota: 'M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5M14 3c.5 2.5 2.5 4 5 4',
   otros: circulo(5, 12, 1.5) + circulo(12, 12, 1.5) + circulo(19, 12, 1.5),
 };
 // Íconos de la interfaz (navegación y acciones); los de categorías, metas y deudas están en ICONOS

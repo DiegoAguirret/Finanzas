@@ -10,7 +10,21 @@ function ajustesValidos(x) {
     saldoInicial: Number.isFinite(saldo) ? saldo : 0,
     limite: limite > 0 ? limite : 0, // gasto máximo al mes en soles; 0 = sin límite
     plan: planValido(x?.plan),
+    productos: productosValidos(x?.productos),
   };
+}
+
+// Productos del negocio: nombres que se eligen al registrar una venta o una compra de mercadería
+function productosValidos(lista) {
+  const vistos = new Set();
+  const salida = [];
+  for (const p of Array.isArray(lista) ? lista : []) {
+    const nombre = typeof p === 'string' ? p.trim().slice(0, 60) : '';
+    if (!nombre || vistos.has(nombre.toLowerCase())) continue;
+    vistos.add(nombre.toLowerCase());
+    salida.push(nombre);
+  }
+  return salida.slice(0, 200);
 }
 
 // ---- Plan: reglas generales para organizar el dinero. No recomienda productos ni inversiones ----

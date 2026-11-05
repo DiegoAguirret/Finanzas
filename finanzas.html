@@ -1007,6 +1007,21 @@
               <span class="etiqueta" id="neg-tipo-titulo">Tipo</span>
               <div class="selector-cat" id="neg-tipo" role="radiogroup" aria-labelledby="neg-tipo-titulo"></div>
             </div>
+            <div class="campo-ancho" id="neg-canal-campo">
+              <span class="etiqueta" id="neg-canal-titulo">Dónde vendiste</span>
+              <div class="selector-cat" id="neg-canal" role="radiogroup" aria-labelledby="neg-canal-titulo"></div>
+            </div>
+            <div class="campo-ancho" id="neg-productos-campo">
+              <div class="fila-etiqueta">
+                <span class="etiqueta" id="neg-productos-titulo">Producto</span>
+                <button type="button" class="enlace-mini boton-enlace hidden" id="neg-productos-editar">Editar</button>
+              </div>
+              <div class="productos" id="neg-productos" role="group" aria-labelledby="neg-productos-titulo"></div>
+              <div class="producto-nuevo hidden" id="neg-producto-nuevo">
+                <input id="neg-producto-nombre" maxlength="60" placeholder="Nombre del producto" aria-label="Nombre del producto">
+                <button type="button" class="btn-secondary" id="neg-producto-anadir">Añadir</button>
+              </div>
+            </div>
             <div class="campo-par">
               <label for="neg-descripcion">Descripción (opcional)</label>
               <input id="neg-descripcion" maxlength="100" placeholder="Ej. Anuncio en Instagram">
@@ -1022,6 +1037,13 @@
           </form>
         </section>
       </div>
+      <section class="card plegable"><details data-escritorio><summary><h2>Dónde vendes</h2></summary>
+        <table id="neg-tabla-canales">
+          <thead><tr><th>Canal</th><th class="num">Ventas</th><th class="num">Parte</th></tr></thead>
+          <tbody id="neg-canales"></tbody>
+        </table>
+        <div class="vacio hidden" id="neg-canales-vacio">Sin ventas en este periodo.</div>
+      </details></section>
       <section class="card plegable"><details data-escritorio><summary><h2>En qué gastas</h2></summary>
         <table id="neg-tabla-tipos">
           <thead><tr><th>Tipo</th><th class="num">Monto</th><th class="num">Parte</th></tr></thead>

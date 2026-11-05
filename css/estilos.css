@@ -579,6 +579,21 @@ tbody tr.editando { background: var(--accent-soft); }
 .progreso { height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; }
 .progreso div { height: 100%; border-radius: 4px; background: var(--accent); }
 #neg-recupero { margin-top: 10px; }
+/* Productos del negocio: píldoras que se eligen con un toque */
+.productos { display: flex; flex-wrap: wrap; gap: 6px; }
+.producto {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 14px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text);
+  font: inherit; font-size: .85rem; font-weight: 500; cursor: pointer;
+}
+.producto .ico { width: 16px; height: 16px; }
+.producto[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.producto.nuevo { border-style: dashed; color: var(--muted); }
+.producto.quitar { border-color: var(--danger); color: var(--danger); }
+@media (hover: hover) and (pointer: fine) { .producto:hover { background: var(--accent-soft); } .producto.quitar:hover { background: var(--danger-soft); } }
+.producto-nuevo { display: flex; gap: 6px; margin-top: 8px; }
+.producto-nuevo input { flex: 1; min-width: 0; }
+.boton-enlace { border: 0; background: none; color: var(--accent); font: inherit; font-size: .8rem; cursor: pointer; }
 .form-movimiento { margin-bottom: 16px; }
 .num { text-align: right; }
 

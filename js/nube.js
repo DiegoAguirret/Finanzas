@@ -81,7 +81,7 @@ const TABLAS = {
   },
   negocio: {
     lista: () => negocio,
-    aFila: (m) => ({ id: m.id, tipo: m.tipo, descripcion: m.descripcion, importe: m.importe, moneda: m.moneda, fecha: m.fecha }),
+    aFila: (m) => ({ id: m.id, tipo: m.tipo, canal: m.canal, descripcion: m.descripcion, importe: m.importe, moneda: m.moneda, fecha: m.fecha }),
     deFila: (f) => movimientoNegocioValido(f),
     poner: (l) => { negocio = l; },
   },

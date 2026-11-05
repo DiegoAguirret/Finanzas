@@ -192,6 +192,12 @@ create index if not exists aportes_usuario_fecha on public.aportes (usuario, fec
 create index if not exists aportes_meta on public.aportes (meta);
 create index if not exists negocio_usuario_fecha on public.negocio (usuario, fecha);
 
+-- Dónde se hizo una venta (vacío en los demás tipos)
+alter table public.negocio add column if not exists canal text;
+alter table public.negocio drop constraint if exists negocio_canal_check;
+alter table public.negocio add constraint negocio_canal_check
+  check (canal in ('mercadolibre', 'marketplace', 'instagram', 'web', 'tiktok', 'otro'));
+
 -- ---------------------------------------------------------------------
 -- Seguridad (Row Level Security)
 -- ---------------------------------------------------------------------
