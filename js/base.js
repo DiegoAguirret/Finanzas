@@ -6,7 +6,6 @@ const CLAVE_SIM = 'finanzas.simulacion';
 const CLAVE_INGRESOS = 'finanzas.ingresos';
 const CLAVE_TARJETAS = 'finanzas.tarjetas';
 const CLAVE_PAGOS = 'finanzas.pagos';
-const CLAVE_TARJETA_ANTIGUA = 'finanzas.tarjeta'; // una sola tarjeta Interbank (versión anterior)
 const CLAVE_CATEGORIAS = 'finanzas.categorias';
 const CLAVE_DEUDAS = 'finanzas.deudas';
 const CLAVE_ABONOS = 'finanzas.abonos';

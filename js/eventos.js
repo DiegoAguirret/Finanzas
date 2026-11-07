@@ -209,6 +209,10 @@ for (const [boton, extra] of [['btn-filtros', 'filtros-extra'], ['dash-filtros',
     const abierto = $(extra).classList.toggle('abierto');
     $(boton).setAttribute('aria-expanded', String(abierto));
   });
+  // Un punto en el botón avisa que hay un filtro u orden distinto del normal
+  $(extra).addEventListener('change', () => {
+    $(boton).classList.toggle('activo', [...$(extra).querySelectorAll('select')].some((s) => s.selectedIndex > 0));
+  });
 }
 $('fab').addEventListener('click', () => abrirHoja());
 $('hoja-fondo').addEventListener('click', pedirCerrarHoja);

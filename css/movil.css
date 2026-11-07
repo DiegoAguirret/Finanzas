@@ -72,7 +72,6 @@
   button { min-height: 44px; }
   .icon-btn { min-height: 40px; }
   .pie { display: none; }
-  .vista > .vista-cabecera { padding: 0; background: none; border: 0; }
   .vista > .vista-cabecera h2 { display: none; }
   /* Al abrir, visible desde el primer instante: si no, no puede recibir el foco */
   .menu-abierto .sidebar { transform: none; visibility: visible; transition: transform .2s ease-out; }
@@ -103,6 +102,8 @@
   .resumen .card { flex: 0 0 min(74%, 280px); scroll-snap-align: start; }
   .resumen .card:only-child { flex: 1; }
   .resumen .card-acum { order: -1; }
+  .resumen .destacada { order: -2; }
+  .resumen .destacada .valor { font-size: 1.6rem; }
   .resumen .valor { font-size: 1.35rem; }
   form { grid-template-columns: 1fr 1fr; }
   form .campo-desc, form > div:has(> .importe-moneda) { grid-column: 1 / -1; }
@@ -136,11 +137,8 @@
 
   /* Listas como en una app: qué y cuánto arriba; fecha y acciones debajo */
   .lista-header .filtros { display: flex; flex-direction: column; width: 100%; }
-  .buscar-fila { display: flex; gap: 8px; }
+  .buscar-fila { display: flex; gap: 8px; width: 100%; }
   .buscar-fila :is(input, select) { flex: 1; min-width: 0; width: auto; }
-  .filtrar { display: inline-grid; flex-shrink: 0; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 10px; }
-  .filtrar[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent); }
-  .filtros-extra { display: none; }
   .filtros-extra.abierto { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .filtros-extra select:last-child { grid-column: 1 / -1; }
   :is(#tabla-gastos, #tabla-movs, #neg-tabla) tbody tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0 12px; align-items: center; padding: 12px 0; margin: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }

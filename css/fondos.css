@@ -182,3 +182,8 @@
   :root[data-fondo="navidad"] .hero-mes { padding-bottom: 96px; background-size: auto 92px, auto; }
   :root[data-fondo="degradado"] .barra-superior { background: color-mix(in srgb, var(--bg) 70%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 }
+
+/* En pantallas grandes, con fondos navideños el título de la vista va en su tarjeta para leerse bien */
+@media (min-width: 861px) {
+  :root:is([data-fondo="navidad"], [data-fondo="nochebuena"], [data-fondo="luces"]) .vista > .vista-cabecera { padding: 16px 20px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+}

@@ -44,7 +44,7 @@ function gastoValido(g) {
   };
 }
 
-// La base usa uuid: los ids antiguos ('interbank', números) se cambian y se actualizan sus referencias
+// La base usa uuid: al importar, los ids que no lo son se cambian y se actualizan sus referencias
 function normalizarIds() {
   const nuevos = {};
   let cambio = false;

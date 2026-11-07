@@ -14,10 +14,9 @@ $('tc-fecha').value = hoyISO();
 cargarTiposCambio();
 cargar();
 cargarIngresos();
-cargarTarjetas(); // después de cargar(): la migración mira los gastos con medio 'interbank'
+cargarTarjetas();
 normalizarGastos();
-cargarPagos(); // después de tarjetas y gastos: migra los ciclos marcados como pagados
-normalizarIds();
+cargarPagos();
 poblarMedios();
 cargarSim();
 cargarObjetivos();

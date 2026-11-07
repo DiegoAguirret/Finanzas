@@ -44,7 +44,7 @@ body {
   background: var(--surface); color: var(--text);
   border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--border));
   box-shadow: 0 14px 36px rgba(15, 17, 23, .24);
-  animation: alerta-entra .32s cubic-bezier(.2, .9, .3, 1.15);
+  animation: alerta-entra .32s cubic-bezier(.16, 1, .3, 1);
 }
 .alerta-icono {
   display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
@@ -317,6 +317,10 @@ form.acceso-caja #acceso-texto { margin: -8px 0 4px; }
 }
 .resumen .label { color: var(--muted); font-size: .85rem; }
 .resumen .valor { font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; margin-top: 4px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+/* La cifra que más importa en cada vista */
+.resumen .destacada { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+.resumen .destacada .label { color: var(--text); font-weight: 600; }
+.resumen .destacada .valor { font-size: 2rem; }
 .sub { color: var(--muted); font-size: .82rem; margin-top: 2px; overflow-wrap: anywhere; }
 .sub.ok { color: var(--ok); }
 .sub.mal { color: var(--danger); }
@@ -329,6 +333,9 @@ h2 { margin: 0 0 16px; font-size: 1.1rem; }
   gap: 12px; flex-wrap: wrap;
 }
 .vista-cabecera h2 { margin: 0; font-size: 1.25rem; }
+/* El título de cada vista va sobre el fondo, sin tarjeta: las cifras son lo que resalta */
+.vista > .vista-cabecera { padding: 4px 0 0; background: none; border: 0; }
+.vista > .vista-cabecera h2 { font-size: 1.6rem; letter-spacing: -.02em; }
 .vista-cabecera p { margin: 2px 0 0; color: var(--muted); font-size: .9rem; }
 
 /* Formulario */
@@ -745,9 +752,13 @@ tbody tr.fila-dia:hover { background: none; }
 .barra-mini.solo-ico { min-width: 36px; }
 .btn-menu.solo-ico { display: none; min-width: 44px; }
 :root[data-menu="oculto"] .btn-menu.solo-ico { display: inline-grid; }
-.buscar-fila { display: contents; }
-.filtrar { display: none; }
-.filtros-extra { display: contents; }
+/* Filtros: a la vista solo la búsqueda o el periodo; lo demás detrás del botón de filtros */
+.buscar-fila { display: flex; gap: 8px; }
+.filtrar { position: relative; display: inline-grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 10px; }
+.filtrar[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent); }
+.filtrar.activo::after { content: ''; position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.filtros-extra { display: none; }
+.filtros-extra.abierto { display: flex; flex-wrap: wrap; gap: 8px; flex-basis: 100%; }
 
 /* Secciones secundarias plegadas */
 .plegable summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; min-height: 28px; }

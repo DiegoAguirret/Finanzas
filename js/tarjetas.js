@@ -10,7 +10,6 @@ let tarSeleccion = null;
 let tarEditandoId = null;
 let pagoSugerido = null; // lo que propuso «Pagar», por moneda
 // Versión anterior: id de tarjeta → fechas de corte de los ciclos marcados como pagados
-let pagadosAntiguos = {};
 
 function diaDelMes(v) {
   const n = Number(v);
@@ -33,32 +32,15 @@ function tarjetaValida(t) {
   const nombre = typeof t.nombre === 'string' ? t.nombre.trim().slice(0, 40) : '';
   if (!nombre) return null;
   const id = typeof t.id === 'string' && t.id && !Object.hasOwn(MEDIOS_FIJOS, t.id) ? t.id : nuevoId();
-  // Tarjetas de versiones anteriores sin banco: se deduce del nombre
+  // Sin banco (p. ej. al importar), se deduce del nombre
   const banco = Object.hasOwn(BANCOS, t.banco) ? t.banco : bancoDeNombre(nombre);
   const plazo = Number.isInteger(Number(t.plazo)) && t.plazo >= 1 && t.plazo <= 90 ? Number(t.plazo) : null;
   return { id, nombre, banco, corte: diaDelMes(t.corte), pago: plazo ? null : diaDelMes(t.pago), plazo, linea: numero(t.linea) };
 }
 
 function cargarTarjetas() {
-  let datos = null;
-  try { datos = JSON.parse(localStorage.getItem(CLAVE_TARJETAS)); } catch {}
-  if (!Array.isArray(datos)) {
-    // Migración: la primera versión tenía una sola tarjeta Interbank y los gastos usaban el medio 'interbank'
-    let antigua = null;
-    try { antigua = JSON.parse(localStorage.getItem(CLAVE_TARJETA_ANTIGUA)); } catch {}
-    datos = antigua || gastos.some((g) => g.medio === 'interbank')
-      ? [{ ...(antigua || {}), id: 'interbank', nombre: 'Interbank', banco: 'interbank' }]
-      : [];
-    try { localStorage.removeItem(CLAVE_TARJETA_ANTIGUA); } catch {}
-  }
-  tarjetas = [];
-  for (const original of datos) {
-    const t = tarjetaValida(original);
-    if (!t) continue;
-    tarjetas.push(t);
-    if (Array.isArray(original.pagados) && original.pagados.length) pagadosAntiguos[t.id] = original.pagados;
-  }
-  guardarTarjetas();
+  const datos = leerJSON(CLAVE_TARJETAS, []);
+  tarjetas = Array.isArray(datos) ? datos.map(tarjetaValida).filter(Boolean) : [];
 }
 
 function guardarTarjetas() {
@@ -73,7 +55,7 @@ function pagoValido(p) {
   const moneda = p.moneda === 'USD' ? 'USD' : 'PEN';
   const pagadoMoneda = p.pagadoMoneda === 'USD' ? 'USD' : 'PEN';
   const importe = redondear(Number(p.importe));
-  // Los pagos de versiones anteriores solo tenían { importe } en soles
+  // Sin `pagado`, se pagó lo mismo que se abonó
   const pagado = p.pagado === undefined || p.pagado === null ? importe : redondear(Number(p.pagado));
   const tipoCambio = moneda !== pagadoMoneda && Number(p.tipoCambio) > 0 ? Number(p.tipoCambio) : null;
   if (!(importe > 0) || !(pagado > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(p.fecha)) return null;
@@ -84,26 +66,10 @@ function pagoValido(p) {
   };
 }
 
-// Va después de cargar gastos y tarjetas: la migración necesita los totales de cada ciclo
+// Va después de cargar las tarjetas: un pago sin su tarjeta se descarta
 function cargarPagos() {
-  let datos = null;
-  try { datos = JSON.parse(localStorage.getItem(CLAVE_PAGOS)); } catch {}
+  const datos = leerJSON(CLAVE_PAGOS, []);
   pagos = Array.isArray(datos) ? datos.map(pagoValido).filter(Boolean) : [];
-  // Migración: cada ciclo marcado como pagado pasa a ser un pago por su total, en su vencimiento
-  const hoy = hoyISO();
-  for (const [id, cortes] of Object.entries(pagadosAntiguos)) {
-    const t = tarjetaDe(id);
-    if (!configurada(t)) continue;
-    for (const c of ciclosTarjeta(t)) {
-      if (c.cerrado && c.total.PEN > 0 && cortes.includes(c.hasta)) {
-        pagos.push(pagoValido({ tarjeta: id, importe: c.total.PEN, fecha: c.vence < hoy ? c.vence : hoy }));
-      }
-    }
-  }
-  if (Object.keys(pagadosAntiguos).length) {
-    pagadosAntiguos = {};
-    guardarPagos();
-  }
 }
 
 function guardarPagos() {
