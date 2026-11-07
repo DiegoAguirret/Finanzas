@@ -155,7 +155,7 @@ create table if not exists public.aportes (
   creado timestamptz not null default now()
 );
 
--- Negocio: ventas, inversión y gastos del negocio, separados de las finanzas personales
+-- Negocio: ventas y gastos del negocio, separados de las finanzas personales
 create table if not exists public.negocio (
   id uuid primary key default gen_random_uuid(),
   usuario uuid not null default auth.uid() references auth.users on delete cascade,

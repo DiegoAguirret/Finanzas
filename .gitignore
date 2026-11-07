@@ -6,7 +6,7 @@ pruebas/*_estado.json
 .claude/settings.local.json
 Thumbs.db
 .DS_Store
-# Carpeta que genera Cloudflare Pages al publicar
+# Carpeta que genera construir.py con lo que se publica
 public/
 # Generado por construir.py en cada publicación
 trabajador/cabeceras.js

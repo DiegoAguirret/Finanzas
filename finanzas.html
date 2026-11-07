@@ -285,7 +285,7 @@
         </div>
         </details></section>
       <section class="card plegable"><details><summary><h2>Historial</h2></summary>
-        <table id="tabla-historial">
+        <table>
           <thead>
             <tr>
               <th>Mes</th>
@@ -519,7 +519,7 @@
               <tbody id="tar-ciclos"></tbody>
             </table>
           </details></section>
-        <section class="card plegable" id="sal-card"><details><summary><h2>Deuda anterior</h2></summary>
+        <section class="card plegable"><details><summary><h2>Deuda anterior</h2></summary>
           <div class="sal-elegir">
             <label for="sal-tarjeta">Tarjeta</label>
             <select id="sal-tarjeta"></select>
@@ -527,21 +527,21 @@
           <div class="mensaje hidden" id="sal-aviso">A esta tarjeta le falta el día de corte o de pago: edítala en «Mis tarjetas».</div>
           <form id="sal-form" class="form-movimiento" autocomplete="off">
             <div>
-              <label for="sal-vence" id="sal-etiqueta-vence">Primer pago hasta</label>
+              <label for="sal-vence">Primer pago hasta</label>
               <select id="sal-vence"></select>
             </div>
             <div>
-              <label for="sal-importe" id="sal-etiqueta-monto">Monto de cada pago</label>
+              <label for="sal-importe">Monto de cada pago</label>
               <div class="importe-moneda">
                 <input id="sal-importe" type="number" step="0.01" inputmode="decimal" min="0.01" required placeholder="0.00">
                 <select id="sal-moneda" aria-label="Moneda de la deuda anterior"><option value="PEN">S/</option><option value="USD">US$</option></select>
               </div>
             </div>
-            <div id="sal-cuotas-campo">
+            <div>
               <label for="sal-cuotas">Número de pagos</label>
               <input id="sal-cuotas" type="number" min="1" max="60" step="1" value="1" required>
             </div>
-            <div id="sal-negocio-campo">
+            <div>
               <label class="check-negocio"><input type="checkbox" id="sal-negocio"><span data-ico="negocio"></span>Para mi negocio</label>
             </div>
             <div class="acciones-form">
@@ -558,9 +558,9 @@
 
         
               </div>
-      <section class="card plegable" id="tc-card"><details><summary><h2>Tipo de cambio</h2></summary>
+      <section class="card plegable"><details><summary><h2>Tipo de cambio</h2></summary>
           <span class="sub" id="tc-estado"></span>
-          <table id="tabla-tc">
+          <table>
             <thead>
               <tr>
                 <th>Fuente</th>
@@ -1074,7 +1074,7 @@
         <div class="vacio hidden" id="neg-tipos-vacio">Sin gastos en este periodo.</div>
       </details></section>
       <section class="card plegable"><details><summary><h2>Por mes</h2></summary>
-        <table id="neg-tabla-meses">
+        <table>
           <thead><tr><th>Mes</th><th class="num">Ventas</th><th class="num">Gastos</th><th class="num">Ganancia</th></tr></thead>
           <tbody id="neg-meses"></tbody>
         </table>
@@ -1171,7 +1171,7 @@
             </div>
             <input id="aj-saldo" class="fa-select" type="number" step="0.01" placeholder="0.00">
           </div>
-          <details class="mas-opciones bloque" id="aj-mas"><summary>Más opciones</summary>
+          <details class="mas-opciones bloque"><summary>Más opciones</summary>
           <div class="fila-ajuste">
             <div>
               <label class="fa-titulo" for="aj-inicio">Al abrir, ir a</label>
@@ -1234,7 +1234,7 @@
             </div>
             <button type="button" class="btn-primary" id="exp-xlsx">Descargar Excel</button>
           </div>
-<details class="mas-opciones bloque" id="datos-mas"><summary>Más opciones</summary>
+<details class="mas-opciones bloque"><summary>Más opciones</summary>
           <div class="fila-ajuste">
             <div>
               <span class="fa-titulo">CSV</span>
