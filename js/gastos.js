@@ -181,6 +181,10 @@ function pintarResumenMes(delMes, mesActual) {
   $('mes-de').textContent = `${limite > 0 ? 'Límite' : 'De'} ${soles.format(tope)}`;
   $('mes-pct').textContent = `${pct} %`;
   $('mes-detalle').classList.toggle('excedido', pct > 100);
+  // Lo marcado «Para mi negocio» se muestra aparte: no suma al gasto personal
+  const paraNegocio = sumar(gastos.filter((g) => g.negocio && g.fecha.startsWith(mesActual)));
+  $('mes-negocio').classList.toggle('hidden', !paraNegocio);
+  $('mes-negocio').replaceChildren(icono('negocio'), document.createTextNode(`+ ${soles.format(paraNegocio)} para tu negocio`));
   pintarAvisoLimite(delMes, mesActual);
 }
 
