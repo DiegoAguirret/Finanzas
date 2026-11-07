@@ -255,6 +255,9 @@ function salirEdicionNegocio() {
   editandoProductos = false;
   fijarOpcionNegocio('neg-canal', canal);
   fijarTipoNegocio(tipo);
+  // Tras guardar o cancelar vuelve la cuadrícula de tipos (con el último elegido marcado)
+  verTiposNegocio = true;
+  pintarCanalNegocio();
   $('neg-fecha').value = hoyISO();
   $('neg-form-titulo').textContent = 'Nuevo movimiento';
   $('neg-guardar').textContent = 'Añadir movimiento';
